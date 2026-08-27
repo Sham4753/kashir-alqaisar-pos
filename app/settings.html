@@ -38,10 +38,10 @@
                 <span id="secRestaurant-icon" class="text-gray-400">▼</span>
             </button>
             <div id="secRestaurant" class="hidden px-6 pb-6 space-y-3">
-            <input type="text" id="resName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="اسم المطعم">
-            <input type="text" id="resPhone" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="رقم الهاتف">
-            <input type="text" id="resAddress" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="العنوان">
-            <div class="rounded-xl border border-orange-100 bg-orange-50 p-3"><label class="block text-sm font-black text-slate-700">شعار واجهات الكاشير</label><p class="mt-1 text-xs leading-5 text-slate-500">يظهر في شريط أعلى صفحات الكاشير. هذا شعار الهوية العامة ولا يستبدل شعار الإيصال في إعدادات الطابعة.</p><input id="restaurantLogoFile" type="file" accept="image/png,image/jpeg,image/webp" onchange="loadRestaurantLogo(event)" class="mt-2 block w-full text-sm"><div class="mt-2 flex items-center gap-3"><img id="restaurantLogoPreview" class="hidden h-14 w-14 rounded-xl border border-orange-200 bg-white object-cover p-1" alt="معاينة شعار واجهات الكاشير"><button type="button" onclick="clearRestaurantLogo()" class="rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-700">حذف الشعار</button></div></div>
+            <div><label for="resName" class="block text-sm font-bold text-slate-700 mb-1">اسم المطعم</label><input type="text" id="resName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="مثال: مطعم القيصر"></div>
+            <div><label for="resPhone" class="block text-sm font-bold text-slate-700 mb-1">رقم الهاتف</label><input type="text" id="resPhone" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="رقم هاتف المطعم"></div>
+            <div><label for="resAddress" class="block text-sm font-bold text-slate-700 mb-1">العنوان</label><input type="text" id="resAddress" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="عنوان المطعم"></div>
+            <div class="rounded-xl border border-blue-100 bg-blue-50 p-3"><label for="restaurantLogoFile" class="block text-sm font-black text-slate-700">شعار واجهات الكاشير</label><p class="mt-1 text-xs leading-5 text-slate-500">اختر صورة PNG أو JPG أو WebP؛ سيُصغّرها النظام ويضغطها تلقائيًا مع الحفاظ على النسبة لتناسب التخزين المحلي. هذا شعار الهوية العامة ولا يستبدل شعار الإيصال.</p><input id="restaurantLogoFile" type="file" accept="image/png,image/jpeg,image/webp" onchange="loadRestaurantLogo(event)" class="mt-2 block w-full text-sm"><div class="mt-2 flex items-center gap-3"><img id="restaurantLogoPreview" class="hidden h-14 w-14 rounded-xl border border-blue-200 bg-white object-cover p-1" alt="معاينة شعار واجهات الكاشير"><button type="button" onclick="clearRestaurantLogo()" class="q-button-danger rounded-lg px-3 py-2 text-xs font-bold">حذف الشعار</button></div></div>
             <button onclick="saveRestaurant()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">💾 حفظ</button>
             </div>
         </div>
@@ -54,10 +54,10 @@
             </button>
             <div id="secSupport" class="hidden px-6 pb-6 space-y-3">
             <p class="text-xs text-gray-400">بتظهر بشاشة الترحيب حتى صاحب المطعم يعرف مين يتواصل معه لو صار عنده مشكلة</p>
-            <input type="text" id="supportPhone" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="رقم الدعم الفني">
-            <input type="text" id="supportWhatsapp" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="رقم واتساب (بدون + أو رموز)">
-            <input type="text" id="supportFacebook" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="رابط فيسبوك">
-            <input type="text" id="supportInstagram" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="رابط انستغرام">
+            <div><label for="supportPhone" class="block text-sm font-bold text-slate-700 mb-1">رقم الدعم الفني</label><input type="text" id="supportPhone" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="رقم الدعم الفني"></div>
+            <div><label for="supportWhatsapp" class="block text-sm font-bold text-slate-700 mb-1">واتساب الدعم</label><input type="text" id="supportWhatsapp" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="رقم واتساب بدون + أو رموز"></div>
+            <div><label for="supportFacebook" class="block text-sm font-bold text-slate-700 mb-1">رابط Facebook</label><input type="text" id="supportFacebook" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="رابط صفحة الدعم"></div>
+            <div><label for="supportInstagram" class="block text-sm font-bold text-slate-700 mb-1">رابط Instagram</label><input type="text" id="supportInstagram" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="رابط حساب الدعم"></div>
             <button onclick="saveSupportInfo()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">💾 حفظ</button>
             </div>
         </div>
@@ -69,13 +69,13 @@
                 <span id="secCurrency-icon" class="text-gray-400">▼</span>
             </button>
             <div id="secCurrency" class="hidden px-6 pb-6 space-y-3">
-            <select id="currency" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+            <div><label for="currency" class="block text-sm font-bold text-slate-700 mb-1">عملة العرض</label><select id="currency" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
                 <option value="SYP">ل.س</option>
                 <option value="USD">$</option>
                 <option value="EUR">€</option>
-            </select>
-            <input type="number" id="usdRate" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="سعر صرف الدولار (1$ = ؟ ل.س)">
-            <input type="number" id="eurRate" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="سعر صرف اليورو (1€ = ؟ ل.س)">
+            </select></div>
+            <div><label for="usdRate" class="block text-sm font-bold text-slate-700 mb-1">سعر صرف الدولار</label><input type="number" id="usdRate" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="1$ = ؟ ل.س"></div>
+            <div><label for="eurRate" class="block text-sm font-bold text-slate-700 mb-1">سعر صرف اليورو</label><input type="number" id="eurRate" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="1€ = ؟ ل.س"></div>
             <button onclick="saveCurrency()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">💾 حفظ</button>
             </div>
         </div>
@@ -104,21 +104,21 @@
                 <span id="secPrinter-icon" class="text-gray-400">▼</span>
             </button>
             <div id="secPrinter" class="hidden px-6 pb-6 space-y-3">
-            <select id="paperWidth" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+            <div><label for="paperWidth" class="block text-sm font-bold text-slate-700 mb-1">عرض ورق الطابعة</label><select id="paperWidth" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
                 <option value="58">58mm</option>
                 <option value="80" selected>80mm</option>
-            </select>
-            <select id="fontSize" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+            </select></div>
+            <div><label for="fontSize" class="block text-sm font-bold text-slate-700 mb-1">حجم خط الإيصال</label><select id="fontSize" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
                 <option value="small">صغير</option>
                 <option value="medium" selected>وسط</option>
                 <option value="large">كبير</option>
-            </select>
-            <select id="copies" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+            </select></div>
+            <div><label for="copies" class="block text-sm font-bold text-slate-700 mb-1">عدد النسخ</label><select id="copies" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
                 <option value="1">نسخة 1</option>
                 <option value="2">نسختين</option>
                 <option value="3">3 نسخ</option>
-            </select>
-            <textarea id="footerText" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="نص نهاية الإيصال"></textarea>
+            </select></div>
+            <div><label for="footerText" class="block text-sm font-bold text-slate-700 mb-1">نص نهاية الإيصال</label><textarea id="footerText" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="مثل: شكرًا لزيارتكم"></textarea></div>
             <button onclick="savePrinter()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">💾 حفظ</button>
             </div>
         </div>
@@ -157,16 +157,16 @@
                 <span id="secUsers-icon" class="text-gray-400">▼</span>
             </button>
             <div id="secUsers" class="hidden px-6 pb-6 space-y-3">
-            <div class="flex gap-2">
-                <input type="text" id="newUsername" class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="اسم المستخدم">
-                <input type="password" id="newPassword" class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="كلمة المرور">
+            <div class="grid gap-3 sm:grid-cols-2">
+                <div><label for="newUsername" class="block text-sm font-bold text-slate-700 mb-1">اسم المستخدم</label><input type="text" id="newUsername" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="اسم الدخول"></div>
+                <div><label for="newPassword" class="block text-sm font-bold text-slate-700 mb-1">كلمة المرور</label><input type="password" id="newPassword" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="كلمة مرور قوية"></div>
             </div>
-            <select id="newRole" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none">
+            <div><label for="newRole" class="block text-sm font-bold text-slate-700 mb-1">دور المستخدم</label><select id="newRole" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none">
                 <option value="cashier">👨‍🍳 كاشير</option>
                 <option value="waiter">🧑‍🍽️ نادل — تطبيق الجوال</option>
                 <option value="supervisor">🧑‍💼 مشرف</option>
                 <option value="manager">👨‍💼 مدير</option>
-            </select>
+            </select></div>
             <button onclick="addUser()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition">➕ إضافة مستخدم</button>
             <div id="usersList" class="space-y-2 pt-2"></div>
             </div>
@@ -196,7 +196,7 @@
                 <input type="checkbox" id="lockEnabled" class="w-5 h-5">
                 <label>تفعيل قفل الشاشة التلقائي</label>
             </div>
-            <input type="number" id="lockTimeout" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="مدة القفل بالدقائق (مثال: 5)">
+            <div><label for="lockTimeout" class="block text-sm font-bold text-slate-700 mb-1">مدة القفل بالدقائق</label><input type="number" id="lockTimeout" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="مثال: 5"></div>
             <button onclick="saveLock()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">💾 حفظ</button>
             </div>
         </div>
@@ -209,10 +209,10 @@
             </button>
             <div id="secCommercial" class="hidden px-6 pb-6 space-y-3">
                 <p class="text-xs text-gray-500 leading-5">ينشئ مجلدًا وZIP مستقلين في مجلد <b>Deliveries</b> بجانب النظام، مع حذف الفواتير والعملاء والديون وسجلات النسخة الحالية. متاح للمدير فقط.</p>
-                <input id="clientRestaurantName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="اسم المطعم الجديد">
-                <input id="clientOwnerName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="اسم المالك (اختياري)">
-                <input id="clientFolderName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="اسم مجلد التسليم بالإنجليزية، مثال: restaurant_alsham">
-                <input id="clientLicenseId" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="رقم الترخيص (اختياري)">
+                <div><label for="clientRestaurantName" class="block text-sm font-bold text-slate-700 mb-1">اسم المطعم الجديد</label><input id="clientRestaurantName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="اسم المطعم"></div>
+                <div><label for="clientOwnerName" class="block text-sm font-bold text-slate-700 mb-1">اسم المالك</label><input id="clientOwnerName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="اختياري"></div>
+                <div><label for="clientFolderName" class="block text-sm font-bold text-slate-700 mb-1">اسم مجلد التسليم</label><input id="clientFolderName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="بالإنجليزية، مثال: restaurant_alsham"></div>
+                <div><label for="clientLicenseId" class="block text-sm font-bold text-slate-700 mb-1">رقم الترخيص</label><input id="clientLicenseId" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="اختياري"></div>
                 <button onclick="createClientCopy()" class="w-full bg-indigo-700 text-white font-bold py-3 rounded-lg hover:bg-indigo-800">📦 إنشاء مجلد وZIP للعميل</button>
                 <div id="clientCopyResult" class="hidden text-sm rounded-lg p-3"></div>
             </div>
@@ -293,13 +293,18 @@
             restaurantLogoData = d.brand_logo_data || '';
             renderRestaurantLogoPreview();
         }
-        function loadRestaurantLogo(event) {
+        async function loadRestaurantLogo(event) {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
-            if (file.size > 200 * 1024) { showToast('⚠️ حجم شعار الواجهات يجب ألا يتجاوز 200 كيلوبايت'); event.target.value = ''; return; }
-            const reader = new FileReader();
-            reader.onload = () => { restaurantLogoData = String(reader.result || ''); renderRestaurantLogoPreview(); };
-            reader.readAsDataURL(file);
+            try {
+                const prepared = await window.qaisarPrepareImage(file, {maxDimension: 512, maxBytes: 180 * 1024});
+                restaurantLogoData = prepared.dataUrl;
+                renderRestaurantLogoPreview();
+                showToast(`✅ جرى ضغط الشعار إلى ${Math.ceil(prepared.bytes / 1024)} كيلوبايت`);
+            } catch (error) {
+                event.target.value = '';
+                showToast('⚠️ ' + (error.message || 'تعذر معالجة الشعار'));
+            }
         }
         function renderRestaurantLogoPreview() {
             const preview = document.getElementById('restaurantLogoPreview');

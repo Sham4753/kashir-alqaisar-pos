@@ -49,9 +49,12 @@
         }
         #printReceipt { position: absolute; visibility: hidden; top: 0; left: -99999px; }
         @media print {
+            @page { size: 80mm auto; margin: 0; }
+            html, body { width: 80mm !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
             body * { visibility: hidden; }
             #printReceipt, #printReceipt * { visibility: visible; }
-            #printReceipt { display: block !important; position: absolute; top: 0; left: 0; width: 100%; }
+            #printReceipt { display: block !important; position: absolute; top: 0; left: 0; width: 80mm; margin: 0; padding: 0; }
+            #printReceipt a { display: none !important; }
         }
         /* تصميم تشغيلي احترافي: طبقات واضحة، إجراءات قليلة، وتركيز على البيع السريع */
         :root { --q-ink:#0f172a; --q-slate:#334155; --q-blue:#2563eb; --q-orange:#f97316; --q-mint:#059669; --q-surface:#ffffff; --q-bg:#eef3f8; --q-line:#dce5ef; }
@@ -103,18 +106,18 @@
     <!-- شريط تشغيل مختصر: البحث والتنقل الضروريان فقط -->
     <header class="flex items-center justify-between shadow-sm z-10">
         <div class="flex items-center gap-3 shrink-0">
-            <button onclick="toggleMenu()" class="w-11 h-11 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xl" title="القائمة والإدارة">☰</button>
-            <div class="brand-mark">🍽️</div>
+            <button onclick="toggleMenu()" class="w-11 h-11 rounded-xl bg-slate-800 hover:bg-slate-700 text-white" title="القائمة والإدارة" aria-label="فتح القائمة والإدارة"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+            <div class="brand-mark" aria-hidden="true"><svg class="q-line-icon" viewBox="0 0 24 24"><path d="M5 11h14v7H5zM7 11V7h10v4M8 18v2M16 18v2"></path></svg></div>
             <div class="brand-copy"><h1 id="restaurantTitle" class="text-base font-black">كاشير القيصر</h1><small>نقطة البيع المحلية</small></div>
             <span id="connectionStatus" class="text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700">متصل</span>
-            <a id="printErrorBadge" href="analytics.html" class="hidden items-center gap-1 rounded-full border border-rose-400 bg-rose-100 px-2.5 py-1 text-xs font-black text-rose-800 animate-pulse" title="أخطاء طباعة غير معالجة — افتح التقارير للمراجعة"><span>🖨️</span><span id="printErrorCount">0</span><span>خطأ طباعة</span></a>
+            <a id="printErrorBadge" href="analytics.html" class="hidden items-center gap-1 rounded-full border border-rose-400 bg-rose-100 px-2.5 py-1 text-xs font-black text-rose-800 animate-pulse" title="أخطاء طباعة غير معالجة — افتح التقارير للمراجعة"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4V10h16v8h-2M7 14h10v7H7zM17 11h.01"></path></svg><span id="printErrorCount">0</span><span>خطأ طباعة</span></a>
         </div>
         <div class="header-tools flex items-center gap-2">
             <label class="header-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><input type="text" id="searchBox" oninput="searchProducts()" class="top-field cashier-search px-3 text-sm w-52 outline-none" placeholder="ابحث عن صنف أو باركود"></label>
             <label class="header-input"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5v14M7 5v14M10 5v14M14 5v14M17 5v14M21 5v14"></path></svg><input type="text" id="barcodeInput" inputmode="numeric" autocomplete="off" class="top-field cashier-search px-3 text-sm w-40 outline-none" placeholder="مسح باركود F2" title="امسح الباركود ثم اضغط Enter"></label>
             <select id="currency" data-system-currency-control onchange="changeCurrency()" class="top-field px-2 text-sm font-black outline-none" title="عملة العرض"><option value="SYP">ل.س</option><option value="USD">$</option><option value="EUR">€</option></select>
             <button type="button" id="lockNowButton" onclick="showLockScreen(true)" class="nav-link" title="قفل النظام برمز الكاشير الحالي"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"></path></svg><span>قفل</span></button>
-            <button type="button" id="cashDrawerButton" onclick="openCashDrawer()" class="nav-link hidden" title="فتح درج النقد يدويًا — للمدير فقط"><span aria-hidden="true">💵</span><span>فتح الدرج</span></button>
+            <button type="button" id="cashDrawerButton" onclick="openCashDrawer()" class="nav-link hidden" title="فتح درج النقد يدويًا — للمدير فقط"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M3 10h18M8 14h.01M12 14h5"></path></svg><span>فتح الدرج</span></button>
             <a href="kitchen.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v4M16 3v4M5 9h14v12H5z"></path><path d="M9 13h6M9 17h4"></path></svg><span>المطبخ</span></a>
             <a href="tables.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h16v8H4zM6 11V6h12v5M7 19v2M17 19v2"></path></svg><span>الطاولات</span></a>
         </div>
@@ -133,7 +136,7 @@
         <!-- Left: Categories -->
         <div id="categoryPanel" class="w-56 bg-white border-l border-gray-200 flex flex-col overflow-hidden">
             <div class="p-3 border-b border-gray-100">
-                <h3 class="text-sm font-bold text-gray-500 uppercase mb-2">📂 الأقسام</h3>
+                <h3 class="text-sm font-bold text-gray-500 uppercase mb-2">الأقسام</h3>
                 <div id="categoriesList" class="space-y-1 overflow-y-auto max-h-[calc(100vh-200px)]"></div>
             </div>
             <div class="p-3 border-t border-gray-100 mt-auto">
@@ -144,7 +147,7 @@
 
         <!-- المنتجات -->
         <div id="productsPanel" class="flex-1 min-w-0 p-4 overflow-y-auto">
-            <div class="product-toolbar"><div><div id="sectionTitle" class="text-sm font-bold">اختر قسمًا للبدء</div><p class="text-xs text-slate-400 mt-1">اضغط على المنتج لإضافته مباشرة إلى الطلب</p></div><span id="productCountHint" class="text-xs bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full">بيع سريع</span></div>
+            <div class="product-toolbar"><div><div id="sectionTitle" class="text-sm font-bold">اختر قسمًا للبدء</div></div><span id="productCountHint" class="text-xs bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full">بيع سريع</span></div>
             <div id="productsGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
         </div>
 
@@ -153,9 +156,9 @@
             <div class="cart-head p-4">
                 <div class="flex justify-between items-center mb-3"><div><h3 class="font-black text-slate-800">الطلب الحالي</h3><p class="text-xs text-slate-500 mt-1">راجع الطلب ثم اختر طريقة الدفع</p></div><span id="itemCount" class="bg-orange-100 text-orange-700 text-xs px-2.5 py-1 rounded-full font-black">0 قطع</span></div>
                 <div class="flex gap-1.5 mb-3">
-                    <button onclick="setOrderType('سفري')" id="btnTakeaway" class="order-type-btn type-btn flex-1 border border-slate-300 text-xs">🛍️ سفري</button>
-                    <button onclick="setOrderType('صالة')" id="btnDinein" class="order-type-btn type-btn flex-1 border border-slate-300 text-xs">🪑 صالة</button>
-                    <button onclick="setOrderType('ديليفري')" id="btnDelivery" class="order-type-btn type-btn flex-1 border border-slate-300 text-xs">🛵 دليفري</button>
+                    <button onclick="setOrderType('سفري')" id="btnTakeaway" class="order-type-btn type-btn flex-1 border border-slate-300 text-xs"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6M9 16h4"></path></svg>سفري</button>
+                    <button onclick="setOrderType('صالة')" id="btnDinein" class="order-type-btn type-btn flex-1 border border-slate-300 text-xs"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16v5H4zM7 15v6M17 15v6M8 10V6h8v4"></path></svg>صالة</button>
+                    <button onclick="setOrderType('ديليفري')" id="btnDelivery" class="order-type-btn type-btn flex-1 border border-slate-300 text-xs"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6M9 16h4"></path></svg>دليفري</button>
                 </div>
                 <details class="group"><summary class="cursor-pointer text-xs font-bold text-slate-600 select-none">بيانات إضافية للطلب <span class="text-slate-400 font-normal">(الزبون والطاولة والملاحظات)</span></summary><div class="mt-2 space-y-2"><input type="text" id="customerName" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="اسم الزبون (اختياري)"><select id="tableNumber" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm hidden"><option value="">اختر طاولة للصالة</option></select><input type="text" id="orderNote" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="ملاحظة للمطبخ أو الطلب"></div></details>
                 <div class="mt-3 rounded-xl border border-indigo-100 bg-indigo-50 p-3"><div class="flex items-center justify-between gap-2"><b class="text-xs text-indigo-950">إطلاق الطلب للمطبخ</b><span class="text-[10px] text-indigo-700">يمكن إطلاقه لاحقًا من شاشة المطبخ</span></div><div class="mt-2 grid grid-cols-2 gap-2"><label class="cursor-pointer rounded-lg border border-indigo-200 bg-white px-2 py-2 text-center text-xs font-bold text-indigo-900"><input name="kitchenRelease" type="radio" value="now" checked class="ml-1 accent-indigo-600">ابدأ الآن</label><label class="cursor-pointer rounded-lg border border-indigo-200 bg-white px-2 py-2 text-center text-xs font-bold text-indigo-900"><input name="kitchenRelease" type="radio" value="later" class="ml-1 accent-indigo-600">أطلق لاحقًا</label></div></div>
@@ -166,12 +169,12 @@
             <div id="cartItems" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
 
             <!-- Cart Footer -->
-            <div class="border-t border-gray-100 p-3 space-y-3">
+            <div class="cart-footer border-t border-gray-100 p-3 space-y-3">
                 <div><label class="text-xs text-slate-500 font-bold">الخصم</label><div class="flex gap-2 mt-1"><input type="number" id="discountPct" onchange="updateTotal()" class="w-1/2 border border-slate-200 rounded-lg px-3 py-2 text-sm text-center" placeholder="نسبة %" value="0"><input type="number" id="discountAmount" onchange="updateTotal()" class="w-1/2 border border-slate-200 rounded-lg px-3 py-2 text-sm text-center" placeholder="قيمة الخصم" value="0"></div></div>
                 <div class="cart-summary"><div class="flex justify-between items-center"><span class="text-xs text-slate-300">الإجمالي المستحق</span><span class="text-xs bg-white/10 px-2 py-1 rounded">يشمل الخصم</span></div><div id="totalDisplay" class="font-black mt-1">0</div></div>
                 <button onclick="openPaymentModal()" id="checkoutButton" class="primary-checkout w-full text-white">إتمام الدفع وحفظ الفاتورة <span class="opacity-75 text-xs">F4</span></button>
                 <button onclick="saveDineInSession()" id="saveDineInButton" class="hidden w-full min-h-[46px] bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm">حفظ طلب الطاولة وإرساله للمطبخ</button>
-                <div class="grid grid-cols-3 gap-2"><button onclick="holdOrder()" class="secondary-action bg-amber-50 text-amber-700 border border-amber-200 text-xs">⏸️ تعليق</button><button onclick="undoLastItem()" class="secondary-action bg-slate-100 text-slate-700 text-xs">↩️ تراجع</button><button onclick="clearCart()" class="secondary-action bg-rose-50 text-rose-700 border border-rose-100 text-xs">🗑️ مسح</button></div>
+                <div class="grid grid-cols-3 gap-2"><button onclick="holdOrder()" class="secondary-action bg-slate-100 text-slate-700 border border-slate-200 text-xs">تعليق</button><button onclick="undoLastItem()" class="secondary-action bg-slate-100 text-slate-700 text-xs">تراجع</button><button onclick="clearCart()" class="secondary-action bg-red-600 text-white border border-red-700 text-xs">مسح</button></div>
                 <div id="heldOrders" class="space-y-1"></div>
             </div>
         </div>
@@ -180,17 +183,17 @@
     <!-- Payment Modal -->
     <div id="paymentModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-2xl shadow-2xl p-6 w-96 animate-slide">
-            <h3 class="text-lg font-bold text-gray-800 mb-4 text-center">💰 إتمام الدفع</h3>
+            <h3 class="text-lg font-bold text-gray-800 mb-4 text-center"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M3 10h18M8 14h.01M12 14h5"></path></svg>إتمام الدفع</h3>
             <div class="text-3xl font-black text-center text-gray-800 mb-6" id="paymentTotal">0</div>
             <div class="grid grid-cols-2 gap-3">
                 <button onclick="quickPay('نقدي')" class="quick-pay-btn bg-green-50 border-2 border-green-200 rounded-xl p-4 hover:bg-green-100">
-                    <div class="text-2xl mb-1">💵</div><div class="font-bold text-green-700">نقدي</div>
+                    <svg class="q-payment-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M3 10h18M8 14h.01M12 14h5"></path></svg><div class="font-bold text-blue-700">نقدي</div>
                 </button>
                 <button onclick="quickPay('بطاقة')" class="quick-pay-btn bg-blue-50 border-2 border-blue-200 rounded-xl p-4 hover:bg-blue-100">
-                    <div class="text-2xl mb-1">💳</div><div class="font-bold text-blue-700">بطاقة</div>
+                    <svg class="q-payment-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M3 10h18M8 14h.01M12 14h5"></path></svg><div class="font-bold text-blue-700">بطاقة</div>
                 </button>
                 <button onclick="quickPay('مختلط')" class="quick-pay-btn bg-purple-50 border-2 border-purple-200 rounded-xl p-4 hover:bg-purple-100 col-span-2">
-                    <div class="text-2xl mb-1">🔄</div><div class="font-bold text-purple-700">مختلط (نقدي + بطاقة)</div>
+                    <svg class="q-payment-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h11l-3-3M17 17H6l3 3M18 7a8 8 0 0 1 0 10M6 17a8 8 0 0 1 0-10"></path></svg><div class="font-bold text-blue-700">مختلط (نقدي + بطاقة)</div>
                 </button>
             </div>
             <button onclick="closePaymentModal()" class="w-full mt-4 bg-gray-500 text-white py-2.5 rounded-lg font-bold">إلغاء</button>
@@ -200,21 +203,21 @@
     <!-- Mixed Payment Split Modal -->
     <div id="mixedPaymentModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-2xl shadow-2xl p-6 w-96 animate-slide">
-            <h3 class="text-lg font-bold text-gray-800 mb-4 text-center">🔄 دفع مختلط (نقدي + بطاقة)</h3>
+            <h3 class="text-lg font-bold text-gray-800 mb-4 text-center"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h11l-3-3M17 17H6l3 3M18 7a8 8 0 0 1 0 10M6 17a8 8 0 0 1 0-10"></path></svg>دفع مختلط (نقدي + بطاقة)</h3>
             <div class="text-2xl font-black text-center text-gray-800 mb-4" id="mixedTotal">0</div>
             <div class="space-y-3">
                 <div>
-                    <label class="text-sm text-gray-600 mb-1 block">💵 نقدي</label>
+                    <label for="mixedCashInput" class="text-sm text-gray-600 mb-1 block">نقدي</label>
                     <input type="number" id="mixedCashInput" oninput="onMixedCashChange()" class="w-full border border-green-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="0">
                 </div>
                 <div>
-                    <label class="text-sm text-gray-600 mb-1 block">💳 بطاقة</label>
+                    <label for="mixedCardInput" class="text-sm text-gray-600 mb-1 block">بطاقة</label>
                     <input type="number" id="mixedCardInput" oninput="onMixedCardChange()" class="w-full border border-blue-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0">
                 </div>
             </div>
-            <div id="mixedError" class="hidden text-red-600 text-sm text-center mt-2">⚠️ مجموع المبلغين لازم يساوي الإجمالي</div>
+            <div id="mixedError" class="hidden text-red-600 text-sm text-center mt-2">مجموع المبلغين يجب أن يساوي الإجمالي</div>
             <div class="flex gap-2 mt-4">
-                <button onclick="confirmMixedPayment()" class="flex-1 bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition">✅ تأكيد الدفع</button>
+                <button onclick="confirmMixedPayment()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">تأكيد الدفع</button>
                 <button onclick="closeMixedModal()" class="flex-1 bg-gray-500 text-white font-bold py-2.5 rounded-lg">إلغاء</button>
             </div>
         </div>
@@ -223,28 +226,13 @@
     <!-- Sidebar Menu -->
     <div id="sidebar" class="hidden fixed inset-0 bg-black bg-opacity-50 z-40" onclick="toggleMenu()"></div>
     <div id="menuPanel" class="hidden fixed top-0 right-0 h-full w-64 bg-gray-900 text-white z-50 p-4 shadow-2xl transform transition-transform overflow-y-auto">
-        <h3 class="text-lg font-bold mb-4 border-b border-gray-700 pb-2">⚙️ القائمة</h3>
-        <div class="space-y-1 text-sm">
-            <a href="menu_manager.html" class="block px-3 py-2 hover:bg-gray-700 rounded">🍽️ إدارة المنيو</a>
-            <a href="raw_materials.html" class="block px-3 py-2 hover:bg-gray-700 rounded">📦 المواد الخام</a>
-            <div class="border-t border-gray-700 my-2"></div>
-            <a href="orders_list.html" class="block px-3 py-2 hover:bg-gray-700 rounded">📋 قائمة الطلبات</a>
-            <a href="waiting_screen.html" target="_blank" class="block px-3 py-2 hover:bg-gray-700 rounded">📺 شاشة الطلبات الجاهزة</a>
-            <a href="manager_ops.html" class="block px-3 py-2 hover:bg-gray-700 rounded">🎛️ مركز الإدارة</a>
-            <a href="dashboard.html" class="block px-3 py-2 hover:bg-gray-700 rounded">📊 لوحة المدير اليومية</a>
-            <a href="attendance.html" class="block px-3 py-2 hover:bg-gray-700 rounded">⏱️ دوام الموظفين</a>
-            <a href="delivery.html" class="block px-3 py-2 hover:bg-gray-700 rounded">🛵 إدارة الدليفري</a>
-            <a href="customers.html" class="block px-3 py-2 hover:bg-gray-700 rounded">👥 العملاء والولاء</a>
-            <a href="qr_menu.html" target="_blank" class="block px-3 py-2 hover:bg-gray-700 rounded">📱 قائمة QR</a>
-            <a href="debts.html" class="block px-3 py-2 hover:bg-gray-700 rounded">💳 الديون</a>
-            <a href="expenses.html" class="block px-3 py-2 hover:bg-gray-700 rounded">💸 المصروفات اليومية</a>
-            <a href="employees.html" class="block px-3 py-2 hover:bg-gray-700 rounded">🧑‍💼 الموظفين</a>
-            <a href="analytics.html" class="block px-3 py-2 hover:bg-gray-700 rounded">📊 الجرد</a>
-            <div class="border-t border-gray-700 my-2"></div>
-            <a href="settings.html" class="block px-3 py-2 hover:bg-gray-700 rounded">⚙️ الإعدادات العامة</a>
-            <a href="printer_settings.html" class="block px-3 py-2 hover:bg-gray-700 rounded">🖨️ إعدادات الطابعة</a>
-            <div class="border-t border-gray-700 my-2"></div>
-            <button onclick="closeShift()" class="block w-full text-right px-3 py-2 hover:bg-red-700 rounded text-red-400">🔒 إغلاق وردية</button>
+        <div class="menu-panel-header"><h3 class="text-lg font-bold">القائمة التشغيلية</h3><button type="button" onclick="toggleMenu()" class="menu-close-action" aria-label="إغلاق القائمة"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"></path></svg><span>إغلاق</span></button></div>
+        <div class="menu-groups text-sm">
+            <details class="menu-group" open><summary>المبيعات</summary><div class="menu-group-links"><a href="orders_list.html">قائمة الطلبات</a><a href="tables.html">الطاولات والصالة</a><a href="waiting_screen.html" target="_blank">شاشة الطلبات الجاهزة</a><a href="delivery.html">إدارة الدليفري</a><a href="customers.html">العملاء والولاء</a><a href="qr_menu.html" target="_blank">قائمة QR</a></div></details>
+            <details class="menu-group"><summary>المخزون</summary><div class="menu-group-links"><a href="menu_manager.html">إدارة المنيو</a><a href="raw_materials.html">المواد الخام</a><a href="analytics.html">الجرد والمخزون</a></div></details>
+            <details class="menu-group"><summary>المالية</summary><div class="menu-group-links"><a href="analytics.html">التقارير المالية</a><a href="debts.html">الديون</a><a href="expenses.html">المصروفات اليومية</a></div></details>
+            <details class="menu-group"><summary>الموظفون</summary><div class="menu-group-links"><a href="employees.html">الموظفون</a><a href="attendance.html">ورديات الموظفين</a><a href="kitchen.html">محطات المطبخ</a></div></details>
+            <details class="menu-group"><summary>الإعدادات</summary><div class="menu-group-links"><a href="manager_ops.html">مركز الإدارة</a><a href="dashboard.html">لوحة المدير اليومية</a><a href="settings.html">الإعدادات العامة</a><a href="printer_settings.html">إعدادات الطابعة</a><button onclick="closeShift()" class="menu-shift-action">إغلاق وردية</button></div></details>
         </div>
     </div>
 
@@ -377,7 +365,7 @@
                 height = Math.ceil(contentHeightPx * mmPerPx) + 15; // + هامش أمان 15مم
                 height = Math.max(height, 40) + 'mm'; // حد أدنى منطقي حتى ما يصير صفر
             } else {
-                height = '297mm'; // احتياطي افتراضي (طول A4) لو ما قدرنا نحسب المحتوى لأي سبب
+                height = '160mm'; // احتياطي حراري 80mm عند تعذر قياس المحتوى، وليس صفحة A4
             }
             styleTag.textContent = `@page { size: ${width} ${height}; margin: 0; }`;
         }
@@ -401,7 +389,7 @@
             document.getElementById('categoriesList').innerHTML = cats.map(c => {
                 const count = (menu[c]||[]).length;
                 return `<div onclick="selectCategory('${c}')" id="cat_${c}" class="category-item px-3 py-2 rounded-lg text-sm flex justify-between">
-                    <span>📂 ${c}</span><span class="text-xs opacity-60">${count}</span>
+                    <span>${c}</span><span class="text-xs opacity-60">${count}</span>
                 </div>`;
             }).join('');
         }
@@ -414,15 +402,15 @@
             favorites = products.map(p => p.id);
             localStorage.setItem('favorites', JSON.stringify(favorites));
             document.getElementById('favoritesList').innerHTML = products.length > 0 ?
-                products.map(p => `<div onclick="addToCartById(${Number(p.id)},1)" class="text-xs px-3 py-1.5 rounded bg-orange-50 hover:bg-orange-100 cursor-pointer">⭐ ${p.name}</div>`).join('') :
-                '<p class="text-xs text-gray-400 px-3">اضغط ⭐ على منتج</p>';
+                products.map(p => `<div onclick="addToCartById(${Number(p.id)},1)" class="text-xs px-3 py-1.5 rounded bg-blue-50 hover:bg-blue-100 cursor-pointer">${p.name}</div>`).join('') :
+                '<p class="text-xs text-gray-400 px-3">لا توجد أصناف مفضلة</p>';
         }
 
         function selectCategory(cat) {
             currentCategory = cat;
             document.querySelectorAll('.category-item').forEach(el => el.classList.remove('category-active'));
             document.getElementById('cat_'+cat)?.classList.add('category-active');
-            document.getElementById('sectionTitle').textContent = '📦 ' + cat;
+            document.getElementById('sectionTitle').textContent = cat;
             renderProducts(cat);
         }
 
@@ -430,16 +418,10 @@
             const items = menu[cat] || [];
             document.getElementById('productCountHint').textContent = items.length + ' صنف';
             document.getElementById('productsGrid').innerHTML = items.map(p => `
-                <div class="product-card bg-white border border-gray-200 rounded-xl p-3 text-center relative group" role="button" tabindex="0" onclick="addProductFromCard(event,${Number(p.id)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();addProductFromCard(event,${Number(p.id)})}" aria-label="إضافة الصنف إلى السلة">
-                    <button type="button" data-product-favorite onclick="event.stopPropagation();toggleFavorite(${Number(p.id)})" class="absolute top-1 left-1 text-lg ${favorites.includes(p.id)?'':'opacity-70'} transition" aria-label="تبديل المفضلة">
-                        ${favorites.includes(p.id)?'⭐':'☆'}
-                    </button>
-                    ${p.image ? `<img src="${p.image}" class="w-full h-16 object-cover rounded-lg mb-2">` : `<div class="text-3xl mb-2">🍽️</div>`}
-                    <div class="font-bold text-sm mb-1">${p.name}</div>
-                    ${p.barcode ? `<div class="text-[10px] text-gray-400 mb-1">▦ ${p.barcode}</div>` : ''}
-                    <div class="text-orange-600 font-bold text-sm mb-2">${formatPrice(p.price)}</div>
-                    <div class="mt-2 text-[11px] font-bold text-orange-700">المس أي مكان في البطاقة للإضافة</div>
-                    <button type="button" onclick="event.stopPropagation();addToCartById(${Number(p.id)},1)" class="w-full mt-1 bg-orange-500 text-white py-2 rounded-lg text-sm font-bold hover:bg-orange-600 transition">➕ إضافة</button>
+                <div class="product-card bg-white border border-gray-200 rounded-xl p-3 text-center" role="button" tabindex="0" onclick="addProductFromCard(event,${Number(p.id)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();addProductFromCard(event,${Number(p.id)})}" aria-label="إضافة ${p.name} إلى السلة">
+                    ${p.image ? `<img src="${p.image}" alt="${p.name}" class="product-image">` : `<div class="product-image product-image-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 15l3-3 2 2 2-2 3 3M8 9h.01"></path></svg></div>`}
+                    <div class="product-name">${p.name}</div>
+                    <div class="q-product-price">${formatPrice(p.price)}</div>
                 </div>
             `).join('');
         }
@@ -471,13 +453,10 @@
             document.getElementById('sectionTitle').textContent = 'نتائج البحث';
             document.getElementById('productCountHint').textContent = results.length + ' نتيجة';
             document.getElementById('productsGrid').innerHTML = results.map(p => `
-                <div class="product-card bg-white border border-gray-200 rounded-xl p-3 text-center" role="button" tabindex="0" onclick="addProductFromCard(event,${Number(p.id)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();addProductFromCard(event,${Number(p.id)})}" aria-label="إضافة الصنف إلى السلة">
-                    ${p.image ? `<img src="${p.image}" class="w-full h-16 object-cover rounded-lg mb-2">` : ''}
-                    <div class="font-bold text-sm mb-1">${p.name}</div>
-                    ${p.barcode ? `<div class="text-[10px] text-gray-400 mb-1">▦ ${p.barcode}</div>` : ''}
-                    <div class="text-orange-600 font-bold text-sm mb-2">${formatPrice(p.price)}</div>
-                    <div class="mt-2 text-[11px] font-bold text-orange-700">المس أي مكان في البطاقة للإضافة</div>
-                    <button type="button" onclick="event.stopPropagation();addToCartById(${Number(p.id)},1)" class="w-full mt-1 bg-orange-500 text-white py-2 rounded-lg text-sm font-bold hover:bg-orange-600 transition">➕ إضافة</button>
+                <div class="product-card bg-white border border-gray-200 rounded-xl p-3 text-center" role="button" tabindex="0" onclick="addProductFromCard(event,${Number(p.id)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();addProductFromCard(event,${Number(p.id)})}" aria-label="إضافة ${p.name} إلى السلة">
+                    ${p.image ? `<img src="${p.image}" alt="${p.name}" class="product-image">` : `<div class="product-image product-image-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 15l3-3 2 2 2-2 3 3M8 9h.01"></path></svg></div>`}
+                    <div class="product-name">${p.name}</div>
+                    <div class="q-product-price">${formatPrice(p.price)}</div>
                 </div>
             `).join('');
         }
@@ -493,7 +472,6 @@
         }
 
         function addProductFromCard(event, productId) {
-            if (event?.target?.closest?.('[data-product-favorite]')) return;
             addToCartById(productId, 1);
         }
 
@@ -529,18 +507,18 @@
             document.getElementById('itemCount').textContent = count + ' قطع';
 
             if(cart.length === 0) {
-                list.innerHTML = '<div class="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-9 text-center"><div class="text-3xl">🧺</div><p class="mt-2 font-black text-slate-600">السلة فارغة</p><p class="mt-1 text-xs leading-5 text-slate-400">المس بطاقة أي صنف لإضافته إلى الطلب الحالي.</p></div>';
+                list.innerHTML = '<div class="cart-empty"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h2l2 11h9l2-8H7M10 20h.01M17 20h.01"></path></svg><p>السلة فارغة - انقر على الوجبة للإضافة</p></div>';
             } else {
                 list.innerHTML = cart.map((item, i) => `
-                    <div class="cart-item flex justify-between items-center gap-2 border border-slate-100 bg-gray-50 p-3 rounded-xl text-sm animate-slide">
-                        <button type="button" onclick="removeFromCart(${i})" class="remove-cart-item shrink-0 rounded-lg bg-rose-50 text-red-500 hover:bg-rose-100" aria-label="حذف ${item.name}">✕</button>
-                        <span class="min-w-0 flex-1"><span class="block truncate font-black text-slate-800">${item.name}</span>${item.modifiers?.length ? `<small class="block text-[11px] text-indigo-600 mt-0.5 leading-5">+ ${item.modifiers.map(option => typeof option === 'object' ? option.name + (option.price ? ' (' + formatPrice(option.price) + ')' : '') : option).join('، ')}</small>` : ''}</span>
+                    <div class="cart-item border border-slate-100 bg-gray-50 p-3 rounded-xl text-sm animate-slide">
+                        <span class="cart-item-name min-w-0"><span class="block truncate font-black text-slate-800">${item.name}</span>${item.modifiers?.length ? `<small class="block text-[11px] text-indigo-600 mt-0.5 leading-5">+ ${item.modifiers.map(option => typeof option === 'object' ? option.name + (option.price ? ' (' + formatPrice(option.price) + ')' : '') : option).join('، ')}</small>` : ''}</span>
                         <div class="qty-control flex items-center gap-1 rounded-lg bg-white border border-slate-200 p-0.5">
                             <button type="button" onclick="updateCartQty(${i},-1)" class="rounded-md bg-slate-100 hover:bg-slate-200 text-sm font-black" aria-label="تقليل كمية ${item.name}">−</button>
                             <span class="w-7 text-center font-black text-slate-800">${item.qty}</span>
-                            <button type="button" onclick="updateCartQty(${i},1)" class="rounded-md bg-orange-500 text-white hover:bg-orange-600 text-sm font-black" aria-label="زيادة كمية ${item.name}">+</button>
+                            <button type="button" onclick="updateCartQty(${i},1)" class="rounded-md bg-blue-600 text-white hover:bg-blue-700 text-sm font-black" aria-label="زيادة كمية ${item.name}">+</button>
                         </div>
-                        <span class="font-black w-20 text-left text-slate-800">${formatPrice(item.price * item.qty)}</span>
+                        <span class="cart-item-total font-black text-left text-slate-800">${formatPrice(item.price * item.qty)}</span>
+                        <button type="button" onclick="removeFromCart(${i})" class="remove-cart-item shrink-0 rounded-lg bg-red-600 text-white hover:bg-red-700" aria-label="حذف ${item.name}">حذف</button>
                     </div>
                 `).join('');
             }
@@ -836,11 +814,12 @@
                 const paidMethod = paymentMethod;
                 document.getElementById('printReceipt').innerHTML = buildReceiptHTML(resData.id);
                 applyPrintPageSize(document.getElementById('printReceipt').scrollHeight);
-                if (!printerSettings.auto_print_receipt) window.print();
+                const directPrint = !printerSettings.auto_print_receipt ? await printSavedReceipt(resData.id) : null;
                 resetSaleWorkspace();
                 await loadDineInTables();
-                showPrintFailureAlert(resData.print);
-                showToast('✅ تم الحفظ - فاتورة رقم ' + resData.id + (paidMethod ? ' - ' + paidMethod : '') + autoPrintNotice(resData.print) + autoDrawerNotice(resData.drawer));
+                showPrintFailureAlert(directPrint?.print ? {receipt: directPrint.print, kitchen: resData.print?.kitchen} : resData.print);
+                const directPrintNotice = directPrint ? ' — ' + (directPrint.message || directPrint.error || 'تحقق من حالة الطباعة') : '';
+                showToast('✅ تم الحفظ - فاتورة رقم ' + resData.id + (paidMethod ? ' - ' + paidMethod : '') + autoPrintNotice(resData.print) + autoDrawerNotice(resData.drawer) + directPrintNotice);
             } catch(e) { showToast('❌ ' + (e.message || 'خطأ في الحفظ')); }
             finally { setSaleBusy(false); }
         }
@@ -913,6 +892,17 @@
             cashAmount = total;
             cardAmount = 0;
             saveOrder();
+        }
+
+        async function printSavedReceipt(orderId) {
+            try {
+                const response = await fetch('/api/printer/orders/' + encodeURIComponent(orderId) + '/print', {method: 'POST'});
+                const data = await response.json();
+                const print = data.print || {};
+                return {ok: response.ok && data.ok, message: print.message || data.error || (data.ok ? 'أُرسل الإيصال الحراري للطابعة' : 'تعذر إرسال الإيصال الحراري'), error: data.error || '', print};
+            } catch (_) {
+                return {ok: false, message: 'تعذر الاتصال بخدمة الطباعة المحلية'};
+            }
         }
 
         async function changeCurrency() {

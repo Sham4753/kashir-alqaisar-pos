@@ -118,7 +118,7 @@ def choose_vault_dir():
 VAULT_DIR = choose_vault_dir()
 DATA_FILE = os.path.join(VAULT_DIR, 'data.json')
 BACKUP_DIR = os.path.join(VAULT_DIR, 'backups')
-FLASH_BACKUP = os.path.join(BASE_DIR, 'data_backup.json')
+FLASH_BACKUP = os.path.join(VAULT_DIR, 'data_backup.json')
 FACTORY_FILE = os.path.join(BASE_DIR, 'factory_data.json')
 
 os.makedirs(VAULT_DIR, exist_ok=True)
@@ -368,9 +368,7 @@ def setup_initialize():
                               'license_id': str(payload.get('license_id', '')).strip() or 'QAISAR-' + uuid.uuid4().hex[:10].upper(),
                               'owner_name': str(payload.get('owner_name', '')).strip(), 'created_at': datetime.now().isoformat()}
     save(data); backup(); write_local_license(data)
-    # تصبح نسخة المصنع الخاصة بالعميل بعد التهيئة، حتى لا تعيد الضبط بيانات مطعم آخر.
-    atomic_write_json(FACTORY_FILE, data)
-    atomic_write_json(FLASH_BACKUP, data)
+    # يبقى قالب المصنع نظيفًا داخل المصدر، بينما تحفظ بيانات العميل في الخزنة المحلية فقط.
     return jsonify({'ok': True, 'license_id': settings['commercial']['license_id']})
 
 @app.route('/api/license', methods=['GET'])
@@ -1089,8 +1087,7 @@ def start_flask():
 
 @app.route('/api/reload-menu', methods=['POST'])
 def reload_menu():
-    """تهيئة المنيو - استيراد المنيو من نسخة الفلاش (data_backup.json) للخزنة المحلية،
-    مفيدة لو صار فرق بين الجهاز والفلاش أو أول تشغيل على جهاز جديد."""
+    """تهيئة المنيو من لقطة البيانات المحلية المحفوظة في الخزنة."""
     try:
         if os.path.exists(FLASH_BACKUP):
             with open(FLASH_BACKUP, 'r', encoding='utf-8') as f:
@@ -1099,8 +1096,8 @@ def reload_menu():
             local_data['menu'] = flash_data.get('menu', {})
             save(local_data)
             backup()
-            return jsonify({"ok": True, "message": "تم تهيئة المنيو من نسخة الفلاش"})
-        return jsonify({"ok": False, "error": "data_backup.json غير موجود بمجلد التطبيق"})
+            return jsonify({"ok": True, "message": "تمت تهيئة المنيو من اللقطة المحلية"})
+        return jsonify({"ok": False, "error": "لا توجد لقطة بيانات محلية لاستيراد المنيو"})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 
@@ -3406,7 +3403,6 @@ def factory_reset_endpoint():
         with open(FACTORY_FILE, 'r', encoding='utf-8') as f:
             factory_data = json.load(f)
         atomic_write_json(DATA_FILE, factory_data)
-        atomic_write_json(FLASH_BACKUP, factory_data)
         return jsonify({"ok": True, "message": "تمت إعادة ضبط المصنع، وحُفظت نسخة احتياطية من البيانات السابقة"})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
