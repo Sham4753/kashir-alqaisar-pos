@@ -127,6 +127,8 @@ os.makedirs(BACKUP_DIR, exist_ok=True)
 if not os.path.exists(DATA_FILE):
     if os.path.exists(FLASH_BACKUP):
         shutil.copy(FLASH_BACKUP, DATA_FILE)
+    elif os.path.exists(FACTORY_FILE):
+        shutil.copy(FACTORY_FILE, DATA_FILE)
     else:
         with open(DATA_FILE, 'w', encoding='utf-8') as f:
             json.dump({"menu": {}, "orders": [], "shifts": [], "log": [], "settings": {"currency": "SYP"}}, f, ensure_ascii=False, indent=2)
@@ -423,10 +425,13 @@ def add_product():
     barcode = str(payload.get('barcode', '') or '').strip()
     if barcode and any(str(x.get('barcode', '')) == barcode for items in data['menu'].values() for x in items):
         return jsonify({'ok': False, 'error': 'الباركود مستخدم لمنتج آخر'}), 409
+    station = str(payload.get('kitchen_station', 'main') or 'main')
+    if station not in KITCHEN_STATION_LABELS:
+        return jsonify({'ok': False, 'error': 'محطة المطبخ غير صالحة'}), 400
     p = {"id": payload.get('id'), "name": payload.get('name'), "price": payload.get('price'),
-         "image": payload.get('image', ''), "barcode": barcode,
-         "modifiers": payload.get('modifiers', []), "combo_items": payload.get('combo_items', []),
-         "kitchen_station": payload.get('kitchen_station', 'main'), "offer_id": payload.get('offer_id')}
+          "image": payload.get('image', ''), "barcode": barcode,
+         "modifiers": sanitize_modifier_options(payload.get('modifiers', [])), "combo_items": payload.get('combo_items', []),
+         "kitchen_station": station, "offer_id": payload.get('offer_id')}
     if cat in data['menu']:
         data['menu'][cat].append(p)
     save(data); backup()
@@ -448,7 +453,14 @@ def update_product(pid):
                 p['barcode'] = barcode
                 if 'image' in payload:
                     p['image'] = payload.get('image', '')
-                for key in ('modifiers', 'combo_items', 'kitchen_station', 'offer_id'):
+                if 'modifiers' in payload:
+                    p['modifiers'] = sanitize_modifier_options(payload.get('modifiers', []))
+                if 'kitchen_station' in payload:
+                    station = str(payload.get('kitchen_station') or 'main')
+                    if station not in KITCHEN_STATION_LABELS:
+                        return jsonify({'ok': False, 'error': 'محطة المطبخ غير صالحة'}), 400
+                    p['kitchen_station'] = station
+                for key in ('combo_items', 'offer_id'):
                     if key in payload:
                         p[key] = payload.get(key)
                 save(data); backup()
@@ -597,6 +609,27 @@ def as_money(value, default=None):
         return default
 
 
+KITCHEN_STATION_LABELS = {
+    'main': 'المطبخ الرئيسي', 'grill': 'الشواية', 'drinks': 'المشروبات',
+    'fryer': 'المقالي', 'dessert': 'الحلويات',
+}
+
+
+def sanitize_modifier_options(raw_options):
+    """ينظم خيارات الإضافة المسموحة ويمتنع عن قبول السعر القادم من شاشة الكاشير."""
+    if not isinstance(raw_options, list):
+        return []
+    result, seen = [], set()
+    for item in raw_options[:20]:
+        name = str(item.get('name', '') if isinstance(item, dict) else item).strip()[:80]
+        price = as_money(item.get('price', 0) if isinstance(item, dict) else 0, 0)
+        if not name or name in seen or price is None:
+            continue
+        seen.add(name)
+        result.append({'name': name, 'price': price})
+    return result
+
+
 def approved_order_items(data, raw_items):
     """يبني أصناف الفاتورة من منيو الخادم، فلا يعتمد السعر أو الاسم أو الكمية القادمة من المتصفح."""
     if not isinstance(raw_items, list) or not raw_items or len(raw_items) > 100:
@@ -636,16 +669,27 @@ def approved_order_items(data, raw_items):
             return None, 'كمية أحد الأصناف غير صالحة'
         if qty_value != qty or not 1 <= qty <= MAX_ORDER_QTY:
             return None, f'كمية كل صنف يجب أن تكون عدداً صحيحاً بين 1 و{MAX_ORDER_QTY}'
-        price = as_money(product.get('price'))
-        if price is None:
+        base_price = as_money(product.get('price'))
+        if base_price is None:
             return None, 'سعر أحد الأصناف في المنيو غير صالح'
-        modifiers = item.get('modifiers', [])
-        if not isinstance(modifiers, list):
-            modifiers = []
-        allowed_modifiers = {str(x) for x in product.get('modifiers', []) if isinstance(x, str)}
-        modifiers = [str(x)[:80] for x in modifiers if str(x) in allowed_modifiers][:10]
+        catalog = {row['name']: row for row in sanitize_modifier_options(product.get('modifiers', []))}
+        requested = item.get('modifiers', [])
+        if not isinstance(requested, list):
+            requested = []
+        modifier_names = []
+        for raw_modifier in requested[:10]:
+            name = str(raw_modifier.get('name', '') if isinstance(raw_modifier, dict) else raw_modifier).strip()
+            if name in catalog and name not in modifier_names:
+                modifier_names.append(name)
+        modifiers = [catalog[name] for name in modifier_names]
+        modifier_total = round(sum(row['price'] for row in modifiers), 2)
+        station = str(product.get('kitchen_station', 'main') or 'main')
+        if station not in KITCHEN_STATION_LABELS:
+            station = 'main'
         approved.append({'product_id': product.get('id'), 'name': str(product.get('name', '')).strip(),
-                         'price': price, 'quantity': qty, 'modifiers': modifiers})
+                         'base_price': base_price, 'modifier_total': modifier_total,
+                         'price': round(base_price + modifier_total, 2), 'quantity': qty,
+                         'modifiers': modifiers, 'kitchen_station': station})
     return approved, None
 
 
@@ -694,6 +738,8 @@ def orders():
             'customer': str(payload.get('customer', ''))[:120], 'table': str(payload.get('table', ''))[:60],
             'cashier_name': session.get('username', 'غير محدد'), **payment_data
         }
+        if order_type == 'ديليفري':
+            o['delivery_status'] = 'pending'
         snap = currency_snapshot(data, payload)
         o['currency'] = snap['currency']; o['exchange_rate'] = snap['exchange_rate']
         data.setdefault('orders', []).append(o)
@@ -708,8 +754,12 @@ def orders():
         consume_inventory_for_order(data, o['items'], o['id'])
         receipt_print = queue_thermal_print(data, o, 'receipt')
         kitchen_print = queue_thermal_print(data, o, 'kitchen')
+        o['print_status'] = {'receipt': receipt_print, 'kitchen': kitchen_print}
+        drawer_result = maybe_auto_open_cash_drawer(data, o, payment_data.get('cash_amount', 0))
+        if drawer_result:
+            o['cash_drawer_status'] = drawer_result
         save(data); backup()
-        return jsonify({'ok': True, 'id': o['id'], 'total': total, 'print': {'receipt': receipt_print, 'kitchen': kitchen_print}})
+        return jsonify({'ok': True, 'id': o['id'], 'total': total, 'print': {'receipt': receipt_print, 'kitchen': kitchen_print}, 'drawer': drawer_result})
     all_orders = data.get('orders', []) + data.get('orders_archive', [])
     date_from = request.args.get('from', '').strip()
     date_to = request.args.get('to', '').strip()
@@ -1154,6 +1204,65 @@ def delete_employee(eid):
     save(data)
     backup()
     return jsonify({"ok": True})
+
+
+def attendance_rows(data, date_from='', date_to=''):
+    employees = {str(row.get('id')): row.get('name', '') for row in data.get('employees', [])}
+    rows = []
+    for entry in data.get('attendance', []):
+        stamp = str(entry.get('clock_in', entry.get('date', '')))
+        if date_from and stamp[:10] < date_from:
+            continue
+        if date_to and stamp[:10] > date_to:
+            continue
+        row = dict(entry); row['employee_name'] = employees.get(str(entry.get('employee_id')), 'موظف محذوف')
+        if row.get('clock_in') and row.get('clock_out'):
+            try:
+                row['minutes'] = max(0, int((datetime.fromisoformat(row['clock_out']) - datetime.fromisoformat(row['clock_in'])).total_seconds() // 60))
+            except (TypeError, ValueError):
+                row['minutes'] = 0
+        else:
+            row['minutes'] = None
+        rows.append(row)
+    return sorted(rows, key=lambda row: row.get('clock_in', ''), reverse=True)
+
+
+@app.route('/api/attendance', methods=['GET'])
+def list_attendance():
+    if not has_role('manager', 'supervisor'):
+        return permission_error()
+    data = load()
+    return jsonify(attendance_rows(data, request.args.get('from', '').strip(), request.args.get('to', '').strip())[:300])
+
+
+@app.route('/api/attendance/clock', methods=['POST'])
+def clock_employee():
+    if not has_role('manager', 'supervisor'):
+        return permission_error()
+    data = load(); payload = request.get_json(silent=True) or {}
+    try:
+        employee_id = int(payload.get('employee_id'))
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'error': 'اختر موظفًا صالحًا'}), 400
+    if not any(int(row.get('id', -1)) == employee_id for row in data.get('employees', [])):
+        return jsonify({'ok': False, 'error': 'الموظف غير موجود'}), 404
+    action = str(payload.get('action', 'in') or 'in')
+    if action not in {'in', 'out'}:
+        return jsonify({'ok': False, 'error': 'إجراء الدوام غير صالح'}), 400
+    open_row = next((row for row in reversed(data.get('attendance', [])) if int(row.get('employee_id', -1)) == employee_id and not row.get('clock_out')), None)
+    now = datetime.now().isoformat()
+    if action == 'in':
+        if open_row:
+            return jsonify({'ok': False, 'error': 'للموظف تسجيل دخول مفتوح بالفعل'}), 409
+        entry = {'id': uuid.uuid4().hex[:12], 'employee_id': employee_id, 'clock_in': now, 'clock_out': '', 'recorded_by': session.get('username', 'unknown')}
+        data.setdefault('attendance', []).append(entry)
+    else:
+        if not open_row:
+            return jsonify({'ok': False, 'error': 'لا يوجد تسجيل دخول مفتوح لهذا الموظف'}), 409
+        open_row['clock_out'] = now; open_row['closed_by'] = session.get('username', 'unknown'); entry = open_row
+    data['attendance'] = data.get('attendance', [])[-1000:]
+    save(data); backup()
+    return jsonify({'ok': True, 'entry': entry})
 
 
 def positive_amount(value, default=None):
@@ -1770,6 +1879,7 @@ def get_analytics():
             'discount': round(discount_amount if not (category_filter or product_filter) else discount_amount * (filtered_subtotal / original_subtotal if original_subtotal else 0), 2),
             'total': round(detail_total, 2),
             'voided': bool(o.get('voided')),
+            'print_status': order_print_status_label(o),
             'items': detail_items
         })
 
@@ -1828,6 +1938,18 @@ def _report_period_orders(data, period='daily', date_from='', date_to=''):
         if date_to:
             orders = [order for order in orders if (order.get('timestamp') or order.get('date', ''))[:10] <= date_to]
     return orders
+
+
+def order_print_status_label(order):
+    """يعيد وصفًا عربيًا موجزًا لحالة إرسال الإيصال وتذكرة المطبخ المحفوظة مع الفاتورة."""
+    saved = order.get('print_status', {}) or {}
+    labels = {'sent': 'تم الإرسال', 'failed': 'فشل الإرسال', 'skipped': 'لم يُنفذ', 'disabled': 'غير مفعّل'}
+    parts = []
+    for key, title in (('receipt', 'الإيصال'), ('kitchen', 'المطبخ')):
+        job = saved.get(key, {}) if isinstance(saved, dict) else {}
+        status = job.get('status') if isinstance(job, dict) else None
+        parts.append(f'{title}: {labels.get(status, "غير مسجل")}')
+    return ' · '.join(parts)
 
 
 def _in_report_period(timestamp, period, date_from='', date_to=''):
@@ -1943,7 +2065,7 @@ def create_financial_xlsx(report):
     sheets = [
         ('الملخص المالي', [['تقرير مالي ومبيعات - كاشير القيصر'], ['الفترة', report['period']], ['من', report['from'] or '—'], ['إلى', report['to'] or '—'], [], ['البند', 'القيمة'], ['إجمالي المبيعات', summary['sales']], ['عدد الفواتير', summary['orders']], ['نقد داخل', summary['cash_in']], ['نقد خارج', summary['cash_out']], ['رصيد النقد', summary['cash_balance']], ['بطاقة داخل', summary['card_in']], ['بطاقة خارج', summary['card_out']], ['رصيد البطاقات', summary['card_balance']]]),
         ('مبيعات الكاشير', [['الكاشير', 'عدد الفواتير', 'المبيعات', 'النقد', 'البطاقات', 'الخصومات', 'متوسط الفاتورة', 'صالة', 'سفري', 'ديليفري']] + [[row['cashier'], row['orders'], row['sales'], row['cash'], row['card'], row['discounts'], row['average_order'], row['dine_in_orders'], row['takeaway_orders'], row['delivery_orders']] for row in report['cashier_summary']]),
-        ('الفواتير', [['رقم الفاتورة', 'التاريخ', 'الكاشير', 'النوع', 'الدفع', 'النقد', 'البطاقات', 'الخصم', 'الإجمالي', 'الطاولة', 'الزبون', 'الأصناف']] + [[order.get('id', ''), order.get('timestamp') or order.get('date', ''), order.get('cashier_name', 'غير معروف'), order.get('type', 'سفري'), order.get('payment', ''), order.get('cash_amount', ''), order.get('card_amount', ''), order.get('discount_amount', ''), order.get('total', 0), order.get('table', ''), order.get('customer', ''), '، '.join(f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', []))] for order in report['orders']]),
+        ('الفواتير', [['رقم الفاتورة', 'التاريخ', 'الكاشير', 'النوع', 'الدفع', 'النقد', 'البطاقات', 'الخصم', 'الإجمالي', 'حالة الطباعة', 'الطاولة', 'الزبون', 'الأصناف']] + [[order.get('id', ''), order.get('timestamp') or order.get('date', ''), order.get('cashier_name', 'غير معروف'), order.get('type', 'سفري'), order.get('payment', ''), order.get('cash_amount', ''), order.get('card_amount', ''), order.get('discount_amount', ''), order.get('total', 0), order_print_status_label(order), order.get('table', ''), order.get('customer', ''), '، '.join(f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', []))] for order in report['orders']]),
         ('دفتر الصندوق', [['التاريخ', 'الاتجاه', 'القناة', 'التصنيف', 'المبلغ', 'الكاشير/المستخدم', 'المرجع', 'الملاحظة']] + [[movement.get('timestamp', ''), movement.get('direction', ''), movement.get('channel', ''), movement.get('category', ''), movement.get('amount', 0), movement.get('created_by', ''), movement.get('reference_id', ''), movement.get('note', '')] for movement in report['cashbook']])
     ]
     buffer = BytesIO()
@@ -1959,6 +2081,22 @@ def create_financial_xlsx(report):
     return buffer
 
 
+def create_print_log_xlsx(rows):
+    """ينشئ ملف Excel مستقلًا لسجل محاولات الطباعة لتتبع الأعطال لاحقًا."""
+    status_labels = {'sent': 'تم الإرسال', 'failed': 'فشل الإرسال', 'skipped': 'لم يُنفذ', 'disabled': 'غير مفعّل'}
+    sheet_rows = [['سجل حالات الطباعة - كاشير القيصر'], ['تاريخ التصدير', datetime.now().isoformat(timespec='seconds')], [], ['التاريخ', 'رقم الطلب', 'النوع', 'الحالة', 'الطابعة', 'الرسالة']]
+    sheet_rows.extend([[row.get('timestamp', ''), row.get('order_id', ''), 'إيصال العميل' if row.get('type') == 'receipt' else 'تذكرة المطبخ', status_labels.get(row.get('status'), row.get('status', '')), row.get('printer', ''), row.get('message', '')] for row in rows])
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>')
+        archive.writestr('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')
+        archive.writestr('xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="سجل الطباعة" sheetId="1" r:id="rId1"/></sheets></workbook>')
+        archive.writestr('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>')
+        archive.writestr('xl/worksheets/sheet1.xml', _xlsx_sheet(sheet_rows))
+    buffer.seek(0)
+    return buffer
+
+
 @app.route('/api/analytics/financial.xlsx', methods=['GET'])
 def export_financial_xlsx():
     if not has_role('manager', 'supervisor'):
@@ -1968,6 +2106,26 @@ def export_financial_xlsx():
         return jsonify({'ok': False, 'error': 'فترة التقرير غير صالحة'}), 400
     report = financial_report_payload(load(), period, request.args.get('from', '').strip(), request.args.get('to', '').strip(), request.args.get('cashier', '').strip())
     return send_file(create_financial_xlsx(report), as_attachment=True, download_name=f"financial_report_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx", mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+@app.route('/api/analytics/print-log.xlsx', methods=['GET'])
+def export_print_log_xlsx():
+    if not has_role('manager', 'supervisor'):
+        return permission_error()
+    date_from = request.args.get('from', '').strip()
+    date_to = request.args.get('to', '').strip()
+    status = request.args.get('status', '').strip()
+    ticket_type = request.args.get('type', '').strip()
+    printer_query = request.args.get('printer', '').strip().casefold()
+    sort_by = request.args.get('sort', 'timestamp_desc').strip()
+    rows = [row for row in load().get('print_log', []) if (not date_from or str(row.get('timestamp', ''))[:10] >= date_from) and (not date_to or str(row.get('timestamp', ''))[:10] <= date_to) and (not status or row.get('status') == status) and (not ticket_type or row.get('type') == ticket_type) and (not printer_query or printer_query in str(row.get('printer', '')).casefold())]
+    if sort_by == 'printer_asc':
+        rows.sort(key=lambda row: (str(row.get('printer', '')).casefold(), str(row.get('timestamp', ''))))
+    elif sort_by == 'printer_desc':
+        rows.sort(key=lambda row: (str(row.get('printer', '')).casefold(), str(row.get('timestamp', ''))), reverse=True)
+    else:
+        rows.sort(key=lambda row: str(row.get('timestamp', '')), reverse=True)
+    return send_file(create_print_log_xlsx(rows), as_attachment=True, download_name=f"print_log_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx", mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
 @app.route('/api/settings/currency', methods=['POST'])
@@ -2205,6 +2363,82 @@ def print_text_to_printer(printer_name, text):
     except Exception:
         return False
 
+CASH_DRAWER_PULSE_PROFILES = {
+    'pin2_standard': (b'\x1b\x70\x00\x19\xfa', 'المخرج 1 — قياسي'),
+    'pin2_short': (b'\x1b\x70\x00\x19\x64', 'المخرج 1 — نبضة قصيرة'),
+    'pin5_standard': (b'\x1b\x70\x01\x19\xfa', 'المخرج 2 — قياسي'),
+    'pin5_short': (b'\x1b\x70\x01\x19\x64', 'المخرج 2 — نبضة قصيرة'),
+}
+
+
+def open_cash_drawer_via_printer(printer_name, pulse_profile='pin2_standard'):
+    """يرسل نبضة ESC/POS لدرج موصول بمنفذ RJ11 في طابعة متوافقة على Windows فقط."""
+    if sys.platform != 'win32':
+        return False, 'فتح الدرج الفعلي متاح عند تشغيل الكاشير على Windows فقط'
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        class DOC_INFO_1W(ctypes.Structure):
+            _fields_ = [('pDocName', wintypes.LPCWSTR), ('pOutputFile', wintypes.LPCWSTR), ('pDatatype', wintypes.LPCWSTR)]
+
+        winspool = ctypes.WinDLL('winspool.drv')
+        handle = wintypes.HANDLE()
+        winspool.OpenPrinterW.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(wintypes.HANDLE), ctypes.c_void_p]
+        winspool.OpenPrinterW.restype = wintypes.BOOL
+        if not winspool.OpenPrinterW(str(printer_name), ctypes.byref(handle), None):
+            raise OSError('تعذر الاتصال بالطابعة المحددة')
+        try:
+            doc = DOC_INFO_1W('Kashir AlQaisar Cash Drawer', None, 'RAW')
+            winspool.StartDocPrinterW.argtypes = [wintypes.HANDLE, wintypes.DWORD, ctypes.c_void_p]
+            winspool.StartDocPrinterW.restype = wintypes.DWORD
+            if not winspool.StartDocPrinterW(handle, 1, ctypes.byref(doc)):
+                raise OSError('تعذر بدء مهمة فتح الدرج')
+            try:
+                if not winspool.StartPagePrinter(handle):
+                    raise OSError('تعذر بدء أمر فتح الدرج')
+                try:
+                    pulse_bytes = CASH_DRAWER_PULSE_PROFILES.get(pulse_profile, CASH_DRAWER_PULSE_PROFILES['pin2_standard'])[0]
+                    pulse = ctypes.create_string_buffer(pulse_bytes)
+                    written = wintypes.DWORD(0)
+                    if not winspool.WritePrinter(handle, pulse, len(pulse_bytes), ctypes.byref(written)) or written.value != len(pulse_bytes):
+                        raise OSError('لم تستقبل الطابعة نبضة فتح الدرج')
+                finally:
+                    winspool.EndPagePrinter(handle)
+            finally:
+                winspool.EndDocPrinter(handle)
+        finally:
+            winspool.ClosePrinter(handle)
+        return True, 'تم إرسال نبضة فتح الدرج للطابعة'
+    except Exception as exc:
+        return False, str(exc)[:160] or 'تعذر إرسال نبضة فتح الدرج'
+
+
+def record_cash_drawer_attempt(data, username, reason, source='manual'):
+    """ينفذ ويسجل محاولة فتح الدرج، وتستخدمه إجراءات الفتح اليدوي والتلقائي."""
+    printer = data.get('settings', {}).get('printer', {})
+    drawer_printer = str(printer.get('cash_drawer_printer') or printer.get('printer_name') or '').strip()
+    pulse_profile = str(printer.get('cash_drawer_pulse_profile', 'pin2_standard') or 'pin2_standard')
+    log = {'id': uuid.uuid4().hex[:12], 'timestamp': datetime.now().isoformat(), 'username': username or 'unknown', 'printer': drawer_printer, 'reason': reason or 'فتح درج النقد', 'source': source, 'pulse_profile': pulse_profile, 'status': 'skipped', 'message': ''}
+    if not printer.get('cash_drawer_enabled'):
+        log.update({'status': 'disabled', 'message': 'فتح درج النقد غير مفعّل من الإعدادات'})
+    elif not drawer_printer:
+        log.update({'status': 'skipped', 'message': 'لم تُحدد طابعة متوافقة لدرج النقد'})
+    else:
+        opened, message = open_cash_drawer_via_printer(drawer_printer, pulse_profile)
+        log.update({'status': 'sent' if opened else ('skipped' if sys.platform != 'win32' else 'failed'), 'message': message})
+    data.setdefault('cash_drawer_log', []).append(log)
+    data['cash_drawer_log'] = data['cash_drawer_log'][-200:]
+    return log
+
+
+def maybe_auto_open_cash_drawer(data, order, cash_amount):
+    """يفتح الدرج تلقائيًا فقط عندما توجد دفعة نقدية فعلية والخيار مفعّل."""
+    printer = data.get('settings', {}).get('printer', {})
+    if not printer.get('auto_open_cash_drawer') or float(cash_amount or 0) <= 0:
+        return None
+    return record_cash_drawer_attempt(data, order.get('cashier_name', session.get('username', 'unknown')), f"فتح تلقائي بعد دفع نقدي للفاتورة {order.get('id', '')}", 'auto_payment')
+
 
 def thermal_receipt_text(data, order, ticket_type='receipt'):
     """ينشئ نصًا بسيطًا للطابعات الحرارية، ويضمن بقاء البيع ناجحًا إن فشلت الطابعة."""
@@ -2241,9 +2475,9 @@ def queue_thermal_print(data, order, ticket_type='receipt'):
     printer = data.get('settings', {}).get('printer', {})
     enabled = bool(printer.get('auto_print_receipt')) if ticket_type == 'receipt' else bool(printer.get('auto_print_kitchen'))
     if not enabled:
-        return {'queued': False, 'reason': 'disabled'}
+        return {'queued': False, 'status': 'disabled', 'type': ticket_type, 'message': 'الطباعة التلقائية غير مفعلة'}
     printer_name = str(printer.get('printer_name') or '').strip()
-    log = {'id': uuid.uuid4().hex[:12], 'timestamp': datetime.now().isoformat(), 'order_id': order.get('id', ''), 'type': ticket_type, 'printer': printer_name, 'status': 'skipped', 'message': ''}
+    log = {'id': uuid.uuid4().hex[:12], 'timestamp': datetime.now().isoformat(), 'order_id': order.get('id', ''), 'type': ticket_type, 'printer': printer_name, 'status': 'skipped', 'message': '', 'resolved': False}
     if sys.platform != 'win32':
         log.update({'status': 'skipped', 'message': 'الطباعة التلقائية الفعلية متاحة على Windows فقط'})
     elif not printer_name:
@@ -2254,6 +2488,11 @@ def queue_thermal_print(data, order, ticket_type='receipt'):
     data.setdefault('print_log', []).append(log)
     data['print_log'] = data['print_log'][-200:]
     return log
+
+
+def unresolved_print_failures(data):
+    """يعيد محاولات الإرسال الفاشلة التي لم يحلها إرسال ناجح لاحقًا."""
+    return [row for row in data.get('print_log', []) if row.get('status') == 'failed' and not row.get('resolved', False)]
 
 
 @app.route('/api/printer/list', methods=['GET'])
@@ -2289,6 +2528,10 @@ def get_printer_settings():
         "printer_name": p.get('printer_name', ''),
         "auto_print_receipt": bool(p.get('auto_print_receipt', False)),
         "auto_print_kitchen": bool(p.get('auto_print_kitchen', False)),
+        "cash_drawer_enabled": bool(p.get('cash_drawer_enabled', False)),
+        "auto_open_cash_drawer": bool(p.get('auto_open_cash_drawer', False)),
+        "cash_drawer_printer": p.get('cash_drawer_printer', p.get('printer_name', '')),
+        "cash_drawer_pulse_profile": p.get('cash_drawer_pulse_profile', 'pin2_standard'),
         "logo_data": p.get('logo_data', ''),
         "logo_caption": p.get('logo_caption', '')
     })
@@ -2305,19 +2548,40 @@ def set_printer_settings():
     logo_data = str(payload.get('logo_data', existing.get('logo_data', '')) or '')
     if logo_data and (not logo_data.startswith('data:image/') or len(logo_data) > 300000):
         return jsonify({'ok': False, 'error': 'صورة الشعار يجب أن تكون صورة محلية لا تتجاوز 200 كيلوبايت'}), 400
+    pulse_profile = str(payload.get('cash_drawer_pulse_profile', existing.get('cash_drawer_pulse_profile', 'pin2_standard')) or 'pin2_standard')
+    if pulse_profile not in CASH_DRAWER_PULSE_PROFILES:
+        return jsonify({'ok': False, 'error': 'نمط نبضة درج النقد غير صالح'}), 400
     data['settings']['printer'] = {
         'paper_width': payload.get('paper_width', 80),
         'font_size': payload.get('font_size', 'medium'),
         'copies': payload.get('copies', 1),
         'footer_text': str(payload.get('footer_text', '') or '')[:160],
         'printer_name': payload.get('printer_name', existing.get('printer_name', '')),
-        'auto_print_receipt': bool(payload.get('auto_print_receipt', False)),
-        'auto_print_kitchen': bool(payload.get('auto_print_kitchen', False)),
+        'auto_print_receipt': bool(payload.get('auto_print_receipt', existing.get('auto_print_receipt', False))),
+        'auto_print_kitchen': bool(payload.get('auto_print_kitchen', existing.get('auto_print_kitchen', False))),
+        'cash_drawer_enabled': bool(payload.get('cash_drawer_enabled', existing.get('cash_drawer_enabled', False))),
+        'auto_open_cash_drawer': bool(payload.get('auto_open_cash_drawer', existing.get('auto_open_cash_drawer', False))),
+        'cash_drawer_printer': str(payload.get('cash_drawer_printer', existing.get('cash_drawer_printer', existing.get('printer_name', ''))) or '')[:160],
+        'cash_drawer_pulse_profile': pulse_profile,
         'logo_data': logo_data,
         'logo_caption': str(payload.get('logo_caption', '') or '')[:36]
     }
     save(data)
     return jsonify({"ok": True})
+
+
+@app.route('/api/cash-drawer/open', methods=['POST'])
+def open_cash_drawer():
+    """فتح يدوي لدرج نقد موصول بالطابعة مع سجل تدقيق مستقل."""
+    if not has_role('manager'):
+        return permission_error()
+    data = load()
+    reason = str((request.get_json(silent=True) or {}).get('reason', '')).strip()[:160]
+    if len(reason) < 2:
+        return jsonify({'ok': False, 'error': 'أدخل سببًا واضحًا لفتح درج النقد'}), 400
+    log = record_cash_drawer_attempt(data, session.get('username', 'unknown'), reason)
+    save(data); backup()
+    return jsonify({'ok': log['status'] == 'sent', 'drawer': log})
 
 
 @app.route('/api/printer/orders/<order_id>/print', methods=['POST'])
@@ -2338,6 +2602,50 @@ def reprint_order(order_id):
     printer['auto_print_receipt'] = previous
     save(data)
     return jsonify({'ok': result.get('status') == 'sent', 'print': result})
+
+
+@app.route('/api/printer/orders/<order_id>/retry', methods=['POST'])
+def retry_failed_print(order_id):
+    """يعيد محاولة مستند فاشل فقط بعد طلب صريح من مستخدم الصندوق أو الإدارة."""
+    if not has_role('manager', 'supervisor', 'cashier'):
+        return permission_error()
+    payload = request.get_json(silent=True) or {}
+    ticket_type = str(payload.get('type', 'receipt')).strip()
+    if ticket_type not in ('receipt', 'kitchen'):
+        return jsonify({'ok': False, 'error': 'نوع مستند الطباعة غير صالح'}), 400
+    data = load()
+    order = next((row for row in data.get('orders', []) + data.get('orders_archive', []) if str(row.get('id')) == str(order_id) and not row.get('voided')), None)
+    if not order:
+        return jsonify({'ok': False, 'error': 'الفاتورة غير موجودة أو ملغاة'}), 404
+    failures = [row for row in unresolved_print_failures(data) if str(row.get('order_id')) == str(order_id) and row.get('type') == ticket_type]
+    if not failures:
+        return jsonify({'ok': False, 'error': 'لا توجد محاولة طباعة فاشلة غير معالجة لهذا المستند'}), 409
+    printer = data.get('settings', {}).get('printer', {})
+    if not printer.get('printer_name'):
+        return jsonify({'ok': False, 'error': 'حدد طابعة أولًا من إعدادات الطابعة'}), 400
+    enabled_key = 'auto_print_receipt' if ticket_type == 'receipt' else 'auto_print_kitchen'
+    previous = printer.get(enabled_key, False)
+    printer[enabled_key] = True
+    result = queue_thermal_print(data, order, ticket_type)
+    printer[enabled_key] = previous
+    order.setdefault('print_status', {})[ticket_type] = result
+    if result.get('status') == 'sent':
+        now = datetime.now().isoformat()
+        for failure in failures:
+            failure['resolved'] = True
+            failure['resolved_at'] = now
+            failure['resolution'] = 'retry_sent'
+    save(data); backup()
+    return jsonify({'ok': result.get('status') == 'sent', 'print': result, 'unresolved_count': len(unresolved_print_failures(data))})
+
+
+@app.route('/api/printer/errors', methods=['GET'])
+def get_unresolved_print_errors():
+    if not has_role('manager', 'supervisor', 'cashier'):
+        return permission_error()
+    rows = unresolved_print_failures(load())
+    rows.sort(key=lambda row: str(row.get('timestamp', '')), reverse=True)
+    return jsonify({'ok': True, 'count': len(rows), 'errors': rows[:30]})
 
 @app.route('/api/printer/test', methods=['POST'])
 def test_printer():
@@ -3159,12 +3467,16 @@ def close_dine_in_session(session_id):
     consume_inventory_for_order(data, order['items'], order['id'])
     receipt_print = queue_thermal_print(data, order, 'receipt')
     kitchen_print = queue_thermal_print(data, order, 'kitchen')
+    order['print_status'] = {'receipt': receipt_print, 'kitchen': kitchen_print}
+    drawer_result = maybe_auto_open_cash_drawer(data, order, payment_data.get('cash_amount', 0))
+    if drawer_result:
+        order['cash_drawer_status'] = drawer_result
     session_row['status'] = 'closed'; session_row['closed_at'] = now; session_row['closed_order_id'] = order['id']
     table = find_table(data, session_row.get('table_id'))
     if table:
         table['status'] = 'free'; table.pop('active_session_id', None); table.pop('active_since', None)
     save(data); backup()
-    return jsonify({'ok': True, 'id': order['id'], 'total': order['total'], 'order': order, 'print': {'receipt': receipt_print, 'kitchen': kitchen_print}})
+    return jsonify({'ok': True, 'id': order['id'], 'total': order['total'], 'order': order, 'print': {'receipt': receipt_print, 'kitchen': kitchen_print}, 'drawer': drawer_result})
 
 
 @app.route('/api/kitchen/orders', methods=['GET'])
@@ -3180,7 +3492,135 @@ def kitchen_orders():
             kitchen_row['table'] = session_row.get('table_name', '')
             kitchen_row['is_dine_in_session'] = True
             open_sessions.append(kitchen_row)
-    return jsonify(paid_orders + open_sessions)
+    def with_station_routes(row):
+        view = dict(row)
+        station_items = {}
+        for item in view.get('items', []):
+            station = str(item.get('kitchen_station', 'main') or 'main')
+            if station not in KITCHEN_STATION_LABELS:
+                station = 'main'
+            station_items.setdefault(station, []).append(item)
+        view['station_items'] = station_items
+        view['stations'] = [{'key': key, 'label': KITCHEN_STATION_LABELS[key], 'items': len(items)} for key, items in station_items.items()]
+        return view
+    return jsonify([with_station_routes(row) for row in paid_orders + open_sessions])
+
+
+@app.route('/api/ready-orders', methods=['GET'])
+def ready_orders():
+    """يعيد الطلبات الجاهزة للسفري والدليفري دون بيانات مالية حساسة لشاشة الانتظار المحلية."""
+    data = load()
+    rows = []
+    for order in data.get('orders', []):
+        if order.get('voided') or order.get('kitchen_status') != 'ready' or order.get('type') not in {'سفري', 'ديليفري'}:
+            continue
+        rows.append({'id': order.get('id'), 'type': order.get('type'), 'customer': order.get('customer', ''),
+                     'timestamp': order.get('timestamp', ''), 'driver_name': order.get('driver_name', ''),
+                     'delivery_status': order.get('delivery_status', '')})
+    return jsonify(rows)
+
+
+@app.route('/api/delivery/drivers', methods=['GET', 'POST'])
+def delivery_drivers():
+    if not has_role('manager', 'supervisor'):
+        return permission_error()
+    data = load()
+    if request.method == 'GET':
+        return jsonify(data.get('delivery_drivers', []))
+    payload = request.get_json(silent=True) or {}
+    name = str(payload.get('name', '')).strip()[:100]
+    phone = str(payload.get('phone', '')).strip()[:40]
+    if len(name) < 2:
+        return jsonify({'ok': False, 'error': 'اسم السائق مطلوب'}), 400
+    driver = {'id': uuid.uuid4().hex[:8], 'name': name, 'phone': phone, 'status': 'available', 'created_at': datetime.now().isoformat()}
+    data.setdefault('delivery_drivers', []).append(driver); save(data); backup()
+    return jsonify({'ok': True, 'driver': driver})
+
+
+@app.route('/api/delivery/orders', methods=['GET'])
+def delivery_orders():
+    if not has_role('manager', 'supervisor', 'cashier'):
+        return permission_error()
+    data = load(); rows = []
+    for order in data.get('orders', []):
+        if order.get('type') != 'ديليفري' or order.get('voided') or order.get('delivery_status') == 'delivered':
+            continue
+        rows.append({'id': order.get('id'), 'customer': order.get('customer', ''), 'timestamp': order.get('timestamp', ''),
+                     'kitchen_status': order.get('kitchen_status', 'new'), 'delivery_status': order.get('delivery_status', 'pending'),
+                     'driver_id': order.get('driver_id', ''), 'driver_name': order.get('driver_name', '')})
+    return jsonify(rows)
+
+
+@app.route('/api/delivery/orders/<order_id>', methods=['POST'])
+def update_delivery_order(order_id):
+    if not has_role('manager', 'supervisor', 'cashier'):
+        return permission_error()
+    data = load(); payload = request.get_json(silent=True) or {}
+    order = next((row for row in data.get('orders', []) if str(row.get('id')) == str(order_id) and row.get('type') == 'ديليفري'), None)
+    if not order:
+        return jsonify({'ok': False, 'error': 'طلب الدليفري غير موجود'}), 404
+    status = str(payload.get('status', order.get('delivery_status', 'pending')) or 'pending')
+    if status not in {'pending', 'assigned', 'out_for_delivery', 'delivered'}:
+        return jsonify({'ok': False, 'error': 'حالة التوصيل غير صالحة'}), 400
+    if 'driver_id' in payload:
+        driver = next((row for row in data.get('delivery_drivers', []) if str(row.get('id')) == str(payload.get('driver_id'))), None)
+        if not driver:
+            return jsonify({'ok': False, 'error': 'السائق غير موجود'}), 404
+        order['driver_id'] = driver['id']; order['driver_name'] = driver['name']; status = 'assigned' if status == 'pending' else status
+    order['delivery_status'] = status; order['delivery_updated_at'] = datetime.now().isoformat(); order['delivery_updated_by'] = session.get('username', 'unknown')
+    save(data); backup()
+    return jsonify({'ok': True, 'order': order})
+
+
+@app.route('/api/dashboard/daily', methods=['GET'])
+def daily_dashboard():
+    if not has_role('manager', 'supervisor'):
+        return permission_error()
+    data = load(); today = datetime.now().strftime('%Y-%m-%d')
+    orders = [row for row in data.get('orders', []) if not row.get('voided') and str(row.get('timestamp', row.get('date', '')))[:10] == today]
+    kitchen_active = [row for row in orders if row.get('kitchen_status', 'new') != 'served']
+    stock_rows = data.get('inventory', [])
+    low_stock = [row for row in stock_rows if float(row.get('quantity', row.get('stock', 0)) or 0) <= float(row.get('reorder_point', row.get('min_stock', 0)) or 0)]
+    attendance = attendance_rows(data, today, today)
+    drivers = data.get('delivery_drivers', [])
+    total_sales = round(sum(float(row.get('total', 0) or 0) for row in orders), 2)
+    prep_totals = {}
+    for row in data.get('kitchen_prep_log', []):
+        if str(row.get('ready_at', ''))[:10] != today:
+            continue
+        station = str(row.get('station', 'main'))
+        entry = prep_totals.setdefault(station, {'station': station, 'label': KITCHEN_STATION_LABELS.get(station, station), 'orders': 0, 'minutes_total': 0})
+        entry['orders'] += 1; entry['minutes_total'] += max(0, int(row.get('minutes', 0) or 0))
+    prep_averages = [{**entry, 'average_minutes': round(entry['minutes_total'] / entry['orders'], 1)} for entry in prep_totals.values()]
+    return jsonify({'date': today, 'sales': total_sales, 'orders': len(orders),
+                    'average_ticket': round(total_sales / len(orders), 2) if orders else 0,
+                    'kitchen_active': len(kitchen_active), 'kitchen_ready': sum(1 for row in kitchen_active if row.get('kitchen_status') == 'ready'),
+                    'low_stock': [{'name': row.get('name', ''), 'quantity': row.get('quantity', row.get('stock', 0))} for row in low_stock[:8]],
+                    'staff_present': sum(1 for row in attendance if not row.get('clock_out')),
+                    'delivery_open': sum(1 for row in orders if row.get('type') == 'ديليفري' and row.get('delivery_status') != 'delivered'),
+                    'drivers_available': sum(1 for row in drivers if row.get('status', 'available') == 'available'),
+                    'print_errors': len(unresolved_print_failures(data)), 'prep_averages': prep_averages})
+
+
+def record_kitchen_ready_metrics(data, row, public_order_id):
+    """يسجل مدة التحضير لكل محطة مرة واحدة عندما يصل الطلب إلى جاهز."""
+    if row.get('kitchen_ready_recorded_at'):
+        return
+    ready_at = datetime.now()
+    started_at = str(row.get('preparation_started_at') or row.get('timestamp') or row.get('created_at') or ready_at.isoformat())
+    try:
+        minutes = max(0, int((ready_at - datetime.fromisoformat(started_at)).total_seconds() // 60))
+    except (TypeError, ValueError):
+        minutes = 0
+    stations = set()
+    for item in row.get('items', []):
+        station = str(item.get('kitchen_station', 'main') or 'main')
+        stations.add(station if station in KITCHEN_STATION_LABELS else 'main')
+    for station in stations or {'main'}:
+        data.setdefault('kitchen_prep_log', []).append({'id': uuid.uuid4().hex[:12], 'order_id': str(public_order_id), 'station': station,
+                                                         'started_at': started_at, 'ready_at': ready_at.isoformat(), 'minutes': minutes})
+    data['kitchen_prep_log'] = data.get('kitchen_prep_log', [])[-1000:]
+    row['kitchen_ready_recorded_at'] = ready_at.isoformat()
 
 
 @app.route('/api/kitchen/orders/<order_id>/status', methods=['POST'])
@@ -3191,11 +3631,23 @@ def kitchen_status(order_id):
     if str(order_id).startswith('SESSION-'):
         session_row = find_dine_in_session(data, str(order_id)[8:])
         if session_row and session_row.get('status') == 'open':
-            session_row['kitchen_status'] = status; session_row['updated_at'] = datetime.now().isoformat(); save(data)
+            prior_status = session_row.get('kitchen_status', 'new')
+            session_row['kitchen_status'] = status; session_row['updated_at'] = datetime.now().isoformat()
+            if status == 'preparing' and prior_status != 'preparing':
+                session_row['preparation_started_at'] = datetime.now().isoformat()
+            if status == 'ready' and prior_status != 'ready':
+                record_kitchen_ready_metrics(data, session_row, 'SESSION-' + str(session_row['id']))
+            save(data)
             return jsonify({'ok': True, 'status': status, 'dine_in_session': True})
     for order in data.get('orders', []):
         if str(order.get('id')) == str(order_id):
-            order['kitchen_status'] = status; save(data); return jsonify({'ok': True, 'status': status})
+            prior_status = order.get('kitchen_status', 'new')
+            order['kitchen_status'] = status
+            if status == 'preparing' and prior_status != 'preparing':
+                order['preparation_started_at'] = datetime.now().isoformat()
+            if status == 'ready' and prior_status != 'ready':
+                record_kitchen_ready_metrics(data, order, order.get('id'))
+            save(data); return jsonify({'ok': True, 'status': status})
     return jsonify({'ok': False, 'error': 'الطلب غير موجود'}), 404
 
 

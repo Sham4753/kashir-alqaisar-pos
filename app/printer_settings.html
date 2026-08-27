@@ -67,6 +67,14 @@
             </div>
 
             <div class="border-b border-slate-100 pb-4 space-y-3">
+                <h2 class="font-bold text-gray-700">💵 درج النقد</h2>
+                <label class="flex items-center justify-between gap-4 p-3 rounded-lg bg-amber-50 cursor-pointer"><span><b>تفعيل الفتح اليدوي للدرج</b><small class="block text-xs text-gray-600 mt-1">يتطلب درجًا موصولًا بمنفذ RJ11 في طابعة حرارية تدعم ESC/POS على Windows.</small></span><input id="cash_drawer_enabled" type="checkbox" class="w-5 h-5 accent-amber-600"></label>
+                <label class="flex items-center justify-between gap-4 p-3 rounded-lg bg-emerald-50 cursor-pointer"><span><b>فتح الدرج تلقائيًا بعد دفع نقدي</b><small class="block text-xs text-gray-600 mt-1">يفتح فقط عندما تتضمن الفاتورة مبلغًا نقديًا، وليس لعمليات البطاقة فقط.</small></span><input id="auto_open_cash_drawer" type="checkbox" class="w-5 h-5 accent-emerald-600"></label>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">اسم طابعة الدرج</label><input id="cash_drawer_printer" type="text" maxlength="160" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="اتركه فارغًا لاستخدام طابعة الإيصال المحددة"><p class="mt-1 text-xs text-gray-500">لا توصل درج النقد مباشرة بمنفذ USB؛ استخدم منفذ الدرج المخصص في الطابعة المتوافقة.</p></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">نمط نبضة فتح الدرج</label><select id="cash_drawer_pulse_profile" class="w-full border border-gray-300 rounded-lg px-4 py-2.5"><option value="pin2_standard">المخرج 1 — قياسي (موصى به)</option><option value="pin2_short">المخرج 1 — نبضة قصيرة</option><option value="pin5_standard">المخرج 2 — قياسي</option><option value="pin5_short">المخرج 2 — نبضة قصيرة</option></select><p class="mt-1 text-xs text-gray-500">ابدأ بالمخرج 1 القياسي. غيّر النمط فقط وفق دليل الطابعة أو بعد اختبار فتح الدرج على جهاز Windows.</p></div>
+            </div>
+
+            <div class="border-b border-slate-100 pb-4 space-y-3">
                 <h2 class="font-bold text-gray-700">🖼️ شعار الإيصال</h2>
                 <p class="text-xs text-gray-500">اختر صورة PNG أو JPG محلية صغيرة. يظهر الشعار في معاينة الإيصال والطباعة عبر المتصفح، ويطبع العنوان المختصر أدناه للطابعات النصية الحرارية.</p>
                 <input id="logo_file" type="file" accept="image/png,image/jpeg,image/webp" onchange="loadLogoFile(event)" class="block w-full text-sm">
@@ -127,6 +135,10 @@
                 document.getElementById('currentPrinterName').textContent = config.printer_name || 'لم يتم تحديد طابعة بعد';
                 document.getElementById('auto_print_receipt').checked = !!config.auto_print_receipt;
                 document.getElementById('auto_print_kitchen').checked = !!config.auto_print_kitchen;
+                document.getElementById('cash_drawer_enabled').checked = !!config.cash_drawer_enabled;
+                document.getElementById('auto_open_cash_drawer').checked = !!config.auto_open_cash_drawer;
+                document.getElementById('cash_drawer_printer').value = config.cash_drawer_printer || config.printer_name || '';
+                document.getElementById('cash_drawer_pulse_profile').value = config.cash_drawer_pulse_profile || 'pin2_standard';
                 document.getElementById('logo_caption').value = config.logo_caption || '';
                 logoData = config.logo_data || '';
                 renderLogoPreview();
@@ -147,6 +159,10 @@
                 footer_text: document.getElementById('footer_text').value,
                 auto_print_receipt: document.getElementById('auto_print_receipt').checked,
                 auto_print_kitchen: document.getElementById('auto_print_kitchen').checked,
+                cash_drawer_enabled: document.getElementById('cash_drawer_enabled').checked,
+                auto_open_cash_drawer: document.getElementById('auto_open_cash_drawer').checked,
+                cash_drawer_printer: document.getElementById('cash_drawer_printer').value.trim(),
+                cash_drawer_pulse_profile: document.getElementById('cash_drawer_pulse_profile').value,
                 logo_data: logoData,
                 logo_caption: document.getElementById('logo_caption').value.trim()
             };

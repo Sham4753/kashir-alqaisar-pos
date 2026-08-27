@@ -168,7 +168,7 @@
                 <h3 class="font-bold text-gray-700 mb-2">🧾 تفاصيل فواتير المبيعات</h3>
                 <div class="overflow-x-auto border rounded-lg">
                     <table class="w-full text-sm text-right">
-                        <thead class="bg-gray-100"><tr><th class="p-2">الفاتورة</th><th class="p-2">التاريخ</th><th class="p-2">الأصناف</th><th class="p-2">الدفع</th><th class="p-2">الخصم</th><th class="p-2">الإجمالي</th></tr></thead>
+                        <thead class="bg-gray-100"><tr><th class="p-2">الفاتورة</th><th class="p-2">التاريخ</th><th class="p-2">الأصناف</th><th class="p-2">الدفع</th><th class="p-2">حالة الطباعة</th><th class="p-2">الخصم</th><th class="p-2">الإجمالي</th></tr></thead>
                         <tbody id="orderDetailsBody"></tbody>
                     </table>
                 </div>
@@ -187,7 +187,7 @@
             <div class="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-2xl bg-white shadow-2xl p-5">
                 <div class="flex items-start justify-between gap-4 border-b border-slate-200 pb-4"><div><h2 id="excelPreviewTitle" class="text-lg font-black text-slate-800">معاينة نتائج Excel</h2><p id="excelPreviewMeta" class="mt-1 text-xs text-slate-500">جارِ تحضير المعاينة…</p></div><button onclick="closeExcelPreview()" class="rounded-lg px-3 py-2 text-slate-500 hover:bg-slate-100" aria-label="إغلاق">✕</button></div>
                 <div id="excelPreviewBody" class="py-4"><p class="text-center text-slate-500">جارِ تحميل البيانات…</p></div>
-                <div class="flex gap-2 border-t border-slate-200 pt-4"><button onclick="exportExcel()" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700">📊 تصدير هذه النتائج إلى Excel</button><button onclick="closeExcelPreview()" class="rounded-xl bg-slate-100 px-4 py-3 font-bold text-slate-700 hover:bg-slate-200">رجوع</button></div>
+                <div class="border-t border-slate-200 pt-4"><div class="mb-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]"><input id="printLogPrinterFilter" type="search" class="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-200" placeholder="ابحث باسم الطابعة في سجل الطباعة"><select id="printLogDocumentType" class="rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">كل المستندات</option><option value="receipt">إيصال العميل</option><option value="kitchen">تذكرة المطبخ</option></select><select id="printLogPrinterSort" class="rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="timestamp_desc">الأحدث أولاً</option><option value="printer_asc">الطابعة: أ إلى ي</option><option value="printer_desc">الطابعة: ي إلى أ</option></select></div><div class="flex flex-wrap gap-2"><button onclick="exportExcel()" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700">📊 تصدير هذه النتائج إلى Excel</button><button id="exportPrintLog" onclick="exportPrintLog()" class="rounded-xl bg-slate-800 px-4 py-3 font-bold text-white hover:bg-slate-900">🖨️ تصدير سجل الطباعة</button><button onclick="closeExcelPreview()" class="rounded-xl bg-slate-100 px-4 py-3 font-bold text-slate-700 hover:bg-slate-200">رجوع</button></div></div>
             </div>
         </div>
     </div>
@@ -322,6 +322,11 @@
         let lastReportData = null;
         let lastFinancialReport = null;
         let lastFinancialParams = '';
+        let previewOrders = [];
+        let previewPaymentFilter = 'all';
+        let previewAmountSort = 'desc';
+        let previewDocumentFilter = 'all';
+        let previewPrintStatusFilter = 'all';
 
         function showResults(data) {
             lastReportData = data;
@@ -508,8 +513,22 @@
                 const to = document.getElementById('dateTo').value || 'اليوم';
                 document.getElementById('excelPreviewMeta').textContent = `الكاشير: ${cashier} · من ${from} إلى ${to} · ${summary.orders || 0} فاتورة`;
                 const rows = (data.cashier_summary || []).slice(0, 6).map(row => `<tr class="border-t"><td class="p-2 font-bold">${escapeHtml(row.cashier)}</td><td class="p-2">${row.orders}</td><td class="p-2 font-bold">${formatPrice(row.sales)}</td><td class="p-2">${formatPrice(row.cash)}</td><td class="p-2">${formatPrice(row.card)}</td></tr>`).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-500">لا توجد مبيعات ضمن المرشحات المحددة</td></tr>';
-                const invoices = (data.orders || []).slice(0, 5).map(order => `<li class="flex justify-between gap-3 border-t py-2 text-xs"><span>${escapeHtml(order.id || '')} · ${escapeHtml(order.cashier_name || 'غير معروف')}</span><b>${formatPrice(order.total || 0)}</b></li>`).join('') || '<li class="py-2 text-xs text-slate-500">لا توجد فواتير</li>';
-                body.innerHTML = `<div class="grid grid-cols-2 gap-3 md:grid-cols-4"><div class="rounded-xl bg-emerald-50 p-3"><div class="text-xs text-emerald-700">المبيعات</div><div class="mt-1 font-black text-emerald-800">${formatPrice(summary.sales || 0)}</div></div><div class="rounded-xl bg-sky-50 p-3"><div class="text-xs text-sky-700">الفواتير</div><div class="mt-1 font-black text-sky-800">${summary.orders || 0}</div></div><div class="rounded-xl bg-amber-50 p-3"><div class="text-xs text-amber-700">نقد داخل</div><div class="mt-1 font-black text-amber-800">${formatPrice(summary.cash_in || 0)}</div></div><div class="rounded-xl bg-violet-50 p-3"><div class="text-xs text-violet-700">بطاقات</div><div class="mt-1 font-black text-violet-800">${formatPrice(summary.card_in || 0)}</div></div></div><h3 class="mt-5 font-black text-slate-800">أداء الكاشير ضمن التصدير</h3><div class="mt-2 overflow-x-auto rounded-xl border"><table class="w-full text-right text-sm"><thead class="bg-slate-100"><tr><th class="p-2">الكاشير</th><th class="p-2">الفواتير</th><th class="p-2">المبيعات</th><th class="p-2">نقد</th><th class="p-2">بطاقة</th></tr></thead><tbody>${rows}</tbody></table></div><h3 class="mt-5 font-black text-slate-800">أول خمس فواتير ستظهر في الملف</h3><ul class="mt-2 rounded-xl border border-slate-200 px-3">${invoices}</ul>`;
+                const productTotals = {};
+                (data.orders || []).forEach(order => (order.items || []).forEach(item => {
+                    const key = item.name || 'صنف غير مسمى';
+                    const row = productTotals[key] || { name: key, quantity: 0, total: 0 };
+                    row.quantity += Number(item.quantity ?? item.qty ?? 1) || 0;
+                    row.total += (Number(item.price) || 0) * (Number(item.quantity ?? item.qty ?? 1) || 0);
+                    productTotals[key] = row;
+                }));
+                const topItems = Object.values(productTotals).sort((a, b) => b.quantity - a.quantity || b.total - a.total).slice(0, 3);
+                const topItemsHtml = topItems.length ? topItems.map((item, index) => `<li class="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-xs"><span><b class="ml-1 text-emerald-700">${index + 1}.</b>${escapeHtml(item.name)}</span><span>${item.quantity} قطعة · <b>${formatPrice(item.total)}</b></span></li>`).join('') : '<li class="text-xs text-slate-500">لا توجد أصناف ضمن هذه النتائج.</li>';
+                previewOrders = data.orders || [];
+                previewPaymentFilter = 'all'; previewAmountSort = 'desc'; previewDocumentFilter = 'all'; previewPrintStatusFilter = 'all';
+                body.innerHTML = `<div class="grid grid-cols-2 gap-3 md:grid-cols-4"><div class="rounded-xl bg-emerald-50 p-3"><div class="text-xs text-emerald-700">إجمالي الإيرادات</div><div class="mt-1 font-black text-emerald-800">${formatPrice(summary.sales || 0)}</div></div><div class="rounded-xl bg-sky-50 p-3"><div class="text-xs text-sky-700">الفواتير</div><div class="mt-1 font-black text-sky-800">${summary.orders || 0}</div></div><div class="rounded-xl bg-amber-50 p-3"><div class="text-xs text-amber-700">نقد داخل</div><div class="mt-1 font-black text-amber-800">${formatPrice(summary.cash_in || 0)}</div></div><div class="rounded-xl bg-violet-50 p-3"><div class="text-xs text-violet-700">بطاقات</div><div class="mt-1 font-black text-violet-800">${formatPrice(summary.card_in || 0)}</div></div></div><div class="mt-5 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4"><div class="flex items-center justify-between gap-3"><h3 class="font-black text-emerald-900">🥇 أكثر العناصر مبيعًا</h3><span class="text-xs text-emerald-700">ضمن النتائج المحددة</span></div><ol class="mt-3 grid gap-2 md:grid-cols-3">${topItemsHtml}</ol></div><h3 class="mt-5 font-black text-slate-800">أداء الكاشير ضمن التصدير</h3><div class="mt-2 overflow-x-auto rounded-xl border"><table class="w-full text-right text-sm"><thead class="bg-slate-100"><tr><th class="p-2">الكاشير</th><th class="p-2">الفواتير</th><th class="p-2">المبيعات</th><th class="p-2">نقد</th><th class="p-2">بطاقة</th></tr></thead><tbody>${rows}</tbody></table></div><div class="mt-5 flex flex-wrap items-center justify-between gap-3"><h3 class="font-black text-slate-800">ابحث داخل الفواتير</h3><span id="excelPreviewSearchCount" class="text-xs text-slate-500"></span></div><div class="relative mt-2"><input id="excelPreviewSearch" oninput="filterPreviewInvoices(this.value)" type="search" class="w-full rounded-xl border border-slate-300 py-3 pr-10 pl-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" placeholder="رقم الطلب، الكاشير، الصنف، الدفع أو المبلغ"><span class="absolute right-3 top-3 text-slate-400">⌕</span></div><div class="mt-3 flex flex-wrap gap-2"><span class="self-center text-xs font-bold text-slate-600">الدفع:</span><button type="button" data-preview-payment="all" onclick="setPreviewPaymentFilter('all')" class="rounded-lg border px-3 py-2 text-xs font-bold">الكل</button><button type="button" data-preview-payment="cash" onclick="setPreviewPaymentFilter('cash')" class="rounded-lg border px-3 py-2 text-xs font-bold">نقدي فقط</button><button type="button" data-preview-payment="card" onclick="setPreviewPaymentFilter('card')" class="rounded-lg border px-3 py-2 text-xs font-bold">بطاقة فقط</button><button type="button" data-preview-payment="mixed" onclick="setPreviewPaymentFilter('mixed')" class="rounded-lg border px-3 py-2 text-xs font-bold">مختلط فقط</button><span class="mx-1 hidden h-7 border-r border-slate-200 sm:block"></span><span class="self-center text-xs font-bold text-slate-600">المبلغ:</span><button type="button" id="previewSortAsc" onclick="setPreviewAmountSort('asc')" class="rounded-lg border px-3 py-2 text-xs font-bold">الأقل أولًا ↑</button><button type="button" id="previewSortDesc" onclick="setPreviewAmountSort('desc')" class="rounded-lg border px-3 py-2 text-xs font-bold">الأعلى أولًا ↓</button></div><ul id="excelPreviewInvoices" class="mt-2 rounded-xl border border-slate-200 px-3"></ul>`;
+                document.getElementById('excelPreviewInvoices').insertAdjacentHTML('beforebegin', `<div class="mt-3 flex flex-wrap gap-2"><span class="self-center text-xs font-bold text-slate-600">المستند:</span><button type="button" data-preview-document="all" onclick="setPreviewDocumentFilter('all')" class="rounded-lg border px-3 py-2 text-xs font-bold">الكل</button><button type="button" data-preview-document="receipt" onclick="setPreviewDocumentFilter('receipt')" class="rounded-lg border px-3 py-2 text-xs font-bold">إيصال العميل</button><button type="button" data-preview-document="kitchen" onclick="setPreviewDocumentFilter('kitchen')" class="rounded-lg border px-3 py-2 text-xs font-bold">تذكرة المطبخ</button><span class="mx-1 hidden h-7 border-r border-slate-200 sm:block"></span><span class="self-center text-xs font-bold text-slate-600">حالة الطباعة:</span><button type="button" data-preview-status="all" onclick="setPreviewPrintStatusFilter('all')" class="rounded-lg border px-3 py-2 text-xs font-bold">الكل</button><button type="button" data-preview-status="sent" onclick="setPreviewPrintStatusFilter('sent')" class="rounded-lg border px-3 py-2 text-xs font-bold">ناجح</button><button type="button" data-preview-status="failed" onclick="setPreviewPrintStatusFilter('failed')" class="rounded-lg border px-3 py-2 text-xs font-bold">فاشل</button><button type="button" data-preview-status="skipped" onclick="setPreviewPrintStatusFilter('skipped')" class="rounded-lg border px-3 py-2 text-xs font-bold">لم يُنفذ</button><button type="button" data-preview-status="disabled" onclick="setPreviewPrintStatusFilter('disabled')" class="rounded-lg border px-3 py-2 text-xs font-bold">غير مفعّل</button></div>`);
+                updatePreviewControlStyles();
+                filterPreviewInvoices('');
             } catch (error) {
                 body.innerHTML = `<p class="rounded-xl bg-red-50 p-4 text-center text-sm text-red-700">${escapeHtml(error.message || 'تعذر تحميل معاينة التقرير')}</p>`;
             }
@@ -518,6 +537,104 @@
         function closeExcelPreview() {
             const modal = document.getElementById('excelPreviewModal');
             modal.classList.add('hidden'); modal.classList.remove('flex');
+        }
+
+        function filterPreviewInvoices(query) {
+            const normalized = String(query || '').trim().toLocaleLowerCase('ar');
+            const matches = previewOrders.filter(order => {
+                const items = (order.items || []).map(item => item.name || '').join(' ');
+                const searchable = [order.id, order.cashier_name, order.payment, order.total, items].join(' ').toLocaleLowerCase('ar');
+                const payment = String(order.payment || '').trim();
+                const savedPrint = order.print_status || {};
+                const documentJob = previewDocumentFilter === 'all' ? null : savedPrint[previewDocumentFilter];
+                const matchesDocument = previewDocumentFilter === 'all' || Boolean(documentJob);
+                const matchesPayment = previewPaymentFilter === 'all' || (previewPaymentFilter === 'cash' && (payment === 'نقدي' || payment === 'نقد')) || (previewPaymentFilter === 'card' && payment === 'بطاقة') || (previewPaymentFilter === 'mixed' && payment === 'مختلط');
+                const statuses = typeof savedPrint === 'object' ? Object.values(savedPrint).map(job => job?.status) : [];
+                const matchesStatus = previewPrintStatusFilter === 'all' || (previewDocumentFilter !== 'all' ? documentJob?.status === previewPrintStatusFilter : statuses.includes(previewPrintStatusFilter));
+                return matchesPayment && matchesDocument && matchesStatus && (!normalized || searchable.includes(normalized));
+            }).sort((a, b) => previewAmountSort === 'asc' ? Number(a.total || 0) - Number(b.total || 0) : Number(b.total || 0) - Number(a.total || 0));
+            const target = document.getElementById('excelPreviewInvoices');
+            const count = document.getElementById('excelPreviewSearchCount');
+            if (!target || !count) return;
+            count.textContent = `${matches.length} من ${previewOrders.length} فاتورة`;
+            target.innerHTML = matches.slice(0, 50).map(order => {
+                const items = (order.items || []).map(item => `${escapeHtml(item.name || '')} × ${item.quantity ?? item.qty ?? 1}`).join('، ');
+                return `<li class="border-t py-2 text-xs first:border-t-0"><div class="flex justify-between gap-3"><span><b>${escapeHtml(order.id || '')}</b> · ${escapeHtml(order.cashier_name || 'غير معروف')}</span><b>${formatPrice(order.total || 0)}</b></div><div class="mt-1 text-slate-500">${escapeHtml(order.payment || '')}${items ? ' · ' + items : ''}</div><div class="mt-2 flex flex-wrap gap-1.5">${previewPrintStatusBadges(order)}</div></li>`;
+            }).join('') || '<li class="py-4 text-center text-xs text-slate-500">لا توجد فاتورة تطابق البحث.</li>';
+        }
+
+        function setPreviewPaymentFilter(value) {
+            previewPaymentFilter = value;
+            updatePreviewControlStyles();
+            filterPreviewInvoices(document.getElementById('excelPreviewSearch')?.value || '');
+        }
+
+        function setPreviewAmountSort(value) {
+            previewAmountSort = value;
+            updatePreviewControlStyles();
+            filterPreviewInvoices(document.getElementById('excelPreviewSearch')?.value || '');
+        }
+
+        function setPreviewDocumentFilter(value) {
+            previewDocumentFilter = value;
+            updatePreviewControlStyles();
+            filterPreviewInvoices(document.getElementById('excelPreviewSearch')?.value || '');
+        }
+
+        function setPreviewPrintStatusFilter(value) {
+            previewPrintStatusFilter = value;
+            updatePreviewControlStyles();
+            filterPreviewInvoices(document.getElementById('excelPreviewSearch')?.value || '');
+        }
+
+        function updatePreviewControlStyles() {
+            document.querySelectorAll('[data-preview-payment]').forEach(button => {
+                const active = button.dataset.previewPayment === previewPaymentFilter;
+                button.classList.toggle('bg-emerald-600', active); button.classList.toggle('text-white', active); button.classList.toggle('border-emerald-600', active);
+                button.classList.toggle('bg-white', !active); button.classList.toggle('text-slate-600', !active); button.classList.toggle('border-slate-300', !active);
+            });
+            ['previewSortAsc', 'previewSortDesc'].forEach(id => {
+                const button = document.getElementById(id); if (!button) return;
+                const active = id === (previewAmountSort === 'asc' ? 'previewSortAsc' : 'previewSortDesc');
+                button.classList.toggle('bg-slate-800', active); button.classList.toggle('text-white', active); button.classList.toggle('border-slate-800', active);
+                button.classList.toggle('bg-white', !active); button.classList.toggle('text-slate-600', !active); button.classList.toggle('border-slate-300', !active);
+            });
+            document.querySelectorAll('[data-preview-document]').forEach(button => {
+                const active = button.dataset.previewDocument === previewDocumentFilter;
+                button.classList.toggle('bg-sky-600', active); button.classList.toggle('text-white', active); button.classList.toggle('border-sky-600', active);
+                button.classList.toggle('bg-white', !active); button.classList.toggle('text-slate-600', !active); button.classList.toggle('border-slate-300', !active);
+            });
+            document.querySelectorAll('[data-preview-status]').forEach(button => {
+                const active = button.dataset.previewStatus === previewPrintStatusFilter;
+                button.classList.toggle('bg-rose-600', active); button.classList.toggle('text-white', active); button.classList.toggle('border-rose-600', active);
+                button.classList.toggle('bg-white', !active); button.classList.toggle('text-slate-600', !active); button.classList.toggle('border-slate-300', !active);
+            });
+        }
+
+        function previewPrintStatusBadges(order) {
+            const labels = { sent: ['✓', 'تم الإرسال', 'bg-emerald-100 text-emerald-800 border-emerald-200'], failed: ['!', 'فشل الإرسال', 'bg-rose-100 text-rose-800 border-rose-200'], skipped: ['•', 'لم يُنفذ', 'bg-amber-100 text-amber-800 border-amber-200'], disabled: ['–', 'غير مفعّل', 'bg-slate-100 text-slate-600 border-slate-200'] };
+            const saved = order.print_status || {};
+            if (typeof saved === 'string') return `<span class="rounded-full border bg-slate-100 border-slate-200 px-2 py-1 text-[11px] text-slate-600">🖨️ ${escapeHtml(saved)}</span>`;
+            return ['receipt', 'kitchen'].map(key => {
+                const meta = labels[saved[key]?.status] || ['?', 'غير مسجل', 'bg-slate-100 text-slate-600 border-slate-200'];
+                const title = key === 'receipt' ? 'الإيصال' : 'المطبخ';
+                const retry = saved[key]?.status === 'failed' ? `<button type="button" onclick="retryFailedPrintFromPreview('${String(order.id || '').replace(/'/g, '')}', '${key}')" class="mr-1 rounded bg-rose-700 px-1.5 py-0.5 text-[10px] text-white hover:bg-rose-800">إعادة المحاولة</button>` : '';
+                return `<span class="rounded-full border px-2 py-1 text-[11px] font-bold ${meta[2]}"><b class="ml-1">${meta[0]}</b>${title}: ${meta[1]}${retry}</span>`;
+            }).join('');
+        }
+
+        async function retryFailedPrintFromPreview(orderId, ticketType) {
+            const label = ticketType === 'kitchen' ? 'تذكرة المطبخ' : 'إيصال العميل';
+            if (!orderId || !confirm(`إعادة محاولة طباعة ${label} للطلب ${orderId}؟`)) return;
+            try {
+                const response = await fetch('/api/printer/orders/' + encodeURIComponent(orderId) + '/retry', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({type: ticketType})});
+                const data = await response.json();
+                if (!data.ok) throw new Error(data.print?.message || data.error || 'تعذرت إعادة المحاولة');
+                const order = previewOrders.find(row => String(row.id) === String(orderId));
+                if (order) { order.print_status = order.print_status || {}; order.print_status[ticketType] = data.print; }
+                showToast('✅ تمت إعادة إرسال ' + label + ' للطابعة');
+                filterPreviewInvoices(document.getElementById('excelPreviewSearch')?.value || '');
+            } catch (error) { showToast('⚠️ ' + (error.message || 'تعذرت إعادة المحاولة')); }
         }
 
         async function exportExcel() {
@@ -544,6 +661,39 @@
                 showToast('❌ ' + (error.message || 'تعذر تصدير Excel'));
             } finally {
                 buttons.forEach(button => { button.disabled = false; button.textContent = button.dataset.label || '📊 Excel'; button.classList.remove('opacity-70', 'cursor-wait'); });
+            }
+        }
+
+        async function exportPrintLog() {
+            const button = document.getElementById('exportPrintLog');
+            const previousLabel = button.textContent;
+            button.disabled = true; button.textContent = '⏳ جارِ تجهيز السجل…'; button.classList.add('opacity-70', 'cursor-wait');
+            try {
+                const params = new URLSearchParams();
+                const from = document.getElementById('dateFrom').value;
+                const to = document.getElementById('dateTo').value;
+                const printer = document.getElementById('printLogPrinterFilter').value.trim();
+                const ticketType = document.getElementById('printLogDocumentType').value;
+                const sort = document.getElementById('printLogPrinterSort').value;
+                if (from) params.append('from', from);
+                if (to) params.append('to', to);
+                if (printer) params.append('printer', printer);
+                if (ticketType) params.append('type', ticketType);
+                if (sort) params.append('sort', sort);
+                const response = await fetch('/api/analytics/print-log.xlsx?' + params.toString());
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.error || 'تعذر إنشاء سجل الطباعة');
+                }
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(await response.blob());
+                link.href = url; link.download = `print_log_${from || 'start'}_${to || 'today'}.xlsx`;
+                document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+                showToast('✅ تم تصدير سجل حالات الطباعة');
+            } catch (error) {
+                showToast('❌ ' + (error.message || 'تعذر تصدير سجل الطباعة'));
+            } finally {
+                button.disabled = false; button.textContent = previousLabel; button.classList.remove('opacity-70', 'cursor-wait');
             }
         }
 

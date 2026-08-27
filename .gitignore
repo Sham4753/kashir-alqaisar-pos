@@ -9,6 +9,7 @@ data_vault/
 Deliveries/
 app/data_vault/
 app/Deliveries/
+app/data_backup.json
 *.bak
 *.tmp
 

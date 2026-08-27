@@ -104,12 +104,14 @@
             <div class="brand-mark">🍽️</div>
             <div class="brand-copy"><h1 id="restaurantTitle" class="text-base font-black">كاشير القيصر</h1><small>نقطة البيع المحلية</small></div>
             <span id="connectionStatus" class="text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700">متصل</span>
+            <a id="printErrorBadge" href="analytics.html" class="hidden items-center gap-1 rounded-full border border-rose-400 bg-rose-100 px-2.5 py-1 text-xs font-black text-rose-800 animate-pulse" title="أخطاء طباعة غير معالجة — افتح التقارير للمراجعة"><span>🖨️</span><span id="printErrorCount">0</span><span>خطأ طباعة</span></a>
         </div>
         <div class="header-tools flex items-center gap-2">
             <label class="header-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><input type="text" id="searchBox" oninput="searchProducts()" class="top-field cashier-search px-3 text-sm w-52 outline-none" placeholder="ابحث عن صنف أو باركود"></label>
             <label class="header-input"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5v14M7 5v14M10 5v14M14 5v14M17 5v14M21 5v14"></path></svg><input type="text" id="barcodeInput" inputmode="numeric" autocomplete="off" class="top-field cashier-search px-3 text-sm w-40 outline-none" placeholder="مسح باركود F2" title="امسح الباركود ثم اضغط Enter"></label>
             <select id="currency" data-system-currency-control onchange="changeCurrency()" class="top-field px-2 text-sm font-black outline-none" title="عملة العرض"><option value="SYP">ل.س</option><option value="USD">$</option><option value="EUR">€</option></select>
             <button type="button" id="lockNowButton" onclick="showLockScreen(true)" class="nav-link" title="قفل النظام برمز الكاشير الحالي"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"></path></svg><span>قفل</span></button>
+            <button type="button" id="cashDrawerButton" onclick="openCashDrawer()" class="nav-link hidden" title="فتح درج النقد يدويًا — للمدير فقط"><span aria-hidden="true">💵</span><span>فتح الدرج</span></button>
             <a href="kitchen.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v4M16 3v4M5 9h14v12H5z"></path><path d="M9 13h6M9 17h4"></path></svg><span>المطبخ</span></a>
             <a href="tables.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h16v8H4zM6 11V6h12v5M7 19v2M17 19v2"></path></svg><span>الطاولات</span></a>
         </div>
@@ -223,7 +225,11 @@
             <a href="raw_materials.html" class="block px-3 py-2 hover:bg-gray-700 rounded">📦 المواد الخام</a>
             <div class="border-t border-gray-700 my-2"></div>
             <a href="orders_list.html" class="block px-3 py-2 hover:bg-gray-700 rounded">📋 قائمة الطلبات</a>
+            <a href="waiting_screen.html" target="_blank" class="block px-3 py-2 hover:bg-gray-700 rounded">📺 شاشة الطلبات الجاهزة</a>
             <a href="manager_ops.html" class="block px-3 py-2 hover:bg-gray-700 rounded">🎛️ مركز الإدارة</a>
+            <a href="dashboard.html" class="block px-3 py-2 hover:bg-gray-700 rounded">📊 لوحة المدير اليومية</a>
+            <a href="attendance.html" class="block px-3 py-2 hover:bg-gray-700 rounded">⏱️ دوام الموظفين</a>
+            <a href="delivery.html" class="block px-3 py-2 hover:bg-gray-700 rounded">🛵 إدارة الدليفري</a>
             <a href="customers.html" class="block px-3 py-2 hover:bg-gray-700 rounded">👥 العملاء والولاء</a>
             <a href="qr_menu.html" target="_blank" class="block px-3 py-2 hover:bg-gray-700 rounded">📱 قائمة QR</a>
             <a href="debts.html" class="block px-3 py-2 hover:bg-gray-700 rounded">💳 الديون</a>
@@ -245,6 +251,12 @@
             <span class="w-6 h-6 border-[3px] border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></span>
             <span id="printProgressText" class="font-bold">جارِ حفظ الفاتورة وتجهيز الطباعة…</span>
         </div>
+    </div>
+    <div id="printFailureAlert" class="hidden fixed top-5 left-1/2 z-[70] w-[min(94vw,540px)] -translate-x-1/2 rounded-2xl border border-rose-300 bg-white p-4 shadow-2xl" role="alert" aria-live="assertive">
+        <div class="flex items-start gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-100 text-xl font-black text-rose-700 animate-pulse">!</span><div class="min-w-0 flex-1"><div class="flex items-start justify-between gap-3"><div><h2 class="font-black text-rose-800">تدخل مطلوب: فشلت عملية طباعة</h2><p id="printFailureMessage" class="mt-1 text-sm text-slate-600">راجع الطابعة قبل متابعة الطلبات.</p></div><button onclick="dismissPrintFailureAlert()" class="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="إغلاق التنبيه">✕</button></div><div id="printFailureJobs" class="mt-3 flex flex-wrap gap-2"></div><div class="mt-3 flex flex-wrap gap-2"><a href="printer_settings.html" class="rounded-lg bg-rose-700 px-3 py-2 text-xs font-bold text-white hover:bg-rose-800">فتح إعدادات الطابعة</a><button onclick="dismissPrintFailureAlert()" class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200">تمت المراجعة</button></div></div></div>
+    </div>
+    <div id="cashDrawerSuccessAlert" class="hidden fixed top-5 left-1/2 z-[71] w-[min(94vw,460px)] -translate-x-1/2 rounded-2xl border border-emerald-300 bg-white p-4 shadow-2xl" role="status" aria-live="polite">
+        <div class="flex items-start gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xl font-black text-emerald-700">✓</span><div class="min-w-0 flex-1"><div class="flex items-start justify-between gap-3"><div><h2 class="font-black text-emerald-800">تم إرسال أمر فتح الدرج</h2><p id="cashDrawerSuccessMessage" class="mt-1 text-sm text-slate-600">جارِ إرسال الأمر إلى الطابعة.</p></div><button onclick="dismissCashDrawerSuccess()" class="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="إغلاق التأكيد">✕</button></div></div></div>
     </div>
     <div id="printReceipt"></div>
 
@@ -275,6 +287,7 @@
             await loadDineInTables();
             await loadRestaurantName();
             await loadPrinterSettings();
+            await loadPrintErrorCount();
             await loadInventoryAlerts();
             renderAll();
             await restoreDineInFromUrl();
@@ -478,13 +491,19 @@
             const product = Object.values(menu).flat().find(p => Number(p.id) === Number(productId));
             if (!product) return showToast('⚠️ المنتج لم يعد موجوداً؛ حدّث المنيو');
             if (Array.isArray(product.modifiers) && product.modifiers.length) {
-                const selected = prompt('اختر الإضافات المتاحة: ' + product.modifiers.join('، ') + '\nاكتب الإضافات مفصولة بفاصلة أو اتركها فارغة:') || '';
-                modifiers = selected.split(',').map(x => x.trim()).filter(Boolean).filter(x => product.modifiers.includes(x));
+                const catalog = product.modifiers.map(raw => typeof raw === 'object' ? {name: raw.name, price: Number(raw.price || 0)} : {name: String(raw), price: 0});
+                const options = catalog.map((option, index) => `${index + 1}. ${option.name}${option.price ? ' (+' + formatPrice(option.price) + ')' : ''}`).join('\n');
+                const selected = prompt('اختر الإضافات بالأرقام أو الأسماء، مفصولة بفاصلة:\n' + options + '\nمثال: 1, 2 أو بدون بصل\nاتركه فارغًا بلا إضافات:') || '';
+                const selectedTokens = selected.split(',').map(x => x.trim()).filter(Boolean);
+                modifiers = selectedTokens.map(token => {
+                    const numeric = Number(token);
+                    return Number.isInteger(numeric) && numeric >= 1 && numeric <= catalog.length ? catalog[numeric - 1] : catalog.find(option => option.name === token);
+                }).filter(Boolean).filter((option, index, rows) => rows.findIndex(row => row.name === option.name) === index);
             }
-            const key = Number(product.id) + '|' + modifiers.join(',');
+            const key = Number(product.id) + '|' + modifiers.map(option => option.name).join(',');
             const existing = cart.find(i => i.key === key);
             if(existing) existing.qty += qty;
-            else cart.push({key, product_id: Number(product.id), name: product.name, price: Number(product.price), qty, modifiers});
+            else cart.push({key, product_id: Number(product.id), name: product.name, base_price: Number(product.price), price: Number(product.price) + modifiers.reduce((sum, option) => sum + Number(option.price || 0), 0), qty, modifiers});
             renderCart();
             showToast('✅ ' + product.name);
         }
@@ -504,7 +523,7 @@
                 list.innerHTML = cart.map((item, i) => `
                     <div class="cart-item flex justify-between items-center bg-gray-50 p-2 rounded-lg text-sm animate-slide">
                         <button onclick="removeFromCart(${i})" class="text-red-400 hover:text-red-600 ml-1">✕</button>
-                        <span class="flex-1">${item.name}</span>
+                        <span class="flex-1"><span>${item.name}</span>${item.modifiers?.length ? `<small class="block text-[11px] text-indigo-600 mt-0.5">+ ${item.modifiers.map(option => typeof option === 'object' ? option.name + (option.price ? ' (' + formatPrice(option.price) + ')' : '') : option).join('، ')}</small>` : ''}</span>
                         <div class="flex items-center gap-1">
                             <button onclick="updateCartQty(${i},-1)" class="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 text-xs font-bold">-</button>
                             <span class="w-6 text-center font-bold">${item.qty}</span>
@@ -588,8 +607,8 @@
             activeDineInSession = sessionRow;
             orderType = 'صالة';
             cart = (sessionRow.items || []).map(item => ({
-                key: Number(item.product_id) + '|' + (item.modifiers || []).join(','), product_id: Number(item.product_id),
-                name: item.name, price: Number(item.price), qty: Number(item.quantity || 1), modifiers: item.modifiers || []
+                key: Number(item.product_id) + '|' + (item.modifiers || []).map(option => typeof option === 'object' ? option.name : option).join(','), product_id: Number(item.product_id),
+                name: item.name, base_price: Number(item.base_price ?? item.price), price: Number(item.price), qty: Number(item.quantity || 1), modifiers: item.modifiers || []
             }));
             document.getElementById('customerName').value = sessionRow.customer || '';
             document.getElementById('orderNote').value = sessionRow.note || '';
@@ -637,7 +656,8 @@
                 document.getElementById('tableNumber').value = activeDineInSession.table_id;
                 updateDineInUi();
                 await loadDineInTables();
-                showToast('✅ تم حفظ طلب ' + activeDineInSession.table_name + ' وإرساله للمطبخ' + autoPrintNotice(data.print));
+                showPrintFailureAlert(data.print);
+                showToast('✅ تم حفظ طلب ' + activeDineInSession.table_name + ' وإرساله للمطبخ' + autoPrintNotice(data.print) + autoDrawerNotice(data.drawer));
             } catch (e) { showToast('❌ ' + e.message); }
             finally { setSaleBusy(false); }
         }
@@ -789,7 +809,8 @@
                 if (!printerSettings.auto_print_receipt) window.print();
                 resetSaleWorkspace();
                 await loadDineInTables();
-                showToast('✅ تم الحفظ - فاتورة رقم ' + resData.id + (paidMethod ? ' - ' + paidMethod : '') + autoPrintNotice(resData.print));
+                showPrintFailureAlert(resData.print);
+                showToast('✅ تم الحفظ - فاتورة رقم ' + resData.id + (paidMethod ? ' - ' + paidMethod : '') + autoPrintNotice(resData.print) + autoDrawerNotice(resData.drawer));
             } catch(e) { showToast('❌ ' + (e.message || 'خطأ في الحفظ')); }
             finally { setSaleBusy(false); }
         }
@@ -903,6 +924,8 @@
                 const user = await r.json();
                 if (user && user.username) activeCashier = user;
             } catch (e) {}
+            const drawerButton = document.getElementById('cashDrawerButton');
+            if (drawerButton) drawerButton.classList.toggle('hidden', activeCashier.role !== 'manager');
         }
 
         async function initLockScreen() {
@@ -979,9 +1002,108 @@
             const jobs = [print.receipt, print.kitchen].filter(Boolean);
             const sent = jobs.filter(job => job.status === 'sent').map(job => job.type === 'kitchen' ? 'تذكرة المطبخ' : 'الإيصال');
             const skipped = jobs.filter(job => job.status === 'skipped').map(job => job.type === 'kitchen' ? 'تذكرة المطبخ' : 'الإيصال');
+            const failed = jobs.filter(job => job.status === 'failed').map(job => job.type === 'kitchen' ? 'تذكرة المطبخ' : 'الإيصال');
             if (sent.length) return ' — 🖨️ تم إرسال ' + sent.join(' و') + ' تلقائيًا للطابعة';
+            if (failed.length) return ' — ❗ فشل إرسال ' + failed.join(' و') + '، راجع الطابعة';
             if (skipped.length) return ' — ℹ️ حُفظت العملية، والطباعة التلقائية لـ' + skipped.join(' و') + ' لم تُنفّذ: ' + (jobs.find(job => job.status === 'skipped')?.message || 'راجع إعدادات الطابعة');
             return '';
+        }
+
+        function autoDrawerNotice(drawer) {
+            if (!drawer) return '';
+            if (drawer.status === 'sent') return ' — 💵 تم فتح درج النقد تلقائيًا';
+            if (drawer.status === 'failed') return ' — ⚠️ حُفظ الدفع لكن فشل فتح الدرج: ' + (drawer.message || 'راجع الطابعة');
+            if (drawer.status === 'skipped') return ' — ℹ️ لم يُفتح الدرج تلقائيًا: ' + (drawer.message || 'راجع الإعدادات');
+            return '';
+        }
+
+        function showPrintFailureAlert(print) {
+            const failures = [print?.receipt, print?.kitchen].filter(job => job?.status === 'failed');
+            if (!failures.length) return;
+            const names = failures.map(job => job.type === 'kitchen' ? 'تذكرة المطبخ' : 'الإيصال');
+            document.getElementById('printFailureMessage').textContent = `تعذر إرسال ${names.join(' و')} إلى الطابعة. تم حفظ الطلب، لكن يلزم فحص الطابعة أو الاتصال بها.`;
+            document.getElementById('printFailureJobs').innerHTML = failures.map(job => `<div class="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-2 py-2 text-xs font-bold text-rose-800"><span>✕ ${job.type === 'kitchen' ? 'المطبخ' : 'الإيصال'}: ${job.message || 'تعذر إرسال الأمر'}</span><button data-retry-print="${job.type}" onclick="retryFailedPrint('${String(job.order_id || '').replace(/'/g, '')}', '${job.type}')" class="rounded-md bg-rose-700 px-2 py-1 text-white hover:bg-rose-800">إعادة المحاولة</button></div>`).join('');
+            document.getElementById('printFailureAlert').classList.remove('hidden');
+            loadPrintErrorCount();
+        }
+
+        function dismissPrintFailureAlert() {
+            document.getElementById('printFailureAlert').classList.add('hidden');
+        }
+
+        async function retryFailedPrint(orderId, ticketType) {
+            if (!orderId || !ticketType) return showToast('❌ لا تتوفر بيانات كافية لإعادة المحاولة');
+            const label = ticketType === 'kitchen' ? 'تذكرة المطبخ' : 'إيصال العميل';
+            if (!confirm(`إعادة محاولة طباعة ${label} للطلب ${orderId}؟`)) return;
+            const buttons = Array.from(document.querySelectorAll('[data-retry-print]'));
+            buttons.forEach(button => { button.disabled = true; button.classList.add('opacity-60', 'cursor-wait'); });
+            try {
+                const response = await fetch('/api/printer/orders/' + encodeURIComponent(orderId) + '/retry', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({type: ticketType}) });
+                const data = await response.json();
+                if (data.ok) {
+                    showToast('✅ تمت إعادة إرسال ' + label + ' للطابعة');
+                    dismissPrintFailureAlert();
+                } else {
+                    showToast('⚠️ لم تنجح إعادة المحاولة: ' + (data.print?.message || data.error || 'راجع الطابعة'));
+                }
+                await loadPrintErrorCount();
+            } catch (error) {
+                showToast('❌ تعذر الاتصال بخدمة الطباعة');
+            } finally {
+                buttons.forEach(button => { button.disabled = false; button.classList.remove('opacity-60', 'cursor-wait'); });
+            }
+        }
+
+        async function loadPrintErrorCount() {
+            const badge = document.getElementById('printErrorBadge');
+            const countEl = document.getElementById('printErrorCount');
+            if (!badge || !countEl) return;
+            try {
+                const response = await fetch('/api/printer/errors', {cache: 'no-store'});
+                const data = await response.json();
+                if (!response.ok || !data.ok) throw new Error('تعذر تحميل أخطاء الطباعة');
+                const count = Number(data.count) || 0;
+                countEl.textContent = String(count);
+                badge.classList.toggle('hidden', count === 0);
+                badge.classList.toggle('inline-flex', count > 0);
+            } catch (error) {
+                badge.classList.add('hidden'); badge.classList.remove('inline-flex');
+            }
+        }
+
+        async function openCashDrawer() {
+            const button = document.getElementById('cashDrawerButton');
+            const reason = window.prompt('أدخل سبب فتح درج النقد (إلزامي وسيُسجل باسمك):', '');
+            if (reason === null) return;
+            if (reason.trim().length < 2) return showToast('⚠️ أدخل سببًا واضحًا من حرفين على الأقل لفتح الدرج');
+            if (!confirm(`فتح درج النقد الآن بسبب: ${reason.trim()}؟ سيُسجل هذا الإجراء باسم الكاشير الحالي.`)) return;
+            const previous = button.innerHTML;
+            button.disabled = true; button.classList.add('opacity-60', 'cursor-wait'); button.textContent = 'جارِ الفتح…';
+            try {
+                const response = await fetch('/api/cash-drawer/open', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({reason: reason.trim()})});
+                const data = await response.json();
+                if (data.ok) { showToast('✅ تم إرسال أمر فتح درج النقد'); showCashDrawerSuccess(data.drawer); }
+                else showToast('⚠️ لم يُفتح الدرج: ' + (data.drawer?.message || data.error || 'راجع الإعدادات والطابعة'));
+            } catch (error) {
+                showToast('❌ تعذر الاتصال بخدمة درج النقد');
+            } finally {
+                button.disabled = false; button.classList.remove('opacity-60', 'cursor-wait'); button.innerHTML = previous;
+            }
+        }
+
+        let cashDrawerSuccessTimer = null;
+        function showCashDrawerSuccess(drawer) {
+            if (!drawer || drawer.status !== 'sent') return;
+            const alert = document.getElementById('cashDrawerSuccessAlert');
+            document.getElementById('cashDrawerSuccessMessage').textContent = `تم إرسال نبضة فتح الدرج إلى: ${drawer.printer || 'الطابعة المحددة'}`;
+            alert.classList.remove('hidden');
+            if (cashDrawerSuccessTimer) clearTimeout(cashDrawerSuccessTimer);
+            cashDrawerSuccessTimer = setTimeout(dismissCashDrawerSuccess, 7000);
+        }
+
+        function dismissCashDrawerSuccess() {
+            document.getElementById('cashDrawerSuccessAlert').classList.add('hidden');
+            if (cashDrawerSuccessTimer) { clearTimeout(cashDrawerSuccessTimer); cashDrawerSuccessTimer = null; }
         }
 
         function showToast(msg) {

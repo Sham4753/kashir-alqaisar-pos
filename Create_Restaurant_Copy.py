@@ -57,11 +57,13 @@ def clean_data(path):
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
 
 for filename in ('data_backup.json','factory_data.json'):
-    clean_data(output/'app'/filename)
+    template_file = output / 'app' / filename
+    if template_file.exists():
+        clean_data(template_file)
 (output/'CLIENT_SETUP.txt').write_text(
     f'نسخة مستقلة للمطعم: {restaurant}\n\n'
     '1. شغّل Start.bat أو app/QaisarDesktop.exe.\n'
     '2. أكمل معالج الإعداد الأولي وأنشئ حساب المدير.\n'
-    '3. لا تنسخ data_backup.json بين العملاء.\n'
+    '3. لا تنسخ أي ملفات بيانات تشغيلية بين العملاء.\n'
     '4. لتشغيل تطبيق النادل استخدم app/Start_LAN_Mode.bat ثم أدخل عنوان IP:8080 وحساب النادل في التطبيق.\n', encoding='utf-8')
 print(f'CLIENT_COPY_CREATED: {output}')

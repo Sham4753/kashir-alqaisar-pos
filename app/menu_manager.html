@@ -63,9 +63,9 @@
                 <input type="number" id="prodPrice" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="السعر بالليرة السورية (ل.س)">
                 <input type="text" id="prodBarcode" inputmode="numeric" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="الباركود (اختياري)">
                 <p class="text-xs text-gray-400 -mt-2">💡 السعر هون دايماً بالليرة السورية الأساسية، بغض النظر عن عملة العرض بالإعدادات</p>
-                <input type="text" id="prodModifiers" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="إضافات المنتج مفصولة بفاصلة: بدون بصل, زيادة جبنة">
+                <input type="text" id="prodModifiers" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="إضافات وسعرها: بدون بصل, زيادة جبنة:+500">
                 <input type="text" id="prodComboItems" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="مكونات الوجبة المركبة مفصولة بفاصلة (اختياري)">
-                <div class="flex gap-2"><select id="prodKitchenStation" class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5"><option value="main">المطبخ الرئيسي</option><option value="grill">الشواية</option><option value="drinks">المشروبات</option></select><input type="number" id="prodOfferId" class="w-32 border border-gray-300 rounded-lg px-4 py-2.5" placeholder="رقم العرض"></div>
+                <div class="flex gap-2"><select id="prodKitchenStation" class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5"><option value="main">المطبخ الرئيسي</option><option value="grill">الشواية</option><option value="drinks">المشروبات</option><option value="fryer">المقالي</option><option value="dessert">الحلويات</option></select><input type="number" id="prodOfferId" class="w-32 border border-gray-300 rounded-lg px-4 py-2.5" placeholder="رقم العرض"></div>
                 <div>
                     <label class="text-sm font-bold text-gray-600 block mb-1">🖼️ صورة المنتج (تظهر بشاشة الكاشير)</label>
                     <div class="flex items-center gap-3">
@@ -99,9 +99,9 @@
                     <input type="text" id="newProdName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none mb-3" placeholder="اسم المنتج الجديد">
                     <input type="number" id="newProdPrice" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none mb-3" placeholder="السعر بالليرة السورية (ل.س)">
                     <input type="text" id="newProdBarcode" inputmode="numeric" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none mb-3" placeholder="الباركود (اختياري)">
-                    <input type="text" id="newProdModifiers" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 mb-3" placeholder="إضافات مفصولة بفاصلة (اختياري)">
+                    <input type="text" id="newProdModifiers" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 mb-3" placeholder="إضافات وسعرها: صوص:+250, بدون بصل (اختياري)">
                     <input type="text" id="newProdComboItems" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 mb-3" placeholder="مكونات الوجبة المركبة مفصولة بفاصلة (اختياري)">
-                    <div class="flex gap-2 mb-3"><select id="newProdKitchenStation" class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5"><option value="main">المطبخ الرئيسي</option><option value="grill">الشواية</option><option value="drinks">المشروبات</option></select><input type="number" id="newProdOfferId" class="w-32 border border-gray-300 rounded-lg px-4 py-2.5" placeholder="رقم العرض"></div>
+                    <div class="flex gap-2 mb-3"><select id="newProdKitchenStation" class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5"><option value="main">المطبخ الرئيسي</option><option value="grill">الشواية</option><option value="drinks">المشروبات</option><option value="fryer">المقالي</option><option value="dessert">الحلويات</option></select><input type="number" id="newProdOfferId" class="w-32 border border-gray-300 rounded-lg px-4 py-2.5" placeholder="رقم العرض"></div>
                     <div class="flex items-center gap-3 mb-3">
                         <img id="newProdImagePreview" class="hidden w-16 h-16 rounded-lg object-cover border border-gray-200" />
                         <input type="file" id="newProdImageInput" accept="image/*" onchange="onNewProdImageSelected()" class="flex-1 text-sm">
@@ -134,6 +134,23 @@
             if (currentCurrency === 'USD') return usdRate ? '$' + (p / usdRate).toFixed(2) : (p.toLocaleString() + ' ل.س');
             if (currentCurrency === 'EUR') return eurRate ? '€' + (p / eurRate).toFixed(2) : (p.toLocaleString() + ' ل.س');
             return p.toLocaleString() + ' ل.س';
+        }
+
+        function parseModifierOptions(value) {
+            return String(value || '').split(',').map(raw => {
+                const parts = raw.trim().split(':');
+                const name = (parts.shift() || '').trim();
+                const price = Number(String(parts.join(':')).replace('+', '').trim()) || 0;
+                return name ? {name, price: Math.max(0, price)} : null;
+            }).filter(Boolean);
+        }
+
+        function formatModifierOptions(options) {
+            return (options || []).map(option => {
+                const name = typeof option === 'object' ? option.name : option;
+                const price = typeof option === 'object' ? Number(option.price || 0) : 0;
+                return name + (price > 0 ? ':+' + price : '');
+            }).join(', ');
         }
 
         async function loadMenu() {
@@ -241,7 +258,7 @@
                 document.getElementById('prodName').value = prod.name;
                 document.getElementById('prodPrice').value = prod.price;
                 document.getElementById('prodBarcode').value = prod.barcode || '';
-                document.getElementById('prodModifiers').value = (prod.modifiers || []).join(', ');
+                document.getElementById('prodModifiers').value = formatModifierOptions(prod.modifiers || []);
                 document.getElementById('prodComboItems').value = (prod.combo_items || []).join(', ');
                 document.getElementById('prodKitchenStation').value = prod.kitchen_station || 'main';
                 document.getElementById('prodOfferId').value = prod.offer_id || '';
@@ -350,7 +367,7 @@
             const res = await fetch('/api/product/' + currentProdId, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: n, price: p, image: currentProdImage, barcode: document.getElementById('prodBarcode').value.trim(), modifiers: document.getElementById('prodModifiers').value.split(',').map(x=>x.trim()).filter(Boolean), combo_items: document.getElementById('prodComboItems').value.split(',').map(x=>x.trim()).filter(Boolean), kitchen_station: document.getElementById('prodKitchenStation').value, offer_id: parseInt(document.getElementById('prodOfferId').value) || null })
+                body: JSON.stringify({ name: n, price: p, image: currentProdImage, barcode: document.getElementById('prodBarcode').value.trim(), modifiers: parseModifierOptions(document.getElementById('prodModifiers').value), combo_items: document.getElementById('prodComboItems').value.split(',').map(x=>x.trim()).filter(Boolean), kitchen_station: document.getElementById('prodKitchenStation').value, offer_id: parseInt(document.getElementById('prodOfferId').value) || null })
             });
             const data = await res.json();
             if (data.ok) {
@@ -390,7 +407,7 @@
             const res = await fetch('/api/product', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ category: currentProdCat, id: maxId + 1, name: n, price: p, image: newProdImage, barcode: document.getElementById('newProdBarcode').value.trim(), modifiers: document.getElementById('newProdModifiers').value.split(',').map(x=>x.trim()).filter(Boolean), combo_items: document.getElementById('newProdComboItems').value.split(',').map(x=>x.trim()).filter(Boolean), kitchen_station: document.getElementById('newProdKitchenStation').value, offer_id: parseInt(document.getElementById('newProdOfferId').value) || null })
+                body: JSON.stringify({ category: currentProdCat, id: maxId + 1, name: n, price: p, image: newProdImage, barcode: document.getElementById('newProdBarcode').value.trim(), modifiers: parseModifierOptions(document.getElementById('newProdModifiers').value), combo_items: document.getElementById('newProdComboItems').value.split(',').map(x=>x.trim()).filter(Boolean), kitchen_station: document.getElementById('newProdKitchenStation').value, offer_id: parseInt(document.getElementById('newProdOfferId').value) || null })
             });
             const data = await res.json();
             if (data.ok) {
