@@ -133,6 +133,7 @@
             </div>
             <select id="newRole" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none">
                 <option value="cashier">👨‍🍳 كاشير</option>
+                <option value="waiter">🧑‍🍽️ نادل — تطبيق الجوال</option>
                 <option value="supervisor">🧑‍💼 مشرف</option>
                 <option value="manager">👨‍💼 مدير</option>
             </select>
@@ -390,7 +391,7 @@
             } else {
                 list.innerHTML = users.map(u => `
                     <div class="flex justify-between items-center bg-gray-50 p-2 rounded border">
-                        <span>${u.username} <span class="text-xs text-gray-500">(${u.role==='manager'?'مدير':(u.role==='supervisor'?'مشرف':'كاشير')})</span></span>
+                        <span>${u.username} <span class="text-xs text-gray-500">(${u.role==='manager'?'مدير':(u.role==='supervisor'?'مشرف':(u.role==='waiter'?'نادل':'كاشير'))})</span></span>
                         <div class="flex gap-2"><button onclick="editUser(${u.id}, '${String(u.username).replace(/'/g, "\\'")}', '${u.role || 'cashier'}')" class="text-blue-600 text-sm">✏️ تعديل</button><button onclick="deleteUser(${u.id})" class="text-red-500 text-sm">✕</button></div>
                     </div>
                 `).join('');
@@ -425,7 +426,7 @@
         async function editUser(id, currentName, currentRole) {
             const username = prompt('اسم المستخدم:', currentName);
             if (username === null) return;
-            const role = prompt('المستوى: cashier أو supervisor أو manager', currentRole);
+            const role = prompt('المستوى: cashier أو waiter أو supervisor أو manager', currentRole);
             if (role === null) return;
             const password = prompt('كلمة مرور جديدة (اتركها فارغة دون تغيير):', '');
             if (password === null) return;

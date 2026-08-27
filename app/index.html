@@ -240,6 +240,12 @@
 
     <!-- Toast -->
     <div id="toast" class="hidden fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-xl shadow-lg text-center z-50 text-sm"></div>
+    <div id="printProgress" class="hidden fixed inset-0 z-[60] bg-slate-950/35 backdrop-blur-[1px] items-center justify-center p-5" role="status" aria-live="polite">
+        <div class="bg-white rounded-2xl shadow-2xl px-6 py-5 flex items-center gap-3 text-slate-800">
+            <span class="w-6 h-6 border-[3px] border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></span>
+            <span id="printProgressText" class="font-bold">جارِ حفظ الفاتورة وتجهيز الطباعة…</span>
+        </div>
+    </div>
     <div id="printReceipt"></div>
 
     <!-- شاشة القفل التلقائي -->
@@ -622,6 +628,7 @@
             const payload = dineInPayload();
             const url = activeDineInSession ? '/api/dine-in/sessions/' + encodeURIComponent(activeDineInSession.id) : '/api/dine-in/sessions';
             const method = activeDineInSession ? 'PUT' : 'POST';
+            setSaleBusy(true, 'جارِ حفظ طلب الطاولة وتجهيز تذكرة المطبخ…');
             try {
                 const r = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
                 const data = await r.json();
@@ -630,8 +637,9 @@
                 document.getElementById('tableNumber').value = activeDineInSession.table_id;
                 updateDineInUi();
                 await loadDineInTables();
-                showToast('✅ تم حفظ طلب ' + activeDineInSession.table_name + ' وإرساله للمطبخ');
+                showToast('✅ تم حفظ طلب ' + activeDineInSession.table_name + ' وإرساله للمطبخ' + autoPrintNotice(data.print));
             } catch (e) { showToast('❌ ' + e.message); }
+            finally { setSaleBusy(false); }
         }
 
         function setOrderType(type) {
@@ -764,6 +772,7 @@
                 discount_pct: pct, discount_amount: amt, total,
                 subtotal: cart.reduce((s,i) => s + (i.price * i.qty), 0), date: new Date().toISOString()
             };
+            setSaleBusy(true, printerSettings.auto_print_receipt ? 'جارِ حفظ الفاتورة وإرسال الإيصال للطابعة…' : 'جارِ حفظ الفاتورة…');
             try {
                 let res, resData;
                 if (activeDineInSession) {
@@ -777,11 +786,12 @@
                 const paidMethod = paymentMethod;
                 document.getElementById('printReceipt').innerHTML = buildReceiptHTML(resData.id);
                 applyPrintPageSize(document.getElementById('printReceipt').scrollHeight);
-                window.print();
+                if (!printerSettings.auto_print_receipt) window.print();
                 resetSaleWorkspace();
                 await loadDineInTables();
-                showToast('✅ تم الحفظ - فاتورة رقم ' + resData.id + (paidMethod ? ' - ' + paidMethod : ''));
+                showToast('✅ تم الحفظ - فاتورة رقم ' + resData.id + (paidMethod ? ' - ' + paidMethod : '') + autoPrintNotice(resData.print));
             } catch(e) { showToast('❌ ' + (e.message || 'خطأ في الحفظ')); }
+            finally { setSaleBusy(false); }
         }
 
         function buildReceiptHTML(orderId) {
@@ -790,6 +800,9 @@
             const width = (printerSettings.paper_width || 80) + 'mm';
             const restaurantName = document.getElementById('restaurantTitle').textContent.replace('🍽️','').trim();
             const now = new Date();
+            const receiptLogo = printerSettings.logo_data
+                ? `<img src="${printerSettings.logo_data}" alt="شعار المطعم" style="max-height:42px; max-width:70%; object-fit:contain; margin:0 auto 4px;">`
+                : (printerSettings.logo_caption ? `<div style="font-size:.85em; margin-bottom:3px;">${printerSettings.logo_caption}</div>` : '');
 
             const itemsHtml = cart.map(i => `
                 <div style="display:flex; justify-content:space-between;">
@@ -815,6 +828,7 @@
 
             const receipt = `
                 <div style="font-family:sans-serif; font-size:${fs}; width:${width}; padding:6px; direction:rtl; page-break-after:always;">
+                    <div style="text-align:center;">${receiptLogo}</div>
                     <div style="text-align:center; font-weight:bold; font-size:1.2em;">${restaurantName}</div>
                     ${orderNumberLine}
                     <div style="text-align:center; margin-bottom:4px;">${now.toLocaleString('ar')}</div>
@@ -944,6 +958,30 @@
             } catch (e) {
                 document.getElementById('lockError').classList.remove('hidden');
             }
+        }
+
+        function setSaleBusy(busy, text = 'جارِ حفظ الفاتورة وتجهيز الطباعة…') {
+            const progress = document.getElementById('printProgress');
+            document.getElementById('printProgressText').textContent = text;
+            progress.classList.toggle('hidden', !busy);
+            progress.classList.toggle('flex', busy);
+            ['checkoutButton', 'saveDineInButton'].forEach(id => {
+                const button = document.getElementById(id);
+                if (!button) return;
+                button.disabled = busy;
+                button.classList.toggle('opacity-60', busy);
+                button.classList.toggle('cursor-wait', busy);
+            });
+        }
+
+        function autoPrintNotice(print) {
+            if (!print) return '';
+            const jobs = [print.receipt, print.kitchen].filter(Boolean);
+            const sent = jobs.filter(job => job.status === 'sent').map(job => job.type === 'kitchen' ? 'تذكرة المطبخ' : 'الإيصال');
+            const skipped = jobs.filter(job => job.status === 'skipped').map(job => job.type === 'kitchen' ? 'تذكرة المطبخ' : 'الإيصال');
+            if (sent.length) return ' — 🖨️ تم إرسال ' + sent.join(' و') + ' تلقائيًا للطابعة';
+            if (skipped.length) return ' — ℹ️ حُفظت العملية، والطباعة التلقائية لـ' + skipped.join(' و') + ' لم تُنفّذ: ' + (jobs.find(job => job.status === 'skipped')?.message || 'راجع إعدادات الطابعة');
+            return '';
         }
 
         function showToast(msg) {

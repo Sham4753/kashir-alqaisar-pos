@@ -36,7 +36,7 @@
             <h1 class="text-2xl font-bold text-gray-800">📊 التقارير المالية والربحية</h1>
             <div class="flex gap-2">
                 <button onclick="printReport()" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm">🖨️</button>
-                <button onclick="exportCSV()" class="bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm">📊 Excel</button>
+                <button id="exportExcelTop" onclick="openExcelPreview()" class="bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm">👁️ معاينة Excel</button>
                 <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩️ رجوع</a>
             </div>
         </div>
@@ -53,13 +53,26 @@
 
         <!-- نوع الجرد -->
         <div class="bg-white rounded-xl shadow-md p-6 space-y-5 mb-6 no-print">
-            <h2 class="text-lg font-bold text-gray-700">📅 نوع الجرد</h2>
+            <h2 class="text-lg font-bold text-gray-700">📅 أساس التقرير والمرشحات</h2>
             <select id="periodSelect" onchange="onPeriodChange()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
                 <option value="daily">📅 يومي</option>
                 <option value="monthly">📅 شهري</option>
                 <option value="yearly">📅 سنوي</option>
                 <option value="custom">🔍 تفصيلي</option>
+                <option value="all">🗂️ كل الفواتير</option>
             </select>
+            <select id="cashierSelect" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="">👤 جميع الكاشيرات</option>
+            </select>
+
+            <div class="space-y-2">
+                <div class="flex items-center justify-between gap-3"><label class="text-sm font-bold text-gray-700">نطاق التاريخ</label><span class="text-xs text-gray-500">عند تحديد تاريخ، يتقدم على اليومي/الشهري/السنوي</span></div>
+                <div class="flex gap-2">
+                    <input type="date" id="dateFrom" aria-label="من تاريخ" class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <span class="self-center text-gray-500">إلى</span>
+                    <input type="date" id="dateTo" aria-label="إلى تاريخ" class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
 
             <!-- خيارات تفصيلية -->
             <div id="customOptions" class="space-y-4 hidden">
@@ -69,11 +82,6 @@
                 <select id="prodSelect" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
                     <option value="">📝 كل المنتجات</option>
                 </select>
-                <div class="flex gap-2">
-                    <input type="date" id="dateFrom" class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                    <span class="self-center">إلى</span>
-                    <input type="date" id="dateTo" class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
             </div>
             <button onclick="loadReport()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">🔄 عرض التقرير</button>
         </div>
@@ -136,6 +144,19 @@
                 <div class="text-sm text-gray-600">🛵 ديليفري: <span id="typeDelivery" class="font-bold">-</span></div>
             </div>
 
+            <div class="border-t border-gray-200 pt-4">
+                <div class="flex items-center justify-between gap-3 mb-2">
+                    <h3 class="font-bold text-gray-700">👥 أداء المبيعات حسب الكاشير</h3>
+                    <span id="cashbookPeriodSummary" class="text-xs text-gray-500"></span>
+                </div>
+                <div class="overflow-x-auto border rounded-lg">
+                    <table class="w-full text-sm text-right">
+                        <thead class="bg-slate-100"><tr><th class="p-2">الكاشير</th><th class="p-2">الفواتير</th><th class="p-2">المبيعات</th><th class="p-2">نقد</th><th class="p-2">بطاقة</th><th class="p-2">الخصومات</th><th class="p-2">متوسط الفاتورة</th></tr></thead>
+                        <tbody id="cashierSalesBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- المنتجات المباعة -->
             <div>
                 <h3 class="font-bold text-gray-700 mb-2">🥇 المنتجات المباعة</h3>
@@ -156,12 +177,19 @@
             <!-- زر طباعة -->
             <div class="no-print flex gap-2">
                 <button onclick="printReport()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">🖨️ طباعة / PDF</button>
-                <button onclick="exportCSV()" class="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition">📊 تصدير Excel</button>
+                <button id="exportExcelBottom" onclick="openExcelPreview()" class="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition">👁️ معاينة ثم تصدير Excel</button>
             </div>
         </div>
 
         <!-- Toast -->
         <div id="toast" class="hidden fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg text-center z-50"></div>
+        <div id="excelPreviewModal" class="hidden fixed inset-0 z-50 bg-slate-950/50 p-4 items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="excelPreviewTitle">
+            <div class="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-2xl bg-white shadow-2xl p-5">
+                <div class="flex items-start justify-between gap-4 border-b border-slate-200 pb-4"><div><h2 id="excelPreviewTitle" class="text-lg font-black text-slate-800">معاينة نتائج Excel</h2><p id="excelPreviewMeta" class="mt-1 text-xs text-slate-500">جارِ تحضير المعاينة…</p></div><button onclick="closeExcelPreview()" class="rounded-lg px-3 py-2 text-slate-500 hover:bg-slate-100" aria-label="إغلاق">✕</button></div>
+                <div id="excelPreviewBody" class="py-4"><p class="text-center text-slate-500">جارِ تحميل البيانات…</p></div>
+                <div class="flex gap-2 border-t border-slate-200 pt-4"><button onclick="exportExcel()" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700">📊 تصدير هذه النتائج إلى Excel</button><button onclick="closeExcelPreview()" class="rounded-xl bg-slate-100 px-4 py-3 font-bold text-slate-700 hover:bg-slate-200">رجوع</button></div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -183,6 +211,7 @@
 
         async function init() {
             await loadCurrency();
+            await loadCashiers();
             // تحميل الأقسام
             try {
                 const r = await fetch('/api/analytics/categories');
@@ -193,6 +222,20 @@
             // تاريخ اليوم
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('dateTo').value = today;
+        }
+
+        async function loadCashiers() {
+            try {
+                const response = await fetch('/api/settings/users');
+                const users = await response.json();
+                const select = document.getElementById('cashierSelect');
+                (Array.isArray(users) ? users : []).filter(user => ['cashier', 'supervisor', 'manager'].includes(user.role)).forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.username;
+                    option.textContent = user.username + (user.role === 'cashier' ? '' : ' (' + user.role + ')');
+                    select.appendChild(option);
+                });
+            } catch (error) { console.warn('تعذر جلب قائمة الكاشيرات', error); }
         }
 
         function onPeriodChange() {
@@ -217,31 +260,68 @@
             } catch(e) {}
         }
 
-        async function loadReport() {
+        function reportParams() {
             const period = document.getElementById('periodSelect').value;
             const params = new URLSearchParams({ period });
+            const cashier = document.getElementById('cashierSelect').value;
+            if (cashier) params.append('cashier', cashier);
 
             if (period === 'custom') {
                 const cat = document.getElementById('catSelect').value;
                 const prod = document.getElementById('prodSelect').value;
-                const from = document.getElementById('dateFrom').value;
-                const to = document.getElementById('dateTo').value;
                 if (cat) params.append('category', cat);
                 if (prod) params.append('product', prod);
-                if (from) params.append('from', from);
-                if (to) params.append('to', to);
             }
+            const from = document.getElementById('dateFrom').value;
+            const to = document.getElementById('dateTo').value;
+            if (from) params.append('from', from);
+            if (to) params.append('to', to);
+            return params;
+        }
+
+        async function loadReport() {
+            const params = reportParams();
 
             try {
                 const r = await fetch('/api/analytics?' + params.toString());
                 const data = await r.json();
                 showResults(data);
+                await loadFinancialCashierReport(params);
             } catch(e) {
                 showToast('❌ خطأ في التحميل');
             }
         }
 
+        async function loadFinancialCashierReport(params) {
+            const body = document.getElementById('cashierSalesBody');
+            body.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-400">جارِ تحميل تقرير الكاشيرات...</td></tr>';
+            try {
+                const response = await fetch('/api/analytics/financial?' + params.toString());
+                const data = await response.json();
+                if (!response.ok || !data.ok) throw new Error(data.error || 'تعذر تحميل تقرير الكاشيرات');
+                lastFinancialReport = data;
+                lastFinancialParams = params.toString();
+                renderCashierSales(data.cashier_summary || []);
+                const summary = data.summary || {};
+                document.getElementById('cashbookPeriodSummary').textContent = 'الصندوق: ' + formatPrice(summary.cash_balance || 0) + ' · البطاقات: ' + formatPrice(summary.card_balance || 0);
+            } catch (error) {
+                body.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-red-500">تعذر تحميل تقرير الكاشيرات</td></tr>';
+                document.getElementById('cashbookPeriodSummary').textContent = '';
+            }
+        }
+
+        function renderCashierSales(rows) {
+            const body = document.getElementById('cashierSalesBody');
+            if (!rows.length) {
+                body.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-400">لا توجد فواتير ضمن الفترة المحددة</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(row => `<tr class="border-t hover:bg-gray-50"><td class="p-2 font-bold">${escapeHtml(row.cashier)}</td><td class="p-2">${row.orders}</td><td class="p-2 font-bold">${formatPrice(row.sales)}</td><td class="p-2 text-emerald-700">${formatPrice(row.cash)}</td><td class="p-2 text-sky-700">${formatPrice(row.card)}</td><td class="p-2 text-orange-700">${formatPrice(row.discounts)}</td><td class="p-2">${formatPrice(row.average_order)}</td></tr>`).join('');
+        }
+
         let lastReportData = null;
+        let lastFinancialReport = null;
+        let lastFinancialParams = '';
 
         function showResults(data) {
             lastReportData = data;
@@ -262,8 +342,12 @@
             const uncosted = document.getElementById('uncostedProducts');
             if (data.uncosted_products && data.uncosted_products.length) { uncosted.textContent = '⚠️ لم تُحسب تكلفة هذه المنتجات لعدم وجود وصفة أو سعر شراء: ' + data.uncosted_products.join('، '); uncosted.classList.remove('hidden'); } else { uncosted.classList.add('hidden'); }
 
-            const periodLabels = { daily: 'يومي', monthly: 'شهري', yearly: 'سنوي', custom: 'تفصيلي' };
-            const meta = [periodLabels[data.period] || data.period, new Date().toLocaleString('ar')].join(' — ');
+            const periodLabels = { daily: 'يومي', monthly: 'شهري', yearly: 'سنوي', custom: 'تفصيلي', all: 'كل الفواتير' };
+            const selectedFrom = document.getElementById('dateFrom').value;
+            const selectedTo = document.getElementById('dateTo').value;
+            const selectedCashier = document.getElementById('cashierSelect').value;
+            const rangeLabel = selectedFrom || selectedTo ? `من ${selectedFrom || 'البداية'} إلى ${selectedTo || 'اليوم'}` : periodLabels[data.period] || data.period;
+            const meta = [rangeLabel, selectedCashier ? `الكاشير: ${selectedCashier}` : 'جميع الكاشيرات', new Date().toLocaleString('ar')].join(' — ');
             document.getElementById('printReportMeta').textContent = meta;
             fetch('/api/settings/restaurant').then(r => r.json()).then(r => {
                 document.getElementById('printRestaurantName').textContent = r.name || 'كاشير القيصر';
@@ -401,6 +485,66 @@
             ]));
             downloadCSV('تقرير_' + (d.period || 'report') + '_' + new Date().toISOString().slice(0,10) + '.csv', rows);
             showToast('✅ تم تصدير الملف');
+        }
+
+        async function openExcelPreview() {
+            if (!lastReportData) return showToast('⚠️ اعرض التقرير أولاً');
+            const modal = document.getElementById('excelPreviewModal');
+            const body = document.getElementById('excelPreviewBody');
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            body.innerHTML = '<p class="text-center text-slate-500">جارِ مطابقة المعاينة مع المرشحات الحالية…</p>';
+            try {
+                const params = reportParams().toString();
+                if (!lastFinancialReport || lastFinancialParams !== params) {
+                    const response = await fetch('/api/analytics/financial?' + params);
+                    const data = await response.json();
+                    if (!response.ok || !data.ok) throw new Error(data.error || 'تعذر تحميل معاينة التقرير');
+                    lastFinancialReport = data; lastFinancialParams = params;
+                }
+                const data = lastFinancialReport;
+                const summary = data.summary || {};
+                const cashier = document.getElementById('cashierSelect').value || 'جميع الكاشيرات';
+                const from = document.getElementById('dateFrom').value || 'بداية السجل';
+                const to = document.getElementById('dateTo').value || 'اليوم';
+                document.getElementById('excelPreviewMeta').textContent = `الكاشير: ${cashier} · من ${from} إلى ${to} · ${summary.orders || 0} فاتورة`;
+                const rows = (data.cashier_summary || []).slice(0, 6).map(row => `<tr class="border-t"><td class="p-2 font-bold">${escapeHtml(row.cashier)}</td><td class="p-2">${row.orders}</td><td class="p-2 font-bold">${formatPrice(row.sales)}</td><td class="p-2">${formatPrice(row.cash)}</td><td class="p-2">${formatPrice(row.card)}</td></tr>`).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-500">لا توجد مبيعات ضمن المرشحات المحددة</td></tr>';
+                const invoices = (data.orders || []).slice(0, 5).map(order => `<li class="flex justify-between gap-3 border-t py-2 text-xs"><span>${escapeHtml(order.id || '')} · ${escapeHtml(order.cashier_name || 'غير معروف')}</span><b>${formatPrice(order.total || 0)}</b></li>`).join('') || '<li class="py-2 text-xs text-slate-500">لا توجد فواتير</li>';
+                body.innerHTML = `<div class="grid grid-cols-2 gap-3 md:grid-cols-4"><div class="rounded-xl bg-emerald-50 p-3"><div class="text-xs text-emerald-700">المبيعات</div><div class="mt-1 font-black text-emerald-800">${formatPrice(summary.sales || 0)}</div></div><div class="rounded-xl bg-sky-50 p-3"><div class="text-xs text-sky-700">الفواتير</div><div class="mt-1 font-black text-sky-800">${summary.orders || 0}</div></div><div class="rounded-xl bg-amber-50 p-3"><div class="text-xs text-amber-700">نقد داخل</div><div class="mt-1 font-black text-amber-800">${formatPrice(summary.cash_in || 0)}</div></div><div class="rounded-xl bg-violet-50 p-3"><div class="text-xs text-violet-700">بطاقات</div><div class="mt-1 font-black text-violet-800">${formatPrice(summary.card_in || 0)}</div></div></div><h3 class="mt-5 font-black text-slate-800">أداء الكاشير ضمن التصدير</h3><div class="mt-2 overflow-x-auto rounded-xl border"><table class="w-full text-right text-sm"><thead class="bg-slate-100"><tr><th class="p-2">الكاشير</th><th class="p-2">الفواتير</th><th class="p-2">المبيعات</th><th class="p-2">نقد</th><th class="p-2">بطاقة</th></tr></thead><tbody>${rows}</tbody></table></div><h3 class="mt-5 font-black text-slate-800">أول خمس فواتير ستظهر في الملف</h3><ul class="mt-2 rounded-xl border border-slate-200 px-3">${invoices}</ul>`;
+            } catch (error) {
+                body.innerHTML = `<p class="rounded-xl bg-red-50 p-4 text-center text-sm text-red-700">${escapeHtml(error.message || 'تعذر تحميل معاينة التقرير')}</p>`;
+            }
+        }
+
+        function closeExcelPreview() {
+            const modal = document.getElementById('excelPreviewModal');
+            modal.classList.add('hidden'); modal.classList.remove('flex');
+        }
+
+        async function exportExcel() {
+            if (!lastReportData) return showToast('⚠️ اعرض التقرير أولاً');
+            const buttons = [document.getElementById('exportExcelTop'), document.getElementById('exportExcelBottom')].filter(Boolean);
+            buttons.forEach(button => { button.disabled = true; button.dataset.label = button.textContent; button.textContent = '⏳ جارِ تجهيز Excel…'; button.classList.add('opacity-70', 'cursor-wait'); });
+            try {
+                const response = await fetch('/api/analytics/financial.xlsx?' + reportParams().toString());
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.error || 'تعذر إنشاء ملف Excel');
+                }
+                const blob = await response.blob();
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                const cashier = document.getElementById('cashierSelect').value || 'all_cashiers';
+                const from = document.getElementById('dateFrom').value || 'start';
+                const to = document.getElementById('dateTo').value || 'today';
+                link.href = url;
+                link.download = `cashier_report_${cashier}_${from}_${to}.xlsx`;
+                document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+                showToast('✅ تم تصدير نتائج الفترة والكاشير المحددين إلى Excel');
+            } catch (error) {
+                showToast('❌ ' + (error.message || 'تعذر تصدير Excel'));
+            } finally {
+                buttons.forEach(button => { button.disabled = false; button.textContent = button.dataset.label || '📊 Excel'; button.classList.remove('opacity-70', 'cursor-wait'); });
+            }
         }
 
         function showToast(msg) {

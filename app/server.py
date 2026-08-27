@@ -1,5 +1,9 @@
 import os, sys, json, shutil, threading, urllib.request, hashlib, hmac, base64, secrets, tempfile, subprocess, socket, uuid, re
-from datetime import datetime
+from datetime import datetime, timedelta
+import zipfile
+from xml.sax.saxutils import escape as xml_escape
+import zipfile
+from xml.sax.saxutils import escape as xml_escape
 from flask import Flask, request, jsonify, send_from_directory, send_file, session, redirect, Response
 from io import BytesIO
 VENDOR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vendor')
@@ -702,8 +706,10 @@ def orders():
                                  channel='card', reference_type='order', reference_id=o['id'],
                                  note='فاتورة ' + str(o['id']), currency=o['currency'], exchange_rate=o['exchange_rate'])
         consume_inventory_for_order(data, o['items'], o['id'])
+        receipt_print = queue_thermal_print(data, o, 'receipt')
+        kitchen_print = queue_thermal_print(data, o, 'kitchen')
         save(data); backup()
-        return jsonify({'ok': True, 'id': o['id'], 'total': total})
+        return jsonify({'ok': True, 'id': o['id'], 'total': total, 'print': {'receipt': receipt_print, 'kitchen': kitchen_print}})
     all_orders = data.get('orders', []) + data.get('orders_archive', [])
     date_from = request.args.get('from', '').strip()
     date_to = request.args.get('to', '').strip()
@@ -1559,6 +1565,7 @@ def get_analytics():
     period = request.args.get('period', 'daily')
     category_filter = request.args.get('category', '').strip()
     product_filter = request.args.get('product', '').strip()
+    cashier_filter = request.args.get('cashier', '').strip()
     date_from = request.args.get('from', '').strip()
     date_to = request.args.get('to', '').strip()
 
@@ -1566,7 +1573,9 @@ def get_analytics():
     now = datetime.now()
     all_orders = [o for o in data.get('orders', []) + data.get('orders_archive', []) if not o.get('voided')]
 
-    if period == 'daily':
+    if date_from or date_to:
+        orders = [o for o in all_orders if (not date_from or o.get('timestamp', '')[:10] >= date_from) and (not date_to or o.get('timestamp', '')[:10] <= date_to)]
+    elif period == 'daily':
         orders = [o for o in all_orders if o.get('timestamp', '').startswith(now.strftime('%Y-%m-%d'))]
     elif period == 'monthly':
         orders = [o for o in all_orders if o.get('timestamp', '').startswith(now.strftime('%Y-%m'))]
@@ -1580,6 +1589,9 @@ def get_analytics():
             orders = [o for o in orders if o.get('timestamp', '')[:10] <= date_to]
     else:
         orders = all_orders
+
+    if cashier_filter:
+        orders = [o for o in orders if o.get('cashier_name', '') == cashier_filter]
 
     # خريطة منتج -> قسمه (من قائمة الطعام الحالية) لدعم فلتر القسم
     item_category = {}
@@ -1793,9 +1805,169 @@ def get_analytics():
         "total_card": total_card,
         "product_sales": product_sales,
         "order_details": order_details,
-        "slow_items": slow_items,
-        "top_items": top_items
+    "slow_items": slow_items,
+    "top_items": top_items
     })
+
+
+def _report_period_orders(data, period='daily', date_from='', date_to=''):
+    """يجمع الفواتير الصحيحة ضمن الفترة المطلوبة لاستعمالها في التقرير والتصدير."""
+    now = datetime.now()
+    orders = [order for order in data.get('orders', []) + data.get('orders_archive', []) if not order.get('voided')]
+    if date_from or date_to:
+        return [order for order in orders if (not date_from or (order.get('timestamp') or order.get('date', ''))[:10] >= date_from) and (not date_to or (order.get('timestamp') or order.get('date', ''))[:10] <= date_to)]
+    if period == 'daily':
+        return [order for order in orders if (order.get('timestamp') or order.get('date', '')).startswith(now.strftime('%Y-%m-%d'))]
+    if period == 'monthly':
+        return [order for order in orders if (order.get('timestamp') or order.get('date', '')).startswith(now.strftime('%Y-%m'))]
+    if period == 'yearly':
+        return [order for order in orders if (order.get('timestamp') or order.get('date', '')).startswith(now.strftime('%Y'))]
+    if period == 'custom':
+        if date_from:
+            orders = [order for order in orders if (order.get('timestamp') or order.get('date', ''))[:10] >= date_from]
+        if date_to:
+            orders = [order for order in orders if (order.get('timestamp') or order.get('date', ''))[:10] <= date_to]
+    return orders
+
+
+def _in_report_period(timestamp, period, date_from='', date_to=''):
+    """يتحقق من دخول سجل الصندوق ضمن فترة التقرير."""
+    value = str(timestamp or '')
+    now = datetime.now()
+    if date_from or date_to:
+        return (not date_from or value[:10] >= date_from) and (not date_to or value[:10] <= date_to)
+    if period == 'daily':
+        return value.startswith(now.strftime('%Y-%m-%d'))
+    if period == 'monthly':
+        return value.startswith(now.strftime('%Y-%m'))
+    if period == 'yearly':
+        return value.startswith(now.strftime('%Y'))
+    if period == 'custom':
+        return (not date_from or value[:10] >= date_from) and (not date_to or value[:10] <= date_to)
+    return True
+
+
+def financial_report_payload(data, period='daily', date_from='', date_to='', cashier_filter=''):
+    """يبني تقريرًا ماليًا قابلًا للتدقيق، مجمعًا حسب الكاشير وقناة الدفع."""
+    orders = _report_period_orders(data, period, date_from, date_to)
+    if cashier_filter:
+        orders = [order for order in orders if order.get('cashier_name', '') == cashier_filter]
+    cashier_rows = {}
+    for order in orders:
+        cashier = order.get('cashier_name') or 'غير معروف'
+        row = cashier_rows.setdefault(cashier, {
+            'cashier': cashier, 'orders': 0, 'sales': 0.0, 'cash': 0.0, 'card': 0.0,
+            'discounts': 0.0, 'dine_in_orders': 0, 'takeaway_orders': 0, 'delivery_orders': 0
+        })
+        total = float(order.get('total', 0) or 0)
+        subtotal = float(order.get('subtotal', total) or total)
+        discount = float(order.get('discount_amount', max(0, subtotal - total)) or 0)
+        cash_amount = order.get('cash_amount')
+        card_amount = order.get('card_amount')
+        if cash_amount is None and card_amount is None:
+            cash_amount = 0 if order.get('payment') == 'بطاقة' else total
+            card_amount = total if order.get('payment') == 'بطاقة' else 0
+        row['orders'] += 1
+        row['sales'] += total
+        row['cash'] += float(cash_amount or 0)
+        row['card'] += float(card_amount or 0)
+        row['discounts'] += discount
+        order_type = order.get('type', 'سفري')
+        if order_type == 'صالة':
+            row['dine_in_orders'] += 1
+        elif order_type == 'ديليفري':
+            row['delivery_orders'] += 1
+        else:
+            row['takeaway_orders'] += 1
+    cashier_summary = []
+    for row in cashier_rows.values():
+        row['average_order'] = round(row['sales'] / row['orders'], 2) if row['orders'] else 0
+        for key in ('sales', 'cash', 'card', 'discounts'):
+            row[key] = round(row[key], 2)
+        cashier_summary.append(row)
+    cashier_summary.sort(key=lambda row: (-row['sales'], row['cashier']))
+    modern_cashbook = data.get('cash_movements', [])
+    legacy_cashbook = data.get('cashbook', []) if not modern_cashbook else []
+    cashbook = [movement for movement in modern_cashbook + legacy_cashbook if _in_report_period(movement.get('timestamp'), period, date_from, date_to)]
+    cash_in = sum(float(m.get('amount', 0) or 0) for m in cashbook if m.get('channel') == 'cash' and m.get('direction') == 'in')
+    cash_out = sum(float(m.get('amount', 0) or 0) for m in cashbook if m.get('channel') == 'cash' and m.get('direction') == 'out')
+    card_in = sum(float(m.get('amount', 0) or 0) for m in cashbook if m.get('channel') == 'card' and m.get('direction') == 'in')
+    card_out = sum(float(m.get('amount', 0) or 0) for m in cashbook if m.get('channel') == 'card' and m.get('direction') == 'out')
+    return {
+        'period': period, 'from': date_from, 'to': date_to, 'cashier_filter': cashier_filter,
+        'cashier_summary': cashier_summary, 'orders': orders,
+        'cashbook': sorted(cashbook, key=lambda row: str(row.get('timestamp', '')), reverse=True),
+        'summary': {
+            'sales': round(sum(float(order.get('total', 0) or 0) for order in orders), 2), 'orders': len(orders),
+            'cash_in': round(cash_in, 2), 'cash_out': round(cash_out, 2), 'cash_balance': round(cash_in - cash_out, 2),
+            'card_in': round(card_in, 2), 'card_out': round(card_out, 2), 'card_balance': round(card_in - card_out, 2)
+        }
+    }
+
+
+@app.route('/api/analytics/financial', methods=['GET'])
+def financial_analytics():
+    if not has_role('manager', 'supervisor'):
+        return permission_error()
+    period = request.args.get('period', 'daily')
+    if period not in {'daily', 'monthly', 'yearly', 'custom', 'all'}:
+        return jsonify({'ok': False, 'error': 'فترة التقرير غير صالحة'}), 400
+    return jsonify({'ok': True, **financial_report_payload(load(), period, request.args.get('from', '').strip(), request.args.get('to', '').strip(), request.args.get('cashier', '').strip())})
+
+
+def _excel_column(index):
+    result = ''
+    while index:
+        index, remainder = divmod(index - 1, 26)
+        result = chr(65 + remainder) + result
+    return result
+
+
+def _xlsx_sheet(rows):
+    body = []
+    for row_number, row in enumerate(rows, 1):
+        cells = []
+        for column_number, value in enumerate(row, 1):
+            reference = f'{_excel_column(column_number)}{row_number}'
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                cells.append(f'<c r="{reference}"><v>{value}</v></c>')
+            else:
+                cells.append(f'<c r="{reference}" t="inlineStr"><is><t>{xml_escape(str(value if value is not None else ""))}</t></is></c>')
+        body.append(f'<row r="{row_number}">{"".join(cells)}</row>')
+    return ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews><sheetData>' + ''.join(body) + '</sheetData></worksheet>').encode('utf-8')
+
+
+def create_financial_xlsx(report):
+    """ينشئ ملف Excel حقيقيًا بأربع أوراق باستخدام مكتبات Python القياسية فقط."""
+    summary = report['summary']
+    sheets = [
+        ('الملخص المالي', [['تقرير مالي ومبيعات - كاشير القيصر'], ['الفترة', report['period']], ['من', report['from'] or '—'], ['إلى', report['to'] or '—'], [], ['البند', 'القيمة'], ['إجمالي المبيعات', summary['sales']], ['عدد الفواتير', summary['orders']], ['نقد داخل', summary['cash_in']], ['نقد خارج', summary['cash_out']], ['رصيد النقد', summary['cash_balance']], ['بطاقة داخل', summary['card_in']], ['بطاقة خارج', summary['card_out']], ['رصيد البطاقات', summary['card_balance']]]),
+        ('مبيعات الكاشير', [['الكاشير', 'عدد الفواتير', 'المبيعات', 'النقد', 'البطاقات', 'الخصومات', 'متوسط الفاتورة', 'صالة', 'سفري', 'ديليفري']] + [[row['cashier'], row['orders'], row['sales'], row['cash'], row['card'], row['discounts'], row['average_order'], row['dine_in_orders'], row['takeaway_orders'], row['delivery_orders']] for row in report['cashier_summary']]),
+        ('الفواتير', [['رقم الفاتورة', 'التاريخ', 'الكاشير', 'النوع', 'الدفع', 'النقد', 'البطاقات', 'الخصم', 'الإجمالي', 'الطاولة', 'الزبون', 'الأصناف']] + [[order.get('id', ''), order.get('timestamp') or order.get('date', ''), order.get('cashier_name', 'غير معروف'), order.get('type', 'سفري'), order.get('payment', ''), order.get('cash_amount', ''), order.get('card_amount', ''), order.get('discount_amount', ''), order.get('total', 0), order.get('table', ''), order.get('customer', ''), '، '.join(f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', []))] for order in report['orders']]),
+        ('دفتر الصندوق', [['التاريخ', 'الاتجاه', 'القناة', 'التصنيف', 'المبلغ', 'الكاشير/المستخدم', 'المرجع', 'الملاحظة']] + [[movement.get('timestamp', ''), movement.get('direction', ''), movement.get('channel', ''), movement.get('category', ''), movement.get('amount', 0), movement.get('created_by', ''), movement.get('reference_id', ''), movement.get('note', '')] for movement in report['cashbook']])
+    ]
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
+        overrides = ''.join(f'<Override PartName="/xl/worksheets/sheet{i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' for i in range(1, len(sheets) + 1))
+        archive.writestr('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' + overrides + '</Types>')
+        archive.writestr('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')
+        archive.writestr('xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' + ''.join(f'<sheet name="{xml_escape(name)}" sheetId="{i}" r:id="rId{i}"/>' for i, (name, _) in enumerate(sheets, 1)) + '</sheets></workbook>')
+        archive.writestr('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + ''.join(f'<Relationship Id="rId{i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet{i}.xml"/>' for i in range(1, len(sheets) + 1)) + '</Relationships>')
+        for index, (_, rows) in enumerate(sheets, 1):
+            archive.writestr(f'xl/worksheets/sheet{index}.xml', _xlsx_sheet(rows))
+    buffer.seek(0)
+    return buffer
+
+
+@app.route('/api/analytics/financial.xlsx', methods=['GET'])
+def export_financial_xlsx():
+    if not has_role('manager', 'supervisor'):
+        return permission_error()
+    period = request.args.get('period', 'daily')
+    if period not in {'daily', 'monthly', 'yearly', 'custom', 'all'}:
+        return jsonify({'ok': False, 'error': 'فترة التقرير غير صالحة'}), 400
+    report = financial_report_payload(load(), period, request.args.get('from', '').strip(), request.args.get('to', '').strip(), request.args.get('cashier', '').strip())
+    return send_file(create_financial_xlsx(report), as_attachment=True, download_name=f"financial_report_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx", mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
 @app.route('/api/settings/currency', methods=['POST'])
@@ -2020,14 +2192,68 @@ def print_text_to_printer(printer_name, text):
     للنص العربي (RTL) على كل طابعة لأنه طباعة نصية خام بدون محرك رسم. الفواتير الفعلية بالكاشير
     تستمر تُطبع عن طريق نافذة المتصفح (HTML) لأنها ترندر العربي صح، وهذا فقط للفحص السريع."""
     try:
-        tmp_path = os.path.join(VAULT_DIR, '_print_test.txt')
+        tmp_path = os.path.join(VAULT_DIR, f'_thermal_print_{uuid.uuid4().hex}.txt')
         with open(tmp_path, 'w', encoding='utf-8') as f:
             f.write(text)
         cmd = f'Get-Content -Path "{tmp_path}" -Encoding UTF8 | Out-Printer -Name "{printer_name}"'
         subprocess.run(['powershell', '-NoProfile', '-Command', cmd], timeout=10, check=True)
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
         return True
     except Exception:
         return False
+
+
+def thermal_receipt_text(data, order, ticket_type='receipt'):
+    """ينشئ نصًا بسيطًا للطابعات الحرارية، ويضمن بقاء البيع ناجحًا إن فشلت الطابعة."""
+    settings = data.get('settings', {})
+    restaurant = settings.get('restaurant', {})
+    printer = settings.get('printer', {})
+    restaurant_name = restaurant.get('name') or 'كاشير القيصر'
+    caption = str(printer.get('logo_caption', '') or '').strip()
+    width = 42 if int(printer.get('paper_width', 80) or 80) >= 80 else 32
+    divider = '-' * width
+    if ticket_type == 'kitchen':
+        lines = [restaurant_name, caption, divider, 'طلب مطبخ', f"الطلب: {order.get('id', '')}", f"النوع: {order.get('type', 'سفري')}"]
+        if order.get('table'):
+            lines.append('الطاولة: ' + str(order.get('table')))
+        if order.get('customer'):
+            lines.append('الزبون: ' + str(order.get('customer')))
+        lines.extend([divider] + [f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', [])])
+        if order.get('notes'):
+            lines.extend([divider, 'ملاحظة: ' + str(order.get('notes'))])
+    else:
+        lines = [restaurant_name, caption, divider, 'إيصال مبيعات', f"الفاتورة: {order.get('id', '')}", f"التاريخ: {(order.get('timestamp') or order.get('date', ''))[:16]}", divider]
+        lines.extend([f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', [])])
+        lines.append(divider)
+        lines.append('الإجمالي: ' + str(order.get('total', 0)))
+        lines.append('الدفع: ' + str(order.get('payment', '')))
+        if order.get('cashier_name'):
+            lines.append('الكاشير: ' + str(order.get('cashier_name')))
+        lines.extend([divider, str(printer.get('footer_text', '') or ''), '\n\n\n'])
+    return '\n'.join(line for line in lines if line is not None)
+
+
+def queue_thermal_print(data, order, ticket_type='receipt'):
+    """يرسل طباعة تلقائية بعد حفظ الطلب؛ تعطل الطابعة يسجل في السجل ولا يلغي الفاتورة."""
+    printer = data.get('settings', {}).get('printer', {})
+    enabled = bool(printer.get('auto_print_receipt')) if ticket_type == 'receipt' else bool(printer.get('auto_print_kitchen'))
+    if not enabled:
+        return {'queued': False, 'reason': 'disabled'}
+    printer_name = str(printer.get('printer_name') or '').strip()
+    log = {'id': uuid.uuid4().hex[:12], 'timestamp': datetime.now().isoformat(), 'order_id': order.get('id', ''), 'type': ticket_type, 'printer': printer_name, 'status': 'skipped', 'message': ''}
+    if sys.platform != 'win32':
+        log.update({'status': 'skipped', 'message': 'الطباعة التلقائية الفعلية متاحة على Windows فقط'})
+    elif not printer_name:
+        log.update({'status': 'skipped', 'message': 'لم تُحدد طابعة حرارية'})
+    else:
+        sent = print_text_to_printer(printer_name, thermal_receipt_text(data, order, ticket_type))
+        log.update({'status': 'sent' if sent else 'failed', 'message': 'تم إرسال أمر الطباعة' if sent else 'تعذر إرسال أمر الطباعة'})
+    data.setdefault('print_log', []).append(log)
+    data['print_log'] = data['print_log'][-200:]
+    return log
 
 
 @app.route('/api/printer/list', methods=['GET'])
@@ -2060,24 +2286,58 @@ def get_printer_settings():
         "font_size": p.get('font_size', 'medium'),
         "copies": p.get('copies', 1),
         "footer_text": p.get('footer_text', ''),
-        "printer_name": p.get('printer_name', '')
+        "printer_name": p.get('printer_name', ''),
+        "auto_print_receipt": bool(p.get('auto_print_receipt', False)),
+        "auto_print_kitchen": bool(p.get('auto_print_kitchen', False)),
+        "logo_data": p.get('logo_data', ''),
+        "logo_caption": p.get('logo_caption', '')
     })
 
 @app.route('/api/printer/settings', methods=['POST'])
 def set_printer_settings():
+    if not has_role('manager'):
+        return permission_error()
     data = load()
     if 'settings' not in data:
         data['settings'] = {}
     existing = data['settings'].get('printer', {})
+    payload = request.get_json(silent=True) or {}
+    logo_data = str(payload.get('logo_data', existing.get('logo_data', '')) or '')
+    if logo_data and (not logo_data.startswith('data:image/') or len(logo_data) > 300000):
+        return jsonify({'ok': False, 'error': 'صورة الشعار يجب أن تكون صورة محلية لا تتجاوز 200 كيلوبايت'}), 400
     data['settings']['printer'] = {
-        'paper_width': request.json.get('paper_width', 80),
-        'font_size': request.json.get('font_size', 'medium'),
-        'copies': request.json.get('copies', 1),
-        'footer_text': request.json.get('footer_text', ''),
-        'printer_name': request.json.get('printer_name', existing.get('printer_name', ''))
+        'paper_width': payload.get('paper_width', 80),
+        'font_size': payload.get('font_size', 'medium'),
+        'copies': payload.get('copies', 1),
+        'footer_text': str(payload.get('footer_text', '') or '')[:160],
+        'printer_name': payload.get('printer_name', existing.get('printer_name', '')),
+        'auto_print_receipt': bool(payload.get('auto_print_receipt', False)),
+        'auto_print_kitchen': bool(payload.get('auto_print_kitchen', False)),
+        'logo_data': logo_data,
+        'logo_caption': str(payload.get('logo_caption', '') or '')[:36]
     }
     save(data)
     return jsonify({"ok": True})
+
+
+@app.route('/api/printer/orders/<order_id>/print', methods=['POST'])
+def reprint_order(order_id):
+    """يعيد طباعة فاتورة محفوظة بطلب صريح من مستخدم يملك صلاحية الكاشير."""
+    if not has_role('manager', 'supervisor', 'cashier'):
+        return permission_error()
+    data = load()
+    order = next((row for row in data.get('orders', []) + data.get('orders_archive', []) if str(row.get('id')) == str(order_id) and not row.get('voided')), None)
+    if not order:
+        return jsonify({'ok': False, 'error': 'الفاتورة غير موجودة أو ملغاة'}), 404
+    printer = data.get('settings', {}).get('printer', {})
+    if not printer.get('printer_name'):
+        return jsonify({'ok': False, 'error': 'حدد طابعة أولًا من إعدادات الطابعة'}), 400
+    previous = printer.get('auto_print_receipt', False)
+    printer['auto_print_receipt'] = True
+    result = queue_thermal_print(data, order, 'receipt')
+    printer['auto_print_receipt'] = previous
+    save(data)
+    return jsonify({'ok': result.get('status') == 'sent', 'print': result})
 
 @app.route('/api/printer/test', methods=['POST'])
 def test_printer():
@@ -2225,7 +2485,7 @@ ROLE_PAGE_ACCESS = {
     'expenses.html': {'manager'},
 }
 
-ROLE_LABELS = {'cashier': 'كاشير', 'supervisor': 'مشرف', 'manager': 'مدير'}
+ROLE_LABELS = {'cashier': 'كاشير', 'waiter': 'نادل', 'supervisor': 'مشرف', 'manager': 'مدير'}
 
 
 def has_role(*allowed):
@@ -2282,6 +2542,9 @@ def enforce_api_access():
     # بيانات شاشة الترحيب وتسجيل الدخول فقط. قائمة المستخدمين لا تتضمن كلمة مرور أو تجزئتها.
     if path in PUBLIC_API_PATHS:
         return None
+    # تطبيق النادل لا يحمل Cookie المتصفح؛ كل واجهاته تتحقق من رمز قصير العمر داخل الدالة نفسها.
+    if path.startswith('/api/mobile/'):
+        return None
     if path == '/api/qr/menu':
         if os.environ.get('QAISAR_LAN') != '1':
             return jsonify({'ok': False, 'error': 'القائمة الرقمية العامة متاحة فقط عند تفعيل وضع الشبكة المحلية'}), 403
@@ -2336,6 +2599,16 @@ def audit_successful_mutation(response):
             save(data)
         except Exception:
             pass
+    return response
+
+
+@app.after_request
+def mobile_api_cors(response):
+    """يسمح لتطبيق النادل المحلي فقط بالوصول إلى واجهات /api/mobile المحمية برمز."""
+    if request.path.startswith('/api/mobile/'):
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, OPTIONS'
     return response
 
 
@@ -2618,6 +2891,163 @@ def dine_in_session_view(session_row):
     }
 
 
+def mobile_waiter_from_request(data):
+    """يتحقق من رمز النادل المرسل بالتطبيق ويقصر الوصول على شبكة المطعم المحلية."""
+    if os.environ.get('QAISAR_LAN') != '1':
+        return None, (jsonify({'ok': False, 'error': 'تطبيق النادل متاح فقط عند تفعيل الشبكة المحلية'}), 403)
+    header = request.headers.get('Authorization', '')
+    token = header[7:].strip() if header.lower().startswith('bearer ') else ''
+    if not token:
+        return None, (jsonify({'ok': False, 'error': 'رمز الدخول مطلوب'}), 401)
+    digest = hashlib.sha256(token.encode('utf-8')).hexdigest()
+    now = datetime.now().isoformat()
+    for token_row in data.get('mobile_tokens', []):
+        if hmac.compare_digest(str(token_row.get('digest', '')), digest):
+            if token_row.get('expires_at', '') < now:
+                return None, (jsonify({'ok': False, 'error': 'انتهت جلسة النادل؛ سجّل الدخول مجددًا'}), 401)
+            user = next((row for row in active_users(data) if row.get('id') == token_row.get('user_id') and row.get('role') == 'waiter'), None)
+            if user:
+                return user, None
+    return None, (jsonify({'ok': False, 'error': 'رمز دخول النادل غير صالح'}), 401)
+
+
+def mobile_auth_error():
+    data = load()
+    waiter, error = mobile_waiter_from_request(data)
+    return data, waiter, error
+
+
+@app.route('/api/mobile/auth/login', methods=['POST', 'OPTIONS'])
+def mobile_waiter_login():
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    if os.environ.get('QAISAR_LAN') != '1':
+        return jsonify({'ok': False, 'error': 'فعّل وضع الشبكة المحلية في الكاشير أولًا'}), 403
+    payload = request.get_json(silent=True) or {}
+    username = str(payload.get('username', '')).strip()
+    password = str(payload.get('password', ''))
+    data = load()
+    user = next((row for row in active_users(data) if row.get('username') == username and row.get('role') == 'waiter'), None)
+    if not user or not verify_password(user.get('password_hash', user.get('password', '')), password):
+        return jsonify({'ok': False, 'error': 'بيانات النادل غير صحيحة'}), 401
+    token = secrets.token_urlsafe(32)
+    expires_at = (datetime.now() + timedelta(hours=12)).isoformat()
+    tokens = [row for row in data.setdefault('mobile_tokens', []) if row.get('expires_at', '') >= datetime.now().isoformat() and row.get('user_id') != user.get('id')]
+    tokens.append({'digest': hashlib.sha256(token.encode('utf-8')).hexdigest(), 'user_id': user['id'], 'expires_at': expires_at, 'created_at': datetime.now().isoformat()})
+    data['mobile_tokens'] = tokens[-100:]
+    save(data)
+    return jsonify({'ok': True, 'token': token, 'expires_at': expires_at, 'user': {'id': user['id'], 'username': user['username'], 'role': 'waiter'}})
+
+
+@app.route('/api/mobile/auth/logout', methods=['POST', 'OPTIONS'])
+def mobile_waiter_logout():
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    data, waiter, error = mobile_auth_error()
+    if error:
+        return error
+    digest = hashlib.sha256(request.headers.get('Authorization', '')[7:].strip().encode('utf-8')).hexdigest()
+    data['mobile_tokens'] = [row for row in data.get('mobile_tokens', []) if not hmac.compare_digest(str(row.get('digest', '')), digest)]
+    save(data)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/mobile/bootstrap', methods=['GET', 'OPTIONS'])
+def mobile_bootstrap():
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    data, waiter, error = mobile_auth_error()
+    if error:
+        return error
+    normalize_tables(data)
+    return jsonify({'ok': True, 'restaurant': data.get('settings', {}).get('restaurant', {}), 'waiter': {'id': waiter['id'], 'username': waiter['username']}, 'tables': data.get('tables', []), 'menu': data.get('menu', {})})
+
+
+@app.route('/api/mobile/tables', methods=['GET', 'OPTIONS'])
+def mobile_tables():
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    data, _, error = mobile_auth_error()
+    if error:
+        return error
+    tables = normalize_tables(data)
+    sessions = {str(row.get('table_id')): dine_in_session_view(row) for row in data.get('dine_in_sessions', []) if row.get('status') == 'open'}
+    rows = []
+    for table in tables:
+        row = dict(table)
+        row['active_session'] = sessions.get(str(table.get('id')))
+        rows.append(row)
+    return jsonify({'ok': True, 'tables': rows})
+
+
+@app.route('/api/mobile/dine-in/sessions', methods=['POST', 'OPTIONS'])
+def mobile_create_dine_in_session():
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    data, waiter, error = mobile_auth_error()
+    if error:
+        return error
+    normalize_tables(data)
+    payload = request.get_json(silent=True) or {}
+    table = find_table(data, payload.get('table_id'))
+    if not table:
+        return jsonify({'ok': False, 'error': 'اختر طاولة صالحة'}), 404
+    if table.get('status') == 'busy' or table.get('active_session_id'):
+        return jsonify({'ok': False, 'error': 'هذه الطاولة مرتبطة بطلب مفتوح بالفعل'}), 409
+    totals, totals_error = dine_in_totals(data, payload)
+    if totals_error:
+        return jsonify({'ok': False, 'error': totals_error}), 400
+    now = datetime.now().isoformat()
+    session_row = {'id': 'DINE-' + uuid.uuid4().hex[:10].upper(), 'status': 'open', 'table_id': str(table['id']), 'table_name': table['name'], **totals, 'note': str(payload.get('note', ''))[:500], 'customer': str(payload.get('customer', ''))[:120], 'kitchen_status': 'new', 'opened_by': waiter['username'], 'created_at': now, 'updated_at': now}
+    data.setdefault('dine_in_sessions', []).append(session_row)
+    table['status'] = 'busy'; table['active_session_id'] = session_row['id']; table['active_since'] = now
+    save(data); backup()
+    return jsonify({'ok': True, 'session': dine_in_session_view(session_row)}), 201
+
+
+@app.route('/api/mobile/dine-in/sessions/<session_id>', methods=['GET', 'PUT', 'OPTIONS'])
+def mobile_dine_in_session_detail(session_id):
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    data, waiter, error = mobile_auth_error()
+    if error:
+        return error
+    session_row = find_dine_in_session(data, session_id)
+    if not session_row:
+        return jsonify({'ok': False, 'error': 'طلب الصالة غير موجود'}), 404
+    if request.method == 'GET':
+        return jsonify({'ok': True, 'session': dine_in_session_view(session_row)})
+    if session_row.get('status') != 'open':
+        return jsonify({'ok': False, 'error': 'لا يمكن تعديل طلب مغلق'}), 409
+    payload = request.get_json(silent=True) or {}
+    totals, totals_error = dine_in_totals(data, payload)
+    if totals_error:
+        return jsonify({'ok': False, 'error': totals_error}), 400
+    session_row.update(totals)
+    session_row['note'] = str(payload.get('note', ''))[:500]
+    session_row['customer'] = str(payload.get('customer', ''))[:120]
+    session_row['updated_at'] = datetime.now().isoformat(); session_row['updated_by'] = waiter['username']; session_row['kitchen_status'] = 'new'
+    save(data); backup()
+    return jsonify({'ok': True, 'session': dine_in_session_view(session_row)})
+
+
+@app.route('/api/mobile/dine-in/sessions/<session_id>/served', methods=['POST', 'OPTIONS'])
+def mobile_mark_dine_in_served(session_id):
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    data, waiter, error = mobile_auth_error()
+    if error:
+        return error
+    session_row = find_dine_in_session(data, session_id)
+    if not session_row or session_row.get('status') != 'open':
+        return jsonify({'ok': False, 'error': 'طلب الصالة المفتوح غير موجود'}), 404
+    if session_row.get('kitchen_status') != 'ready':
+        return jsonify({'ok': False, 'error': 'لا يمكن تأكيد التقديم قبل جاهزية المطبخ'}), 409
+    session_row['kitchen_status'] = 'served'; session_row['updated_at'] = datetime.now().isoformat(); session_row['served_by'] = waiter['username']
+    save(data); backup()
+    return jsonify({'ok': True, 'session': dine_in_session_view(session_row)})
+
+
 @app.route('/api/dine-in/sessions', methods=['GET', 'POST'])
 def dine_in_sessions():
     data = load()
@@ -2727,12 +3157,14 @@ def close_dine_in_session(session_id):
                              channel='card', reference_type='order', reference_id=order['id'],
                              note='فاتورة صالة ' + str(order['id']), currency=order['currency'], exchange_rate=order['exchange_rate'])
     consume_inventory_for_order(data, order['items'], order['id'])
+    receipt_print = queue_thermal_print(data, order, 'receipt')
+    kitchen_print = queue_thermal_print(data, order, 'kitchen')
     session_row['status'] = 'closed'; session_row['closed_at'] = now; session_row['closed_order_id'] = order['id']
     table = find_table(data, session_row.get('table_id'))
     if table:
         table['status'] = 'free'; table.pop('active_session_id', None); table.pop('active_since', None)
     save(data); backup()
-    return jsonify({'ok': True, 'id': order['id'], 'total': order['total'], 'order': order})
+    return jsonify({'ok': True, 'id': order['id'], 'total': order['total'], 'order': order, 'print': {'receipt': receipt_print, 'kitchen': kitchen_print}})
 
 
 @app.route('/api/kitchen/orders', methods=['GET'])

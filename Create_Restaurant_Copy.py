@@ -17,7 +17,7 @@ def ignore_commercial_artifacts(directory, names):
     ignored = set()
     for name in names:
         low = name.lower()
-        if low in {'__pycache__', 'data_vault', 'deliveries'} or low.endswith(('.pyc', '.log')) or low.startswith(('qa_', 'acceptance_')) or low == 'ui_redesign_notes.md':
+        if low in {'.git', '__pycache__', 'data_vault', 'deliveries'} or low.endswith(('.pyc', '.log')) or low.startswith(('qa_', 'acceptance_')) or low == 'ui_redesign_notes.md':
             ignored.add(name)
         if low.endswith('.zip') and ('kashir' in low or 'qaisar' in low):
             ignored.add(name)
@@ -32,7 +32,11 @@ def clean_data(path):
     settings['restaurant'] = {}
     settings['users'] = []
     settings['commercial'] = {'setup_completed': False, 'template': True, 'template_restaurant_name': restaurant, 'preset_license_id': license_id}
-    for key in ('orders','orders_archive','debts','customers','expenses','audit_log','shifts','gift_cards','sync_queue'):
+    for key in (
+        'orders', 'orders_archive', 'debts', 'customers', 'expenses', 'audit_log', 'shifts',
+        'gift_cards', 'sync_queue', 'cash_movements', 'cashbook', 'supplier_payments',
+        'inventory_movements', 'dine_in_sessions', 'mobile_tokens', 'print_jobs', 'print_log'
+    ):
         data[key] = []
     tables = data.get('tables', [])
     if isinstance(tables, dict):
@@ -42,16 +46,22 @@ def clean_data(path):
     for table in tables:
         if isinstance(table, dict):
             table['status'] = 'free'
-            table.pop('order_id', None)
+            for transient_key in ('order_id', 'active_session', 'active_session_id', 'active_since', 'kitchen_status'):
+                table.pop(transient_key, None)
     data['tables'] = tables
+    printer = settings.setdefault('printer', {})
+    printer.pop('logo_data', None)
+    printer['logo_caption'] = ''
+    printer['auto_print_receipt'] = False
+    printer['auto_print_kitchen'] = False
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
 
 for filename in ('data_backup.json','factory_data.json'):
     clean_data(output/'app'/filename)
 (output/'CLIENT_SETUP.txt').write_text(
     f'نسخة مستقلة للمطعم: {restaurant}\n\n'
-    '1. شغّل QaisarCashier.exe.\n'
+    '1. شغّل Start.bat أو app/QaisarDesktop.exe.\n'
     '2. أكمل معالج الإعداد الأولي وأنشئ حساب المدير.\n'
     '3. لا تنسخ data_backup.json بين العملاء.\n'
-    '4. لتشغيل الجوال استخدم app/Start_LAN_Mode.bat ثم إعدادات > ربط الجوال عبر QR.\n', encoding='utf-8')
+    '4. لتشغيل تطبيق النادل استخدم app/Start_LAN_Mode.bat ثم أدخل عنوان IP:8080 وحساب النادل في التطبيق.\n', encoding='utf-8')
 print(f'CLIENT_COPY_CREATED: {output}')
