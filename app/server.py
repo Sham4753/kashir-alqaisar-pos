@@ -563,9 +563,8 @@ def menu_profitability():
             rows.append(row)
     return jsonify(rows)
 
-def consume_inventory_for_order(data, items):
-    """يخصم من المخزون حسب وصفة كل صنف مُباع × الكمية. الأصناف اللي ما إلها وصفة محددة تُتجاهل بصمت
-    (يسمح بالعمل تدريجياً بدون ما يجبرك تحدد وصفة لكل شي فوراً)."""
+def consume_inventory_for_order(data, items, order_id=''):
+    """يخصم من المخزون حسب وصفة كل صنف مُباع، ويسجل الحركة بمرجع الفاتورة والكاشير."""
     item_recipes = {}
     for cat, prods in data.get('menu', {}).items():
         for p in prods:
@@ -579,7 +578,12 @@ def consume_inventory_for_order(data, items):
         if not recipe:
             continue
         for ing in recipe:
-            sync_inventory_consume(data, ing.get('material', ''), (ing.get('qty', 0) or 0) * qty_sold)
+            used_qty = (ing.get('qty', 0) or 0) * qty_sold
+            material_name = ing.get('material', '')
+            sync_inventory_consume(data, material_name, used_qty)
+            record_inventory_movement(data, material_name, -used_qty, 'sale_consumption',
+                                      reference_type='order', reference_id=order_id,
+                                      note='استهلاك وصفة عند بيع: ' + str(name))
 
 def as_money(value, default=None):
     try:
@@ -689,7 +693,15 @@ def orders():
         snap = currency_snapshot(data, payload)
         o['currency'] = snap['currency']; o['exchange_rate'] = snap['exchange_rate']
         data.setdefault('orders', []).append(o)
-        consume_inventory_for_order(data, o['items'])
+        if payment_data.get('cash_amount', 0):
+            record_cash_movement(data, 'in', payment_data['cash_amount'], 'مبيعات كاشير',
+                                 channel='cash', reference_type='order', reference_id=o['id'],
+                                 note='فاتورة ' + str(o['id']), currency=o['currency'], exchange_rate=o['exchange_rate'])
+        if payment_data.get('card_amount', 0):
+            record_cash_movement(data, 'in', payment_data['card_amount'], 'مبيعات كاشير',
+                                 channel='card', reference_type='order', reference_id=o['id'],
+                                 note='فاتورة ' + str(o['id']), currency=o['currency'], exchange_rate=o['exchange_rate'])
+        consume_inventory_for_order(data, o['items'], o['id'])
         save(data); backup()
         return jsonify({'ok': True, 'id': o['id'], 'total': total})
     all_orders = data.get('orders', []) + data.get('orders_archive', [])
@@ -746,7 +758,7 @@ def void_order(order_id):
                 o['voided'] = True
                 o['void_reason'] = reason
                 o['void_date'] = datetime.now().isoformat()
-                # إرجاع المخزون المستهلك من هذا الطلب (عكس consume_inventory_for_order)
+                # إرجاع المخزون المستهلك من هذا الطلب مع سجل تدقيقي للحركة العكسية.
                 item_recipes = build_item_recipes(data)
                 for i in o.get('items', []):
                     recipe = item_recipes.get(i.get('product_id', i.get('id'))) or item_recipes.get(i.get('name', ''))
@@ -754,7 +766,21 @@ def void_order(order_id):
                         continue
                     qty_sold = i.get('quantity', i.get('qty', 1))
                     for ing in recipe:
-                        sync_inventory_add(data, ing.get('material', ''), '', (ing.get('qty', 0) or 0) * qty_sold)
+                        returned_qty = (ing.get('qty', 0) or 0) * qty_sold
+                        material_name = ing.get('material', '')
+                        sync_inventory_add(data, material_name, '', returned_qty)
+                        record_inventory_movement(data, material_name, returned_qty, 'void_return',
+                                                  reference_type='void_order', reference_id=o.get('id'),
+                                                  note='إرجاع من إلغاء فاتورة: ' + str(o.get('id')))
+                # عكس المقبوضات لأن إلغاء الطلب يعني رد قيمة الفاتورة من الحساب الذي استلمها.
+                if o.get('cash_amount', 0):
+                    record_cash_movement(data, 'out', o.get('cash_amount'), 'استرجاع فاتورة ملغاة',
+                                         channel='cash', reference_type='void_order', reference_id=o.get('id'),
+                                         note='إلغاء فاتورة ' + str(o.get('id')), currency=o.get('currency'), exchange_rate=o.get('exchange_rate'))
+                if o.get('card_amount', 0):
+                    record_cash_movement(data, 'out', o.get('card_amount'), 'استرجاع فاتورة ملغاة',
+                                         channel='card', reference_type='void_order', reference_id=o.get('id'),
+                                         note='إلغاء فاتورة ' + str(o.get('id')), currency=o.get('currency'), exchange_rate=o.get('exchange_rate'))
                 save(data); backup()
                 return jsonify({"ok": True})
     return jsonify({"ok": False, "error": "الطلب غير موجود"}), 404
@@ -1124,17 +1150,78 @@ def delete_employee(eid):
     return jsonify({"ok": True})
 
 
+def positive_amount(value, default=None):
+    amount = as_money(value, default)
+    return amount if amount is not None and amount > 0 else default
+
+
+def inventory_item_by_name(data, name):
+    normalized = str(name or '').strip()
+    return next((item for item in data.get('inventory', []) if item.get('name', '').strip() == normalized), None)
+
+
+def record_inventory_movement(data, material_name, quantity, movement_type, *, unit='', reference_type='', reference_id='', note=''):
+    """دفتر حركات لا يعدّل الرصيد؛ تسجّل الدوال الأخرى الرصيد ثم نستدعيه للتدقيق."""
+    amount = float(quantity or 0)
+    if not material_name or not amount:
+        return None
+    item = inventory_item_by_name(data, material_name)
+    movements = data.setdefault('inventory_movements', [])
+    movement = {
+        'id': max([int(row.get('id', 0) or 0) for row in movements if isinstance(row, dict)] or [0]) + 1,
+        'timestamp': datetime.now().isoformat(), 'material': str(material_name).strip(), 'quantity': round(amount, 4),
+        'unit': unit or (item.get('unit', '') if item else ''), 'type': movement_type,
+        'balance_after': round(float(item.get('stock', 0) or 0), 4) if item else None,
+        'reference_type': reference_type, 'reference_id': str(reference_id or ''), 'note': str(note or '')[:240],
+        'created_by': session.get('username', 'نظام محلي')
+    }
+    movements.append(movement)
+    return movement
+
+
+def record_cash_movement(data, direction, amount, category, *, channel='cash', reference_type='', reference_id='', supplier_id=None, note='', currency=None, exchange_rate=None):
+    """سجل تدفق نقدي مستقل عن مصروف الربح والخسارة لمنع عدّ شراء المورد مرتين."""
+    amount = positive_amount(amount)
+    if direction not in {'in', 'out'} or amount is None or channel not in {'cash', 'card'}:
+        return None
+    snap = currency_snapshot(data, {'currency': currency} if currency else {})
+    movements = data.setdefault('cash_movements', [])
+    movement = {
+        'id': max([int(row.get('id', 0) or 0) for row in movements if isinstance(row, dict)] or [0]) + 1,
+        'timestamp': datetime.now().isoformat(), 'direction': direction, 'channel': channel, 'amount': amount,
+        'currency': snap['currency'], 'exchange_rate': exchange_rate if exchange_rate is not None else snap['exchange_rate'],
+        'category': category, 'reference_type': reference_type, 'reference_id': str(reference_id or ''),
+        'supplier_id': supplier_id, 'note': str(note or '')[:240], 'created_by': session.get('username', 'نظام محلي')
+    }
+    movements.append(movement)
+    return movement
+
+
+def supplier_payment_rows(data, supplier_id):
+    return [row for row in data.get('supplier_payments', []) if row.get('supplier_id') == supplier_id and not row.get('voided')]
+
+
 def supplier_summary(data):
     suppliers = data.get('suppliers', [])
     purchases = data.get('materials', [])
     result = []
     for supplier in suppliers:
         sid = supplier.get('id')
-        rows = [m for m in purchases if m.get('supplier_id') == sid]
-        total = sum(float(m.get('price', 0) or 0) for m in rows)
-        paid = sum(float(m.get('paid_amount', m.get('price', 0)) or 0) for m in rows)
-        result.append({**supplier, 'purchase_total': total, 'paid_total': paid, 'due_total': max(0, total - paid), 'purchase_count': len(rows)})
+        rows = [m for m in purchases if m.get('supplier_id') == sid and not m.get('voided')]
+        purchase_total = round(sum(float(m.get('price', 0) or 0) for m in rows), 2)
+        purchase_paid = round(sum(float(m.get('paid_amount', m.get('price', 0)) or 0) for m in rows), 2)
+        later_payments = supplier_payment_rows(data, sid)
+        later_paid = round(sum(float(row.get('amount', 0) or 0) for row in later_payments), 2)
+        paid_total = round(purchase_paid + later_paid, 2)
+        result.append({**supplier, 'purchase_total': purchase_total, 'paid_at_purchase': purchase_paid,
+                       'later_paid': later_paid, 'paid_total': paid_total,
+                       'due_total': max(0, round(purchase_total - paid_total, 2)),
+                       'purchase_count': len(rows), 'payment_count': len(later_payments)})
     return result
+
+
+def supplier_by_id(data, supplier_id):
+    return next((row for row in data.get('suppliers', []) if row.get('id') == supplier_id), None)
 
 
 @app.route('/api/suppliers', methods=['GET'])
@@ -1194,6 +1281,71 @@ def get_supplier_summary():
     return jsonify({'ok': True, 'suppliers': rows, 'total_due': sum(x['due_total'] for x in rows), 'total_purchases': sum(x['purchase_total'] for x in rows)})
 
 
+@app.route('/api/suppliers/<int:sid>/payments', methods=['GET', 'POST'])
+def supplier_payments(sid):
+    data = load()
+    supplier = supplier_by_id(data, sid)
+    if not supplier:
+        return jsonify({'ok': False, 'error': 'المورد غير موجود'}), 404
+    if request.method == 'GET':
+        return jsonify({'ok': True, 'payments': supplier_payment_rows(data, sid)})
+
+    payload = request.get_json(silent=True) or {}
+    amount = positive_amount(payload.get('amount'))
+    payment_method = str(payload.get('payment', 'نقدي') or 'نقدي')
+    if amount is None or payment_method not in {'نقدي', 'بطاقة'}:
+        return jsonify({'ok': False, 'error': 'مبلغ وطريقة دفع صحيحتان مطلوبان'}), 400
+    summary = next((row for row in supplier_summary(data) if row.get('id') == sid), None)
+    due = float(summary.get('due_total', 0) or 0) if summary else 0
+    if amount > due + 0.01:
+        return jsonify({'ok': False, 'error': 'دفعة المورد أكبر من الرصيد المستحق'}), 400
+    payments = data.setdefault('supplier_payments', [])
+    payment = {
+        'id': max([int(row.get('id', 0) or 0) for row in payments if isinstance(row, dict)] or [0]) + 1,
+        'supplier_id': sid, 'amount': amount, 'payment': payment_method,
+        'reference_no': str(payload.get('reference_no', '') or '')[:100],
+        'note': str(payload.get('note', '') or '')[:240], 'date': datetime.now().isoformat(),
+        'created_by': session.get('username', 'نظام محلي')
+    }
+    payments.append(payment)
+    record_cash_movement(data, 'out', amount, 'دفعة مورد',
+                         channel='card' if payment_method == 'بطاقة' else 'cash',
+                         reference_type='supplier_payment', reference_id=payment['id'], supplier_id=sid,
+                         note='دفعة للمورد: ' + supplier.get('name', ''))
+    save(data); backup()
+    return jsonify({'ok': True, 'payment': payment, 'remaining_due': max(0, round(due - amount, 2))}), 201
+
+
+@app.route('/api/inventory/movements', methods=['GET'])
+def inventory_movements_api():
+    data = load()
+    rows = list(data.get('inventory_movements', []))
+    material = str(request.args.get('material', '') or '').strip()
+    if material:
+        rows = [row for row in rows if row.get('material') == material]
+    limit = min(max(int(request.args.get('limit', 100) or 100), 1), 500)
+    return jsonify({'ok': True, 'movements': sorted(rows, key=lambda row: row.get('timestamp', ''), reverse=True)[:limit]})
+
+
+@app.route('/api/cashbook/summary', methods=['GET'])
+def cashbook_summary_api():
+    data = load()
+    date_from = str(request.args.get('from', '') or '').strip()
+    date_to = str(request.args.get('to', '') or '').strip()
+    rows = list(data.get('cash_movements', []))
+    if date_from:
+        rows = [row for row in rows if row.get('timestamp', '')[:10] >= date_from]
+    if date_to:
+        rows = [row for row in rows if row.get('timestamp', '')[:10] <= date_to]
+    cash_in = round(sum(float(row.get('amount', 0) or 0) for row in rows if row.get('channel') == 'cash' and row.get('direction') == 'in'), 2)
+    cash_out = round(sum(float(row.get('amount', 0) or 0) for row in rows if row.get('channel') == 'cash' and row.get('direction') == 'out'), 2)
+    card_in = round(sum(float(row.get('amount', 0) or 0) for row in rows if row.get('channel') == 'card' and row.get('direction') == 'in'), 2)
+    card_out = round(sum(float(row.get('amount', 0) or 0) for row in rows if row.get('channel') == 'card' and row.get('direction') == 'out'), 2)
+    return jsonify({'ok': True, 'cash_in': cash_in, 'cash_out': cash_out, 'cash_balance': round(cash_in - cash_out, 2),
+                    'card_in': card_in, 'card_out': card_out, 'card_balance': round(card_in - card_out, 2),
+                    'movements': sorted(rows, key=lambda row: row.get('timestamp', ''), reverse=True)[:100]})
+
+
 @app.route('/api/materials', methods=['GET'])
 def get_materials():
     data = load()
@@ -1227,37 +1379,50 @@ def sync_inventory_consume(data, name, qty):
 
 @app.route('/api/materials', methods=['POST'])
 def add_material():
-    """شراء مادة خام - تُسجَّل تلقائياً كمصروف يخصم من صافي الربح بالتحليلات، وتُضاف كمّيتها لرصيد المخزون"""
+    """شراء مادة خام: يحدّث الرصيد، يسجل تكلفة الشراء، ويضيف تدفق الصندوق للجزء المدفوع فقط."""
     data = load()
-    if 'materials' not in data:
-        data['materials'] = []
-    new_id = (max([m['id'] for m in data['materials']], default=0)) + 1
     payload = request.get_json(silent=True) or {}
+    name = str(payload.get('name', '') or '').strip()[:120]
+    unit = str(payload.get('unit', '') or '').strip()[:30]
+    quantity = positive_amount(payload.get('quantity'))
+    price = positive_amount(payload.get('price'))
+    paid_amount = as_money(payload.get('paid_amount', price), None)
+    payment_method = str(payload.get('payment', 'نقدي') or 'نقدي')
+    if not name or not unit or quantity is None or price is None or paid_amount is None or paid_amount > price or payment_method not in {'نقدي', 'بطاقة'}:
+        return jsonify({'ok': False, 'error': 'اسم المادة والوحدة والكمية وقيمة شراء ومدفوع وطريقة دفع صحيحة مطلوبة'}), 400
     supplier_id = payload.get('supplier_id')
     try:
         supplier_id = int(supplier_id) if supplier_id not in (None, '', 0, '0') else None
     except (TypeError, ValueError):
-        supplier_id = None
+        return jsonify({'ok': False, 'error': 'المورد المختار غير صالح'}), 400
+    if supplier_id is not None and not supplier_by_id(data, supplier_id):
+        return jsonify({'ok': False, 'error': 'المورد المختار غير موجود'}), 404
+    materials = data.setdefault('materials', [])
+    new_id = max([int(m.get('id', 0) or 0) for m in materials if isinstance(m, dict)] or [0]) + 1
     material = {
-        'id': new_id,
-        'name': payload.get('name', ''),
-        'quantity': payload.get('quantity', 0),
-        'unit': payload.get('unit', ''),
-        'price': payload.get('price', 0),
-        'paid_amount': payload.get('paid_amount', payload.get('price', 0)),
-        'supplier_id': supplier_id,
-        'invoice_no': (payload.get('invoice_no') or '').strip(),
-        'notes': (payload.get('notes') or '').strip()
+        'id': new_id, 'name': name, 'quantity': quantity, 'unit': unit, 'price': price,
+        'paid_amount': paid_amount, 'supplier_id': supplier_id,
+        'invoice_no': str(payload.get('invoice_no', '') or '').strip()[:100],
+        'notes': str(payload.get('notes', '') or '').strip()[:240], 'payment': payment_method,
+        'date': datetime.now().isoformat(), 'created_by': session.get('username', 'نظام محلي')
     }
-    data['materials'].append(material)
+    materials.append(material)
     data.setdefault('expenses', []).append({
-        'material_id': new_id, 'amount': material['price'],
-        'date': datetime.now().isoformat(), 'note': f"شراء مادة: {material['name']}",
-        'supplier_id': supplier_id, 'paid_amount': material['paid_amount'], 'invoice_no': material['invoice_no']
+        'material_id': new_id, 'amount': price, 'date': material['date'], 'note': f"شراء مادة: {name}",
+        'supplier_id': supplier_id, 'paid_amount': paid_amount, 'payment': payment_method, 'invoice_no': material['invoice_no'],
+        'created_by': session.get('username', 'نظام محلي')
     })
-    sync_inventory_add(data, material['name'], material['unit'], material['quantity'])
+    sync_inventory_add(data, name, unit, quantity)
+    record_inventory_movement(data, name, quantity, 'purchase', unit=unit,
+                              reference_type='material_purchase', reference_id=new_id,
+                              note=('فاتورة مورد: ' + material['invoice_no']) if material['invoice_no'] else 'شراء مادة خام')
+    if paid_amount:
+        record_cash_movement(data, 'out', paid_amount, 'شراء مواد خام',
+                             channel='card' if payment_method == 'بطاقة' else 'cash',
+                             reference_type='material_purchase', reference_id=new_id, supplier_id=supplier_id,
+                             note='شراء: ' + name)
     save(data); backup()
-    return jsonify({"ok": True, "id": new_id})
+    return jsonify({"ok": True, "id": new_id, "due_amount": round(price - paid_amount, 2)})
 
 @app.route('/api/materials/<int:mid>', methods=['PUT'])
 def update_material(mid):
@@ -1335,27 +1500,37 @@ def get_inventory_alerts():
 
 @app.route('/api/inventory/<int:iid>/adjust', methods=['POST'])
 def adjust_inventory(iid):
-    """تصحيح يدوي لرصيد مادة (جرد فعلي، هدر، تلف...) - يُسجَّل كمصروف إذا كان هدر بسعر معروف"""
-    data = load()
+    """تصحيح جرد فعلي مع تسجيل فرق الرصيد والسبب في دفتر الحركات."""
+    data = load(); payload = request.get_json(silent=True) or {}
+    new_stock = as_money(payload.get('stock'), None)
+    if new_stock is None:
+        return jsonify({'ok': False, 'error': 'الرصيد الجديد يجب أن يكون رقماً صفراً أو موجباً'}), 400
     for item in data.get('inventory', []):
         if item['id'] == iid:
-            new_stock = request.json.get('stock')
-            if new_stock is not None:
-                item['stock'] = new_stock
+            old_stock = float(item.get('stock', 0) or 0)
+            item['stock'] = new_stock
+            difference = round(new_stock - old_stock, 4)
+            if difference:
+                record_inventory_movement(data, item.get('name', ''), difference, 'adjustment', unit=item.get('unit', ''),
+                                          reference_type='inventory_adjustment', reference_id=iid,
+                                          note=str(payload.get('reason', 'تصحيح جرد فعلي') or 'تصحيح جرد فعلي'))
             save(data); backup()
-            return jsonify({"ok": True})
-    return jsonify({"ok": False}), 404
+            return jsonify({"ok": True, 'stock': new_stock, 'difference': difference})
+    return jsonify({"ok": False, 'error': 'المادة غير موجودة'}), 404
 
 @app.route('/api/inventory/<int:iid>/threshold', methods=['POST'])
 def set_inventory_threshold(iid):
     """تحديد الحد الأدنى الذي يظهر عنده تنبيه نفاد مخزون"""
-    data = load()
+    data = load(); payload = request.get_json(silent=True) or {}
+    threshold = as_money(payload.get('threshold', 0), None)
+    if threshold is None:
+        return jsonify({'ok': False, 'error': 'حد التنبيه يجب أن يكون رقماً صفراً أو موجباً'}), 400
     for item in data.get('inventory', []):
         if item['id'] == iid:
-            item['low_stock_threshold'] = request.json.get('threshold', 0)
+            item['low_stock_threshold'] = threshold
             save(data); backup()
-            return jsonify({"ok": True})
-    return jsonify({"ok": False}), 404
+            return jsonify({"ok": True, 'threshold': threshold})
+    return jsonify({"ok": False, 'error': 'المادة غير موجودة'}), 404
 
 
 @app.route('/api/analytics/categories', methods=['GET'])
@@ -2543,7 +2718,15 @@ def close_dine_in_session(session_id):
     snap = currency_snapshot(data, payload)
     order['currency'] = snap['currency']; order['exchange_rate'] = snap['exchange_rate']
     data.setdefault('orders', []).append(order)
-    consume_inventory_for_order(data, order['items'])
+    if payment_data.get('cash_amount', 0):
+        record_cash_movement(data, 'in', payment_data['cash_amount'], 'مبيعات كاشير',
+                             channel='cash', reference_type='order', reference_id=order['id'],
+                             note='فاتورة صالة ' + str(order['id']), currency=order['currency'], exchange_rate=order['exchange_rate'])
+    if payment_data.get('card_amount', 0):
+        record_cash_movement(data, 'in', payment_data['card_amount'], 'مبيعات كاشير',
+                             channel='card', reference_type='order', reference_id=order['id'],
+                             note='فاتورة صالة ' + str(order['id']), currency=order['currency'], exchange_rate=order['exchange_rate'])
+    consume_inventory_for_order(data, order['items'], order['id'])
     session_row['status'] = 'closed'; session_row['closed_at'] = now; session_row['closed_order_id'] = order['id']
     table = find_table(data, session_row.get('table_id'))
     if table:

@@ -21,7 +21,7 @@
   <span class="q-appbar-status">محلي وآمن</span>
 </nav>
 
-    <div class="container mx-auto px-4 py-6 max-w-lg">
+    <div class="container mx-auto px-4 py-6 max-w-6xl">
 
         <!-- Header -->
         <div class="flex items-center justify-between mb-6">
@@ -33,6 +33,8 @@
             <div id="inventorySummaryText" class="font-bold"></div>
             <p class="text-xs mt-1">استخدم زر «حد التنبيه» لكل مادة لتحديد متى يظهر التحذير.</p>
         </div>
+
+        <div id="cashbookCards" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"></div>
 
         <!-- إدارة الموردين -->
         <div class="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
@@ -51,6 +53,25 @@
             </div>
         </div>
 
+        <div class="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
+            <button onclick="toggleSection('secSupplierPayments')" class="w-full flex items-center justify-between p-4 text-right">
+                <h2 class="text-lg font-bold text-gray-700">💳 دفعات الموردين</h2>
+                <span id="secSupplierPayments-icon" class="text-gray-400">▼</span>
+            </button>
+            <div id="secSupplierPayments" class="hidden px-6 pb-6 space-y-3">
+                <p class="text-xs text-gray-500">سجّل أي دفعة لاحقة للمورد. تؤثر في رصيد الصندوق ولا تسجّل تكلفة شراء ثانية.</p>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <select id="paymentSupplier" class="border border-gray-300 rounded-lg px-3 py-2.5"><option value="">اختر المورد</option></select>
+                    <input type="number" id="supplierPaymentAmount" class="border border-gray-300 rounded-lg px-3 py-2.5" placeholder="المبلغ" step="0.01" min="0">
+                    <select id="supplierPaymentMethod" class="border border-gray-300 rounded-lg px-3 py-2.5"><option value="نقدي">نقدي من الصندوق</option><option value="بطاقة">بطاقة</option></select>
+                    <input type="text" id="supplierPaymentRef" class="border border-gray-300 rounded-lg px-3 py-2.5" placeholder="رقم السند (اختياري)">
+                </div>
+                <input type="text" id="supplierPaymentNote" class="w-full border border-gray-300 rounded-lg px-3 py-2.5" placeholder="ملاحظة الدفعة (اختياري)">
+                <button onclick="recordSupplierPayment()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition">تسجيل دفعة المورد</button>
+                <div id="supplierPaymentsList" class="space-y-2 max-h-56 overflow-y-auto"></div>
+            </div>
+        </div>
+
         <!-- شراء مادة جديدة -->
         <div class="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
             <button onclick="toggleSection('secAdd')" class="w-full flex items-center justify-between p-4 text-right">
@@ -63,8 +84,9 @@
             <input type="text" id="newUnit" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="الوحدة (كغ، لتر، قطعة...)">
             <input type="number" id="newPrice" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="سعر الشراء">
             <select id="newSupplier" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none"><option value="">▼ المورد (اختياري)</option></select>
-            <div class="grid grid-cols-2 gap-2">
-                <input type="number" id="newPaid" class="border border-gray-300 rounded-lg px-4 py-2.5" placeholder="المدفوع" step="0.01">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <input type="number" id="newPaid" class="border border-gray-300 rounded-lg px-4 py-2.5" placeholder="المدفوع" step="0.01" min="0">
+                <select id="newPaymentMethod" class="border border-gray-300 rounded-lg px-4 py-2.5"><option value="نقدي">نقدي من الصندوق</option><option value="بطاقة">بطاقة</option></select>
                 <input type="text" id="newInvoice" class="border border-gray-300 rounded-lg px-4 py-2.5" placeholder="رقم الفاتورة">
             </div>
             <input type="text" id="newNotes" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="ملاحظات الشراء">
@@ -120,6 +142,17 @@
             </div>
         </div>
 
+        <div class="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
+            <button onclick="toggleSection('secMovements')" class="w-full flex items-center justify-between p-4 text-right">
+                <h2 class="text-lg font-bold text-gray-700">📒 سجل حركات المخزون</h2>
+                <span id="secMovements-icon" class="text-gray-400">▼</span>
+            </button>
+            <div id="secMovements" class="hidden px-6 pb-6 space-y-3">
+                <p class="text-xs text-gray-500">يوثق هذا السجل الشراء والاستهلاك المرتبط بالفواتير، ويعرض الرصيد بعد كل حركة.</p>
+                <div id="inventoryMovementsList" class="space-y-2 max-h-72 overflow-y-auto"></div>
+            </div>
+        </div>
+
         <!-- Toast -->
         <div id="toast" class="hidden fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg text-center z-50"></div>
     </div>
@@ -134,8 +167,10 @@
 
         let materials = [];
         let suppliers = [];
+        let supplierPayments = [];
         let currentEditId = null;
         let currentCurrency = 'SYP', usdRate = 0, eurRate = 0;
+        const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
         async function loadCurrency() {
             try {
@@ -160,17 +195,81 @@
                 fillSelects();
                 renderMaterials();
             } catch(e) { console.error(e); }
-            await loadInventory();
+            await Promise.all([loadInventory(), loadCashbook(), loadSupplierPayments(), loadInventoryMovements()]);
         }
 
         async function loadSuppliers() {
             try {
                 const r = await fetch('/api/suppliers');
                 suppliers = await r.json();
+                const options = suppliers.map(s => `<option value="${s.id}">${escapeHtml(s.name)}${s.due_total > 0 ? ' — مستحق ' + formatPrice(s.due_total) : ''}</option>`).join('');
                 const select = document.getElementById('newSupplier');
-                select.innerHTML = '<option value="">▼ المورد (اختياري)</option>' + suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                const current = select.value;
+                select.innerHTML = '<option value="">▼ المورد (اختياري)</option>' + options;
+                if (current) select.value = current;
+                const paymentSelect = document.getElementById('paymentSupplier');
+                const paymentCurrent = paymentSelect.value;
+                paymentSelect.innerHTML = '<option value="">اختر المورد</option>' + options;
+                if (paymentCurrent) paymentSelect.value = paymentCurrent;
                 const box = document.getElementById('supplierSummary');
-                box.innerHTML = suppliers.length ? suppliers.map(s => `<div class="flex items-center justify-between gap-2 p-3 rounded-lg border bg-indigo-50 border-indigo-100"><div><div class="font-bold text-indigo-900">${s.name}</div><div class="text-xs text-gray-500">${s.phone || 'بدون هاتف'} · ${s.purchase_count} مشتريات</div></div><div class="text-left"><div class="text-xs text-gray-500">المستحق</div><div class="font-bold ${s.due_total > 0 ? 'text-red-600' : 'text-green-600'}">${formatPrice(s.due_total)}</div></div></div>`).join('') : '<p class="text-sm text-gray-400 text-center">لا يوجد موردون بعد</p>';
+                box.innerHTML = suppliers.length ? suppliers.map(s => `<div class="flex items-center justify-between gap-3 p-3 rounded-lg border bg-indigo-50 border-indigo-100"><div><div class="font-bold text-indigo-900">${escapeHtml(s.name)}</div><div class="text-xs text-gray-500">${escapeHtml(s.phone || 'بدون هاتف')} · ${s.purchase_count} مشتريات · مدفوع ${formatPrice(s.paid_total || 0)}</div></div><div class="text-left"><div class="text-xs text-gray-500">المستحق</div><div class="font-bold ${s.due_total > 0 ? 'text-red-600' : 'text-green-600'}">${formatPrice(s.due_total)}</div>${s.due_total > 0 ? `<button onclick="selectSupplierForPayment(${s.id})" class="mt-1 text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-1 rounded">تسجيل دفعة</button>` : ''}</div></div>`).join('') : '<p class="text-sm text-gray-400 text-center">لا يوجد موردون بعد</p>';
+            } catch(e) { console.error(e); }
+        }
+
+        function selectSupplierForPayment(id) {
+            document.getElementById('paymentSupplier').value = id;
+            const section = document.getElementById('secSupplierPayments');
+            if (section.classList.contains('hidden')) toggleSection('secSupplierPayments');
+            document.getElementById('supplierPaymentAmount').focus();
+        }
+
+        async function recordSupplierPayment() {
+            const supplierId = Number(document.getElementById('paymentSupplier').value);
+            const amount = Number(document.getElementById('supplierPaymentAmount').value);
+            if (!supplierId || !amount || amount <= 0) return showToast('⚠️ اختر المورد وأدخل مبلغ الدفعة');
+            try {
+                const response = await fetch('/api/suppliers/' + supplierId + '/payments', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount, payment:document.getElementById('supplierPaymentMethod').value, reference_no:document.getElementById('supplierPaymentRef').value.trim(), note:document.getElementById('supplierPaymentNote').value.trim()})});
+                const data = await response.json();
+                if (!response.ok || !data.ok) throw new Error(data.error || 'تعذر تسجيل الدفعة');
+                ['supplierPaymentAmount','supplierPaymentRef','supplierPaymentNote'].forEach(id => document.getElementById(id).value = '');
+                await loadMaterials();
+                showToast('✅ تم تسجيل الدفعة، المتبقي: ' + formatPrice(data.remaining_due));
+            } catch (e) { showToast('❌ ' + e.message); }
+        }
+
+        async function loadSupplierPayments() {
+            try {
+                const groups = await Promise.all(suppliers.map(async supplier => {
+                    const response = await fetch('/api/suppliers/' + supplier.id + '/payments');
+                    const data = await response.json();
+                    return (data.payments || []).map(payment => ({...payment, supplier_name:supplier.name}));
+                }));
+                supplierPayments = groups.flat().sort((a,b) => String(b.date).localeCompare(String(a.date)));
+                const box = document.getElementById('supplierPaymentsList');
+                box.innerHTML = supplierPayments.length ? supplierPayments.map(payment => `<div class="flex justify-between gap-3 border rounded-lg p-3 bg-slate-50"><div><b>${escapeHtml(payment.supplier_name)}</b><div class="text-xs text-gray-500">${escapeHtml(payment.payment)} · ${escapeHtml(payment.reference_no || 'دون رقم سند')} · ${escapeHtml(payment.created_by || '')}</div></div><div class="font-bold text-emerald-700">${formatPrice(payment.amount)}</div></div>`).join('') : '<p class="text-sm text-gray-400 text-center py-2">لا توجد دفعات مسجلة بعد</p>';
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadCashbook() {
+            try {
+                const response = await fetch('/api/cashbook/summary');
+                const data = await response.json();
+                if (!response.ok || !data.ok) return;
+                const cards = [
+                    ['نقد داخِل من الكاشير', data.cash_in, 'text-emerald-700'], ['نقد خارِج للموردين', data.cash_out, 'text-rose-700'],
+                    ['رصيد الصندوق', data.cash_balance, data.cash_balance >= 0 ? 'text-indigo-700' : 'text-rose-700'], ['صافي البطاقات', data.card_balance, 'text-sky-700']
+                ];
+                document.getElementById('cashbookCards').innerHTML = cards.map(([label,value,color]) => `<div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"><div class="text-xs text-gray-500">${label}</div><div class="mt-2 text-xl font-black ${color}">${formatPrice(value)}</div></div>`).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadInventoryMovements() {
+            try {
+                const response = await fetch('/api/inventory/movements?limit=100');
+                const data = await response.json();
+                const rows = data.movements || [];
+                const typeLabel = {purchase:'شراء من مورد', sale_consumption:'استهلاك عند البيع', adjustment:'تصحيح جرد', void_return:'إرجاع من إلغاء'};
+                document.getElementById('inventoryMovementsList').innerHTML = rows.length ? rows.map(row => `<div class="flex justify-between gap-3 border rounded-lg p-3 ${row.quantity < 0 ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100'}"><div><b>${escapeHtml(row.material)}</b><div class="text-xs text-gray-500">${typeLabel[row.type] || escapeHtml(row.type)} · ${escapeHtml(row.reference_id || 'دون مرجع')} · ${escapeHtml(row.created_by || '')}</div></div><div class="text-left"><b class="${row.quantity < 0 ? 'text-rose-700' : 'text-emerald-700'}">${row.quantity > 0 ? '+' : ''}${row.quantity} ${escapeHtml(row.unit || '')}</b><div class="text-xs text-gray-500">الرصيد: ${row.balance_after ?? '—'}</div></div></div>`).join('') : '<p class="text-sm text-gray-400 text-center py-2">ستظهر هنا حركة الشراء واستهلاك الوصفات عند البيع</p>';
             } catch(e) { console.error(e); }
         }
 
@@ -308,13 +407,14 @@
             const paid_amount = parseFloat(document.getElementById('newPaid').value || price) || 0;
             const invoice_no = document.getElementById('newInvoice').value.trim();
             const notes = document.getElementById('newNotes').value.trim();
+            const payment = document.getElementById('newPaymentMethod').value;
             if (!name || !quantity || !unit || !price) return showToast('⚠️ املأ جميع الحقول');
             if (paid_amount < 0 || paid_amount > price) return showToast('⚠️ المدفوع يجب أن يكون بين صفر وقيمة الشراء');
 
             const res = await fetch('/api/materials', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, quantity, unit, price, supplier_id, paid_amount, invoice_no, notes })
+                body: JSON.stringify({ name, quantity, unit, price, supplier_id, paid_amount, payment, invoice_no, notes })
             });
             const data = await res.json();
             if (data.ok) {
@@ -323,6 +423,7 @@
                 document.getElementById('newUnit').value = '';
                 document.getElementById('newPrice').value = '';
                 document.getElementById('newPaid').value = '';
+                document.getElementById('newPaymentMethod').value = 'نقدي';
                 document.getElementById('newInvoice').value = '';
                 document.getElementById('newNotes').value = '';
                 document.getElementById('newSupplier').value = '';
