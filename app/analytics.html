@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التقارير المالية والربحية - كاشير القيصر</title>
+    <link rel="stylesheet" href="tailwind.css">
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            #results, #results * { visibility: visible; }
+            #results { position: absolute; top: 0; left: 0; width: 100%; }
+            .no-print { display: none !important; }
+        }
+    </style>
+    <link rel="stylesheet" href="design-system.css">
+    <script defer src="design-system.js"></script>
+    <script defer src="currency-manager.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+<nav class="q-appbar" aria-label="التنقل الرئيسي">
+  <a class="q-appbar-brand" href="index.html"><span class="q-appbar-brand-mark"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg></span><span>كاشير القيصر</span></a>
+  <div class="q-appbar-links"><a class="q-appbar-link " href="index.html"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h4"/></svg><span>نقطة البيع</span></a>
+<a class="q-appbar-link " href="menu_manager.html"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM7 9h10M7 13h6"/></svg><span>المنيو</span></a>
+<a class="q-appbar-link " href="raw_materials.html"><svg viewBox="0 0 24 24"><path d="M3 7h18v13H3zM5 7l2-4h10l2 4M8 12h8"/></svg><span>المخزون</span></a>
+<a class="q-appbar-link " href="orders_list.html"><svg viewBox="0 0 24 24"><path d="M6 2h12v20H6zM9 7h6M9 11h6M9 15h4"/></svg><span>الطلبات</span></a>
+<a class="q-appbar-link active" href="analytics.html"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>التقارير</span></a>
+<a class="q-appbar-link " href="settings.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.18 2.18-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.04 1.56V21h-3.08v-.08a1.7 1.7 0 0 0-1.04-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-2.18-2.18.06-.06A1.7 1.7 0 0 0 6.8 15a1.7 1.7 0 0 0-1.56-1.04H5v-3.08h.24A1.7 1.7 0 0 0 6.8 9.84 1.7 1.7 0 0 0 6.46 7.96l-.06-.06 2.18-2.18.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.04-1.56V4.5h3.08v.06a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.18 2.18-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.04H21v3.08h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg><span>الإعدادات</span></a></div>
+  <span class="q-appbar-status">محلي وآمن</span>
+</nav>
+
+    <div class="container mx-auto px-4 py-6 max-w-6xl">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6 no-print">
+            <h1 class="text-2xl font-bold text-gray-800">📊 التقارير المالية والربحية</h1>
+            <div class="flex gap-2">
+                <button onclick="printReport()" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm">🖨️</button>
+                <button onclick="exportCSV()" class="bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm">📊 Excel</button>
+                <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩️ رجوع</a>
+            </div>
+        </div>
+
+        <!-- ربحية المنتجات (مستقلة عن الفترة الزمنية - وضع حالي) -->
+        <div class="bg-white rounded-xl shadow-md p-6 space-y-4 mb-6 no-print">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-bold text-gray-700">💹 ربحية المنتجات</h2>
+                <button onclick="loadProfitabilityReport()" class="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700">🔄 عرض</button>
+            </div>
+            <p class="text-xs text-gray-400">يعتمد على متوسط سعر شراء المواد الخام والوصفة المحددة لكل منتج بصفحة "إدارة المنيو"</p>
+            <div id="profitabilityList" class="space-y-2 max-h-80 overflow-y-auto"></div>
+        </div>
+
+        <!-- نوع الجرد -->
+        <div class="bg-white rounded-xl shadow-md p-6 space-y-5 mb-6 no-print">
+            <h2 class="text-lg font-bold text-gray-700">📅 نوع الجرد</h2>
+            <select id="periodSelect" onchange="onPeriodChange()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="daily">📅 يومي</option>
+                <option value="monthly">📅 شهري</option>
+                <option value="yearly">📅 سنوي</option>
+                <option value="custom">🔍 تفصيلي</option>
+            </select>
+
+            <!-- خيارات تفصيلية -->
+            <div id="customOptions" class="space-y-4 hidden">
+                <select id="catSelect" onchange="onCatChange()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="">🗂️ كل الأقسام</option>
+                </select>
+                <select id="prodSelect" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="">📝 كل المنتجات</option>
+                </select>
+                <div class="flex gap-2">
+                    <input type="date" id="dateFrom" class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <span class="self-center">إلى</span>
+                    <input type="date" id="dateTo" class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+            <button onclick="loadReport()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">🔄 عرض التقرير</button>
+        </div>
+
+        <!-- النتائج -->
+        <div id="results" class="hidden bg-white rounded-xl shadow-md p-6 space-y-5 mb-6">
+            <div id="printHeader" class="hidden print:block mb-4 text-center border-b border-gray-300 pb-3">
+                <div id="printRestaurantName" class="text-xl font-bold"></div>
+                <div id="printReportMeta" class="text-sm text-gray-500 mt-1"></div>
+            </div>
+            <h2 class="text-lg font-bold text-gray-700">📊 النتائج</h2>
+
+            <!-- ملخص مالي -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-green-50 p-3 rounded-lg border border-green-200">
+                    <div class="text-sm text-green-600">💰 المبيعات</div>
+                    <div class="text-xl font-bold text-green-800" id="totalSales">-</div>
+                </div>
+                <div class="bg-red-50 p-3 rounded-lg border border-red-200">
+                    <div class="text-sm text-red-600">📦 المصروفات</div>
+                    <div class="text-xl font-bold text-red-800" id="totalExpenses">-</div>
+                </div>
+                <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <div class="text-sm text-blue-600">💎 صافي الربح</div>
+                    <div class="text-xl font-bold text-blue-800" id="netProfit">-</div>
+                </div>
+                <div class="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                    <div class="text-sm text-orange-600">💳 الديون</div>
+                    <div class="text-xl font-bold text-orange-800" id="totalDebts">-</div>
+                </div>
+                <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+                    <div class="text-sm text-emerald-600">💵 كاش بالدرج</div>
+                    <div class="text-xl font-bold text-emerald-800" id="totalCash">-</div>
+                </div>
+                <div class="bg-sky-50 p-3 rounded-lg border border-sky-200">
+                    <div class="text-sm text-sky-600">💳 بطاقة</div>
+                    <div class="text-xl font-bold text-sky-800" id="totalCard">-</div>
+                </div>
+            </div>
+
+            <!-- مؤشرات مالية مرتبطة بالمخزون والمشتريات -->
+            <div class="border-t border-gray-200 pt-4">
+                <h3 class="font-bold text-gray-700 mb-3">📦 الربحية والمخزون والمشتريات</h3>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div class="bg-purple-50 p-3 rounded-lg border border-purple-200"><div class="text-xs text-purple-600">تكلفة البضاعة المباعة</div><div id="costOfGoodsSold" class="text-lg font-bold text-purple-800">-</div></div>
+                    <div class="bg-teal-50 p-3 rounded-lg border border-teal-200"><div class="text-xs text-teal-600">الربح الإجمالي</div><div id="grossProfit" class="text-lg font-bold text-teal-800">-</div></div>
+                    <div class="bg-cyan-50 p-3 rounded-lg border border-cyan-200"><div class="text-xs text-cyan-600">هامش الربح</div><div id="grossMargin" class="text-lg font-bold text-cyan-800">-</div></div>
+                    <div class="bg-amber-50 p-3 rounded-lg border border-amber-200"><div class="text-xs text-amber-600">مشتريات الفترة</div><div id="purchasesTotal" class="text-lg font-bold text-amber-800">-</div></div>
+                    <div class="bg-lime-50 p-3 rounded-lg border border-lime-200"><div class="text-xs text-lime-600">قيمة المخزون الحالية</div><div id="inventoryValue" class="text-lg font-bold text-lime-800">-</div></div>
+                    <div class="bg-rose-50 p-3 rounded-lg border border-rose-200"><div class="text-xs text-rose-600">مستحقات الموردين</div><div id="supplierDue" class="text-lg font-bold text-rose-800">-</div></div>
+                </div>
+                <div id="uncostedProducts" class="hidden mt-3 text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-lg p-3"></div>
+            </div>
+
+            <!-- إحصائيات -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <div class="text-sm text-gray-600 mb-2">🧾 عدد الطلبات: <span id="totalOrders" class="font-bold">-</span></div>
+                <div class="text-sm text-gray-600 mb-2">🛍️ سفري: <span id="typeTakeaway" class="font-bold">-</span></div>
+                <div class="text-sm text-gray-600 mb-2">🪑 صالة: <span id="typeDinein" class="font-bold">-</span></div>
+                <div class="text-sm text-gray-600">🛵 ديليفري: <span id="typeDelivery" class="font-bold">-</span></div>
+            </div>
+
+            <!-- المنتجات المباعة -->
+            <div>
+                <h3 class="font-bold text-gray-700 mb-2">🥇 المنتجات المباعة</h3>
+                <div id="productSales" class="space-y-2 max-h-64 overflow-y-auto"></div>
+            </div>
+
+            <!-- تفاصيل الفواتير -->
+            <div>
+                <h3 class="font-bold text-gray-700 mb-2">🧾 تفاصيل فواتير المبيعات</h3>
+                <div class="overflow-x-auto border rounded-lg">
+                    <table class="w-full text-sm text-right">
+                        <thead class="bg-gray-100"><tr><th class="p-2">الفاتورة</th><th class="p-2">التاريخ</th><th class="p-2">الأصناف</th><th class="p-2">الدفع</th><th class="p-2">الخصم</th><th class="p-2">الإجمالي</th></tr></thead>
+                        <tbody id="orderDetailsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- زر طباعة -->
+            <div class="no-print flex gap-2">
+                <button onclick="printReport()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">🖨️ طباعة / PDF</button>
+                <button onclick="exportCSV()" class="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition">📊 تصدير Excel</button>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast" class="hidden fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg text-center z-50"></div>
+    </div>
+
+    <script>
+        let currentCurrency = 'SYP', usdRate = 0, eurRate = 0;
+
+        async function loadCurrency() {
+            try {
+                const r = await fetch('/api/settings/currency');
+                const d = await r.json();
+                if (d) { currentCurrency = d.currency || 'SYP'; usdRate = d.usd_rate || 0; eurRate = d.eur_rate || 0; }
+            } catch (e) {}
+        }
+        function formatPrice(p) {
+            p = p || 0;
+            if (currentCurrency === 'USD') return usdRate ? '$' + (p / usdRate).toFixed(2) : (p.toLocaleString() + ' ل.س');
+            if (currentCurrency === 'EUR') return eurRate ? '€' + (p / eurRate).toFixed(2) : (p.toLocaleString() + ' ل.س');
+            return p.toLocaleString() + ' ل.س';
+        }
+
+        async function init() {
+            await loadCurrency();
+            // تحميل الأقسام
+            try {
+                const r = await fetch('/api/analytics/categories');
+                const cats = await r.json();
+                const sel = document.getElementById('catSelect');
+                cats.forEach(c => { sel.innerHTML += `<option value="${c}">📂 ${c}</option>`; });
+            } catch(e) {}
+            // تاريخ اليوم
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dateTo').value = today;
+        }
+
+        function onPeriodChange() {
+            const period = document.getElementById('periodSelect').value;
+            const custom = document.getElementById('customOptions');
+            if (period === 'custom') {
+                custom.classList.remove('hidden');
+            } else {
+                custom.classList.add('hidden');
+            }
+        }
+
+        async function onCatChange() {
+            const cat = document.getElementById('catSelect').value;
+            const sel = document.getElementById('prodSelect');
+            sel.innerHTML = '<option value="">📝 كل المنتجات</option>';
+            if (!cat) return;
+            try {
+                const r = await fetch('/api/analytics/products?category=' + encodeURIComponent(cat));
+                const prods = await r.json();
+                prods.forEach(p => { sel.innerHTML += `<option value="${p}">${p}</option>`; });
+            } catch(e) {}
+        }
+
+        async function loadReport() {
+            const period = document.getElementById('periodSelect').value;
+            const params = new URLSearchParams({ period });
+
+            if (period === 'custom') {
+                const cat = document.getElementById('catSelect').value;
+                const prod = document.getElementById('prodSelect').value;
+                const from = document.getElementById('dateFrom').value;
+                const to = document.getElementById('dateTo').value;
+                if (cat) params.append('category', cat);
+                if (prod) params.append('product', prod);
+                if (from) params.append('from', from);
+                if (to) params.append('to', to);
+            }
+
+            try {
+                const r = await fetch('/api/analytics?' + params.toString());
+                const data = await r.json();
+                showResults(data);
+            } catch(e) {
+                showToast('❌ خطأ في التحميل');
+            }
+        }
+
+        let lastReportData = null;
+
+        function showResults(data) {
+            lastReportData = data;
+            document.getElementById('results').classList.remove('hidden');
+            document.getElementById('totalSales').textContent = formatPrice(data.total_sales||0);
+            document.getElementById('totalExpenses').textContent = formatPrice(data.total_expenses||0);
+            document.getElementById('netProfit').textContent = formatPrice(data.net_profit||0);
+            document.getElementById('totalDebts').textContent = formatPrice(data.total_debts||0);
+            document.getElementById('totalCash').textContent = formatPrice(data.total_cash||0);
+            document.getElementById('totalCard').textContent = formatPrice(data.total_card||0);
+            document.getElementById('totalOrders').textContent = data.total_orders || 0;
+            document.getElementById('costOfGoodsSold').textContent = formatPrice(data.cost_of_goods_sold || 0);
+            document.getElementById('grossProfit').textContent = formatPrice(data.gross_profit || 0);
+            document.getElementById('grossMargin').textContent = (data.gross_margin_pct || 0) + '%';
+            document.getElementById('purchasesTotal').textContent = formatPrice(data.purchases_total || 0);
+            document.getElementById('inventoryValue').textContent = formatPrice(data.inventory_value || 0);
+            document.getElementById('supplierDue').textContent = formatPrice(data.supplier_due || 0);
+            const uncosted = document.getElementById('uncostedProducts');
+            if (data.uncosted_products && data.uncosted_products.length) { uncosted.textContent = '⚠️ لم تُحسب تكلفة هذه المنتجات لعدم وجود وصفة أو سعر شراء: ' + data.uncosted_products.join('، '); uncosted.classList.remove('hidden'); } else { uncosted.classList.add('hidden'); }
+
+            const periodLabels = { daily: 'يومي', monthly: 'شهري', yearly: 'سنوي', custom: 'تفصيلي' };
+            const meta = [periodLabels[data.period] || data.period, new Date().toLocaleString('ar')].join(' — ');
+            document.getElementById('printReportMeta').textContent = meta;
+            fetch('/api/settings/restaurant').then(r => r.json()).then(r => {
+                document.getElementById('printRestaurantName').textContent = r.name || 'كاشير القيصر';
+            }).catch(() => {});
+
+            const types = data.types || {};
+            document.getElementById('typeTakeaway').textContent = types['سفري'] || 0;
+            document.getElementById('typeDinein').textContent = types['صالة'] || 0;
+            document.getElementById('typeDelivery').textContent = types['ديليفري'] || 0;
+
+            renderOrderDetails(data.order_details || []);
+
+            // المنتجات المباعة
+            const products = data.product_sales || [];
+            products.sort((a, b) => b.quantity - a.quantity);
+            const prodDiv = document.getElementById('productSales');
+            if (products.length === 0) {
+                prodDiv.innerHTML = '<p class="text-gray-500">لا توجد منتجات</p>';
+            } else {
+                prodDiv.innerHTML = products.map(p => {
+                    let datesHtml = '';
+                    if (p.dates && Object.keys(p.dates).length > 0) {
+                        datesHtml = '<div class="text-xs text-gray-400 mr-4 mt-1">' +
+                            Object.entries(p.dates).map(([d, q]) => `${d}: ${q}`).join(' | ') +
+                            '</div>';
+                    }
+                    return `<div class="bg-gray-50 p-2 rounded border">
+                        <div class="flex justify-between">
+                            <span class="font-bold">${p.name}</span>
+                            <span>${p.quantity} (${formatPrice(p.total||0)})</span>
+                        </div>
+                        ${datesHtml}
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>\"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[ch]));
+        }
+
+        function renderOrderDetails(orders) {
+            const body = document.getElementById('orderDetailsBody');
+            if (!orders.length) {
+                body.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400">لا توجد فواتير ضمن الفترة المحددة</td></tr>';
+                return;
+            }
+            body.innerHTML = orders.map(o => {
+                const items = (o.items || []).map(i => `${escapeHtml(i.name)} × ${i.quantity}`).join('، ');
+                const date = o.date ? new Date(o.date).toLocaleString('ar') : '-';
+                const status = o.voided ? ' <span class="text-red-600">(ملغاة)</span>' : '';
+                return `<tr class="border-t hover:bg-gray-50"><td class="p-2 font-bold">${escapeHtml(o.id)}${status}</td><td class="p-2 whitespace-nowrap">${escapeHtml(date)}</td><td class="p-2 min-w-[220px]">${items}</td><td class="p-2">${escapeHtml(o.payment)}</td><td class="p-2">${formatPrice(o.discount || 0)}</td><td class="p-2 font-bold">${formatPrice(o.total || 0)}</td></tr>`;
+            }).join('');
+        }
+
+        async function loadProfitabilityReport() {
+            const box = document.getElementById('profitabilityList');
+            box.innerHTML = '<p class="text-gray-400 text-center py-4 text-sm">جارِ التحميل...</p>';
+            try {
+                const r = await fetch('/api/menu/profitability');
+                const rows = await r.json();
+                const withCost = rows.filter(x => x.margin_pct !== null).sort((a, b) => a.margin_pct - b.margin_pct);
+                const withoutCost = rows.filter(x => x.margin_pct === null);
+                if (rows.length === 0) {
+                    box.innerHTML = '<p class="text-gray-400 text-center py-4 text-sm">ما في منتجات بالمنيو</p>';
+                    return;
+                }
+                let html = withCost.map(p => {
+                    const color = p.margin_pct >= 30 ? 'border-emerald-300 bg-emerald-50' : (p.margin_pct >= 10 ? 'border-orange-300 bg-orange-50' : 'border-red-300 bg-red-50');
+                    return `<div class="p-2 rounded border ${color}">
+                        <div class="flex justify-between font-bold"><span>${p.name}</span><span>${p.margin_pct}%</span></div>
+                        <div class="text-xs text-gray-500">سعر: ${formatPrice(p.price)} | تكلفة: ${formatPrice(p.cost)} | ربح: ${formatPrice(p.profit)}</div>
+                    </div>`;
+                }).join('');
+                if (withoutCost.length > 0) {
+                    html += `<div class="text-xs text-gray-400 mt-2 pt-2 border-t">بدون وصفة/تكلفة معروفة: ${withoutCost.map(p => p.name).join('، ')}</div>`;
+                }
+                box.innerHTML = html || '<p class="text-gray-400 text-center py-4 text-sm">ما في منتجات لها وصفة محددة بعد</p>';
+            } catch (e) {
+                box.innerHTML = '<p class="text-red-400 text-center py-4 text-sm">تعذر تحميل التقرير</p>';
+            }
+        }
+
+        function printReport() {
+            const results = document.getElementById('results');
+            if (results.classList.contains('hidden')) {
+                showToast('⚠️ اعرض التقرير أولاً');
+                return;
+            }
+            window.print();
+        }
+
+        function downloadCSV(filename, rows) {
+            const csv = rows.map(r => r.map(cell => {
+                const s = String(cell ?? '');
+                return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+            }).join(',')).join('\n');
+            // \uFEFF (BOM) ضروري حتى برنامج Excel يعرض العربي صح بدل رموز غريبة
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function exportCSV() {
+            if (!lastReportData) return showToast('⚠️ اعرض التقرير أولاً');
+            const d = lastReportData;
+            const rows = [
+                ['تقرير مبيعات - كاشير القيصر'],
+                ['تاريخ الإصدار', new Date().toLocaleString('ar')],
+                [],
+                ['البند', 'القيمة'],
+                ['إجمالي المبيعات', d.total_sales || 0],
+                ['إجمالي المصروفات', d.total_expenses || 0],
+                ['المشتريات', d.purchases_total || 0],
+                ['تكلفة البضاعة المباعة', d.cost_of_goods_sold || 0],
+                ['الربح الإجمالي', d.gross_profit || 0],
+                ['هامش الربح %', d.gross_margin_pct || 0],
+                ['قيمة المخزون الحالية', d.inventory_value || 0],
+                ['مستحقات الموردين', d.supplier_due || 0],
+                ['صافي الربح', d.net_profit || 0],
+                ['الديون المتبقية', d.total_debts || 0],
+                ['كاش بالدرج', d.total_cash || 0],
+                ['بطاقة', d.total_card || 0],
+                ['عدد الطلبات', d.total_orders || 0],
+                [],
+                ['المنتج', 'الكمية المباعة', 'الإجمالي']
+            ];
+            (d.product_sales || []).forEach(p => rows.push([p.name, p.quantity, p.total || 0]));
+            rows.push([], ['تفاصيل الفواتير'], ['رقم الفاتورة', 'التاريخ', 'الأصناف', 'طريقة الدفع', 'الخصم', 'الإجمالي']);
+            (d.order_details || []).forEach(o => rows.push([
+                o.id, o.date, (o.items || []).map(i => `${i.name} × ${i.quantity}`).join('، '), o.payment, o.discount || 0, o.total || 0
+            ]));
+            downloadCSV('تقرير_' + (d.period || 'report') + '_' + new Date().toISOString().slice(0,10) + '.csv', rows);
+            showToast('✅ تم تصدير الملف');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 2500);
+        }
+
+        init();
+    </script>
+</body>
+</html>

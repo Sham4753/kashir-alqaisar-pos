@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>كاشير القيصر</title>
+    <link rel="stylesheet" href="tailwind.css">
+    <style>
+        body { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%); }
+        .profile-card { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+        .profile-card:active { transform: scale(0.97); }
+    </style>
+    <link rel="stylesheet" href="design-system.css">
+    <script defer src="design-system.js"></script>
+    <script defer src="currency-manager.js"></script>
+</head>
+<body class="min-h-screen flex flex-col text-white">
+    <div class="flex-1 flex flex-col items-center justify-center px-6 py-10">
+        <div class="text-6xl mb-3">🍽️</div>
+        <h1 id="restaurantName" class="text-3xl font-bold mb-1">كاشير القيصر</h1>
+        <div id="dateTime" class="text-blue-200 text-sm mb-10"></div>
+
+        <div id="profilesBox" class="w-full max-w-md space-y-3"></div>
+
+        <div id="noUsersBox" class="hidden w-full max-w-md text-center">
+            <button onclick="window.location.href='index.html'" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl text-lg shadow-xl transition">
+                🚀 دخول للنظام
+            </button>
+            <p class="text-blue-200 text-xs mt-3">تقدر تضيف مستخدمين (مدير/كاشير) لاحقاً من الإعدادات</p>
+        </div>
+    </div>
+
+    <!-- نافذة كلمة المرور -->
+    <div id="pwModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-6">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-xs text-center text-gray-800">
+            <div id="pwAvatar" class="text-4xl mb-2"></div>
+            <div id="pwUsername" class="font-bold text-lg mb-4"></div>
+            <input type="password" id="pwInput" onkeydown="if(event.key==='Enter') confirmLogin()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 mb-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="كلمة المرور">
+            <div id="pwError" class="hidden text-red-600 text-sm mb-2">⚠️ كلمة المرور غير صحيحة</div>
+            <div class="flex gap-2 mt-2">
+                <button onclick="closePwModal()" class="flex-1 bg-gray-200 text-gray-700 font-bold py-2.5 rounded-lg hover:bg-gray-300">إلغاء</button>
+                <button onclick="confirmLogin()" class="flex-1 bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700">دخول</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- فوتر الدعم الفني -->
+    <div class="bg-black bg-opacity-30 py-4 px-6 text-center">
+        <div id="supportBox" class="flex flex-wrap items-center justify-center gap-4 text-sm text-blue-200"></div>
+        <div class="text-xs text-blue-300 opacity-60 mt-2">كاشير القيصر © 2026</div>
+    </div>
+
+    <script>
+        let selectedUser = null;
+
+        function updateDateTime() {
+            document.getElementById('dateTime').textContent = new Date().toLocaleString('ar');
+        }
+        updateDateTime();
+        setInterval(updateDateTime, 30000);
+
+        async function loadRestaurantName() {
+            try {
+                const r = await fetch('/api/restaurant/name');
+                const d = await r.json();
+                if (d.name) document.getElementById('restaurantName').textContent = d.name;
+            } catch (e) {}
+        }
+
+        async function loadProfiles() {
+            try {
+                const r = await fetch('/api/settings/users');
+                const users = await r.json();
+                if (!users || users.length === 0) {
+                    document.getElementById('noUsersBox').classList.remove('hidden');
+                    return;
+                }
+                const box = document.getElementById('profilesBox');
+                box.innerHTML = users.map(u => {
+                    const isManager = u.role === 'manager';
+                    const icon = isManager ? '👨‍💼' : '👨‍🍳';
+                    const roleLabel = isManager ? 'مدير' : 'كاشير';
+                    return `
+                    <button onclick="openPwModal('${u.username}', '${icon}')" class="profile-card w-full bg-white bg-opacity-10 backdrop-blur border border-white border-opacity-20 rounded-2xl p-4 flex items-center gap-4 hover:bg-opacity-20 text-right">
+                        <div class="text-4xl">${icon}</div>
+                        <div class="flex-1">
+                            <div class="font-bold text-lg">${u.username}</div>
+                            <div class="text-xs text-blue-200">${roleLabel}</div>
+                        </div>
+                        <div class="text-blue-300">◀</div>
+                    </button>`;
+                }).join('');
+            } catch (e) {
+                document.getElementById('noUsersBox').classList.remove('hidden');
+            }
+        }
+
+        function openPwModal(username, icon) {
+            selectedUser = username;
+            document.getElementById('pwAvatar').textContent = icon;
+            document.getElementById('pwUsername').textContent = username;
+            document.getElementById('pwInput').value = '';
+            document.getElementById('pwError').classList.add('hidden');
+            document.getElementById('pwModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('pwInput').focus(), 100);
+        }
+
+        function closePwModal() {
+            document.getElementById('pwModal').classList.add('hidden');
+            selectedUser = null;
+        }
+
+        async function confirmLogin() {
+            const password = document.getElementById('pwInput').value;
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: selectedUser, password })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    window.location.href = data.role === 'manager' ? 'settings.html' : 'index.html';
+                } else {
+                    document.getElementById('pwError').classList.remove('hidden');
+                }
+            } catch (e) {
+                document.getElementById('pwError').classList.remove('hidden');
+            }
+        }
+
+        async function loadSupportInfo() {
+            try {
+                const r = await fetch('/api/settings/support-info');
+                const d = await r.json();
+                const box = document.getElementById('supportBox');
+                const items = [];
+                if (d.support_phone) items.push(`<a href="tel:${d.support_phone}" class="hover:text-white">📞 ${d.support_phone}</a>`);
+                if (d.whatsapp) items.push(`<a href="https://wa.me/${d.whatsapp.replace(/[^0-9]/g,'')}" target="_blank" class="hover:text-white">💬 واتساب</a>`);
+                if (d.facebook) items.push(`<a href="${d.facebook}" target="_blank" class="hover:text-white">📘 فيسبوك</a>`);
+                if (d.instagram) items.push(`<a href="${d.instagram}" target="_blank" class="hover:text-white">📷 انستغرام</a>`);
+                box.innerHTML = items.length > 0 ? items.join('<span class="opacity-30">|</span>') : 'الدعم الفني';
+            } catch (e) {}
+        }
+
+        loadRestaurantName();
+        loadProfiles();
+        loadSupportInfo();
+    </script>
+</body>
+</html>

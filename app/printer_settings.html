@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إعدادات الطابعة - كاشير القيصر</title>
+    <link rel="stylesheet" href="tailwind.css">
+    <link rel="stylesheet" href="design-system.css">
+    <script defer src="design-system.js"></script>
+    <script defer src="currency-manager.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+<nav class="q-appbar" aria-label="التنقل الرئيسي">
+  <a class="q-appbar-brand" href="index.html"><span class="q-appbar-brand-mark"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg></span><span>كاشير القيصر</span></a>
+  <div class="q-appbar-links"><a class="q-appbar-link " href="index.html"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h4"/></svg><span>نقطة البيع</span></a>
+<a class="q-appbar-link " href="menu_manager.html"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM7 9h10M7 13h6"/></svg><span>المنيو</span></a>
+<a class="q-appbar-link " href="raw_materials.html"><svg viewBox="0 0 24 24"><path d="M3 7h18v13H3zM5 7l2-4h10l2 4M8 12h8"/></svg><span>المخزون</span></a>
+<a class="q-appbar-link " href="orders_list.html"><svg viewBox="0 0 24 24"><path d="M6 2h12v20H6zM9 7h6M9 11h6M9 15h4"/></svg><span>الطلبات</span></a>
+<a class="q-appbar-link " href="analytics.html"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>التقارير</span></a>
+<a class="q-appbar-link " href="settings.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.18 2.18-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.04 1.56V21h-3.08v-.08a1.7 1.7 0 0 0-1.04-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-2.18-2.18.06-.06A1.7 1.7 0 0 0 6.8 15a1.7 1.7 0 0 0-1.56-1.04H5v-3.08h.24A1.7 1.7 0 0 0 6.8 9.84 1.7 1.7 0 0 0 6.46 7.96l-.06-.06 2.18-2.18.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.04-1.56V4.5h3.08v.06a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.18 2.18-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.04H21v3.08h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg><span>الإعدادات</span></a></div>
+  <span class="q-appbar-status">محلي وآمن</span>
+</nav>
+
+    <div class="container mx-auto px-4 py-6 max-w-lg">
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">🖨️ إعدادات الطابعة</h1>
+            <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩️ رجوع</a>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-6 space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">📛 اسم المطعم</label>
+                <input type="text" id="restaurant_name" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="مطعم القيصر">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">📏 عرض الورق</label>
+                <select id="paper_width" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <option value="58">58mm</option>
+                    <option value="80" selected>80mm</option>
+                    <option value="112">112mm</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">🔤 حجم الخط</label>
+                <select id="font_size" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <option value="small">صغير</option>
+                    <option value="medium" selected>وسط</option>
+                    <option value="large">كبير</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">📋 عدد النسخ</label>
+                <select id="copies" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <option value="1" selected>1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">📝 نص نهاية الإيصال</label>
+                <textarea id="footer_text" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="شكراً لزيارتكم"></textarea>
+            </div>
+
+            <button onclick="saveSettings()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition text-lg">
+                💾 حفظ الإعدادات
+            </button>
+
+            <div id="toast" class="hidden fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg text-center z-50"></div>
+        </div>
+
+        <!-- الطابعة المتصلة -->
+        <div class="bg-white rounded-xl shadow-md p-6 space-y-4 mt-6">
+            <h2 class="text-lg font-bold text-gray-700">🖨️ الطابعة المتصلة</h2>
+            <div id="currentPrinterBox" class="bg-gray-50 p-3 rounded-lg text-sm text-gray-600">
+                الطابعة الحالية: <span id="currentPrinterName" class="font-bold text-gray-800">-</span>
+            </div>
+
+            <button onclick="discoverPrinters()" class="w-full bg-gray-700 text-white font-bold py-2.5 rounded-lg hover:bg-gray-800 transition">
+                🔍 البحث عن طابعات متصلة
+            </button>
+
+            <div id="printerListBox" class="hidden space-y-3">
+                <select id="printerSelect" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                </select>
+                <button onclick="selectPrinter()" class="w-full bg-emerald-600 text-white font-bold py-2.5 rounded-lg hover:bg-emerald-700 transition">
+                    ✅ استخدام هذه الطابعة
+                </button>
+            </div>
+
+            <button onclick="testPrint()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition text-lg">
+                🧪 طباعة تجريبية
+            </button>
+            <p class="text-xs text-gray-400 text-center">
+                ملاحظة: البحث عن الطابعات والتعيين والاختبار الفعلي متاحين فقط عند تشغيل النظام على جهاز ويندوز فعلي، وليس أثناء التطوير.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        async function loadSettings() {
+            try {
+                const res = await fetch('/api/printer/settings');
+                const config = await res.json();
+                document.getElementById('paper_width').value = config.paper_width || 80;
+                document.getElementById('font_size').value = config.font_size || 'medium';
+                document.getElementById('copies').value = config.copies || 1;
+                document.getElementById('footer_text').value = config.footer_text || '';
+                document.getElementById('currentPrinterName').textContent = config.printer_name || 'لم يتم تحديد طابعة بعد';
+
+                const rRes = await fetch('/api/settings/restaurant');
+                const rConfig = await rRes.json();
+                document.getElementById('restaurant_name').value = rConfig.name || '';
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function saveSettings() {
+            const config = {
+                paper_width: parseInt(document.getElementById('paper_width').value),
+                font_size: document.getElementById('font_size').value,
+                copies: parseInt(document.getElementById('copies').value),
+                footer_text: document.getElementById('footer_text').value
+            };
+            try {
+                await fetch('/api/printer/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                await fetch('/api/settings/restaurant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: document.getElementById('restaurant_name').value })
+                });
+                showToast('✅ تم حفظ الإعدادات بنجاح');
+            } catch (e) {
+                showToast('❌ خطأ في الحفظ');
+            }
+        }
+
+        async function discoverPrinters() {
+            showToast('🔍 جارِ البحث...');
+            try {
+                const res = await fetch('/api/printer/list');
+                const data = await res.json();
+                if (!data.ok) {
+                    showToast('⚠️ ' + (data.error || 'تعذر البحث عن طابعات'));
+                    return;
+                }
+                if (data.printers.length === 0) {
+                    showToast('⚠️ ما لقيت أي طابعة متصلة بويندوز');
+                    return;
+                }
+                const sel = document.getElementById('printerSelect');
+                sel.innerHTML = data.printers.map(p =>
+                    `<option value="${p}" ${p === data.default ? 'selected' : ''}>${p}${p === data.default ? ' (افتراضية بويندوز)' : ''}</option>`
+                ).join('');
+                document.getElementById('printerListBox').classList.remove('hidden');
+                showToast(`✅ لقيت ${data.printers.length} طابعة`);
+            } catch (e) {
+                showToast('❌ خطأ بالبحث عن الطابعات');
+            }
+        }
+
+        async function selectPrinter() {
+            const name = document.getElementById('printerSelect').value;
+            if (!name) return showToast('⚠️ اختر طابعة أولاً');
+            try {
+                const res = await fetch('/api/printer/select', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    document.getElementById('currentPrinterName').textContent = name;
+                    showToast('✅ تم تعيين الطابعة: ' + name);
+                } else {
+                    showToast('⚠️ ' + (data.error || 'تعذر التعيين'));
+                }
+            } catch (e) {
+                showToast('❌ خطأ بتعيين الطابعة');
+            }
+        }
+
+        async function testPrint() {
+            showToast('🖨️ جارِ إرسال الطباعة التجريبية...');
+            try {
+                const res = await fetch('/api/printer/test', { method: 'POST' });
+                const data = await res.json();
+                showToast((data.ok ? '✅ ' : '⚠️ ') + data.message);
+            } catch (e) {
+                showToast('❌ خطأ في الطباعة');
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 2500);
+        }
+
+        loadSettings();
+    </script>
+</body>
+</html>

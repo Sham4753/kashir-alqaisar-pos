@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المواد الخام - كاشير القيصر</title>
+    <link rel="stylesheet" href="tailwind.css">
+    <link rel="stylesheet" href="design-system.css">
+    <script defer src="design-system.js"></script>
+    <script defer src="currency-manager.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+<nav class="q-appbar" aria-label="التنقل الرئيسي">
+  <a class="q-appbar-brand" href="index.html"><span class="q-appbar-brand-mark"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg></span><span>كاشير القيصر</span></a>
+  <div class="q-appbar-links"><a class="q-appbar-link " href="index.html"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h4"/></svg><span>نقطة البيع</span></a>
+<a class="q-appbar-link " href="menu_manager.html"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM7 9h10M7 13h6"/></svg><span>المنيو</span></a>
+<a class="q-appbar-link active" href="raw_materials.html"><svg viewBox="0 0 24 24"><path d="M3 7h18v13H3zM5 7l2-4h10l2 4M8 12h8"/></svg><span>المخزون</span></a>
+<a class="q-appbar-link " href="orders_list.html"><svg viewBox="0 0 24 24"><path d="M6 2h12v20H6zM9 7h6M9 11h6M9 15h4"/></svg><span>الطلبات</span></a>
+<a class="q-appbar-link " href="analytics.html"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>التقارير</span></a>
+<a class="q-appbar-link " href="settings.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.18 2.18-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.04 1.56V21h-3.08v-.08a1.7 1.7 0 0 0-1.04-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-2.18-2.18.06-.06A1.7 1.7 0 0 0 6.8 15a1.7 1.7 0 0 0-1.56-1.04H5v-3.08h.24A1.7 1.7 0 0 0 6.8 9.84 1.7 1.7 0 0 0 6.46 7.96l-.06-.06 2.18-2.18.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.04-1.56V4.5h3.08v.06a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.18 2.18-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.04H21v3.08h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg><span>الإعدادات</span></a></div>
+  <span class="q-appbar-status">محلي وآمن</span>
+</nav>
+
+    <div class="container mx-auto px-4 py-6 max-w-lg">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">📦 المواد الخام</h1>
+            <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩️ رجوع</a>
+        </div>
+
+        <div id="inventorySummary" class="hidden bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-red-800">
+            <div id="inventorySummaryText" class="font-bold"></div>
+            <p class="text-xs mt-1">استخدم زر «حد التنبيه» لكل مادة لتحديد متى يظهر التحذير.</p>
+        </div>
+
+        <!-- إدارة الموردين -->
+        <div class="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
+            <button onclick="toggleSection('secSuppliers')" class="w-full flex items-center justify-between p-4 text-right">
+                <h2 class="text-lg font-bold text-gray-700">🚚 إدارة الموردين</h2>
+                <span id="secSuppliers-icon" class="text-gray-400">▲</span>
+            </button>
+            <div id="secSuppliers" class="px-6 pb-6 space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <input type="text" id="supplierName" class="border border-gray-300 rounded-lg px-3 py-2.5" placeholder="اسم المورد">
+                    <input type="text" id="supplierPhone" class="border border-gray-300 rounded-lg px-3 py-2.5" placeholder="رقم الهاتف (اختياري)">
+                    <input type="text" id="supplierNotes" class="border border-gray-300 rounded-lg px-3 py-2.5" placeholder="ملاحظات (اختياري)">
+                </div>
+                <button onclick="addSupplier()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition">➕ إضافة المورد</button>
+                <div id="supplierSummary" class="space-y-2 max-h-56 overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <!-- شراء مادة جديدة -->
+        <div class="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
+            <button onclick="toggleSection('secAdd')" class="w-full flex items-center justify-between p-4 text-right">
+                <h2 class="text-lg font-bold text-gray-700">➕ شراء مادة جديدة</h2>
+                <span id="secAdd-icon" class="text-gray-400">▲</span>
+            </button>
+            <div id="secAdd" class="px-6 pb-6 space-y-3">
+            <input type="text" id="newName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="اسم المادة">
+            <input type="number" id="newQty" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="الكمية" step="0.01">
+            <input type="text" id="newUnit" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="الوحدة (كغ، لتر، قطعة...)">
+            <input type="number" id="newPrice" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="سعر الشراء">
+            <select id="newSupplier" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none"><option value="">▼ المورد (اختياري)</option></select>
+            <div class="grid grid-cols-2 gap-2">
+                <input type="number" id="newPaid" class="border border-gray-300 rounded-lg px-4 py-2.5" placeholder="المدفوع" step="0.01">
+                <input type="text" id="newInvoice" class="border border-gray-300 rounded-lg px-4 py-2.5" placeholder="رقم الفاتورة">
+            </div>
+            <input type="text" id="newNotes" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="ملاحظات الشراء">
+            <button onclick="addMaterial()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition">➕ إضافة (تسجل تلقائياً في الجرد)</button>
+            </div>
+        </div>
+
+        <!-- تعديل وحذف مادة -->
+        <div class="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
+            <button onclick="toggleSection('secEdit')" class="w-full flex items-center justify-between p-4 text-right">
+                <h2 class="text-lg font-bold text-gray-700">✏️ تعديل مادة</h2>
+                <span id="secEdit-icon" class="text-gray-400">▼</span>
+            </button>
+            <div id="secEdit" class="hidden px-6 pb-6 space-y-3">
+            <select id="editSelect" onchange="onEditSelect()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500 outline-none">
+                <option value="">▼ اختر المادة...</option>
+            </select>
+            <div id="editFields" class="space-y-4 hidden">
+                <input type="text" id="editName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500 outline-none" placeholder="اسم المادة">
+                <input type="number" id="editQty" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500 outline-none" placeholder="الكمية" step="0.01">
+                <input type="text" id="editUnit" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500 outline-none" placeholder="الوحدة">
+                <input type="number" id="editPrice" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500 outline-none" placeholder="سعر الشراء">
+                <div class="flex gap-2">
+                    <button onclick="updateMaterial()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">💾 حفظ</button>
+                    <button onclick="deleteMaterial()" class="flex-1 bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition">✕ حذف</button>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <!-- سجل المشتريات (كل عملية شراء على حدة) -->
+        <div class="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
+            <button onclick="toggleSection('secLog')" class="w-full flex items-center justify-between p-4 text-right">
+                <h2 class="text-lg font-bold text-gray-700">🧾 سجل المشتريات</h2>
+                <span id="secLog-icon" class="text-gray-400">▼</span>
+            </button>
+            <div id="secLog" class="hidden px-6 pb-6 space-y-3">
+            <input type="text" id="searchBox" oninput="renderMaterials()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="🔍 بحث...">
+            <div id="materialsList" class="space-y-2 max-h-72 overflow-y-auto"></div>
+            <div id="totalPrice" class="text-center font-bold text-lg text-gray-700 pt-2 border-t border-gray-200"></div>
+            </div>
+        </div>
+
+        <!-- رصيد المخزون الفعلي (يتحدث تلقائياً مع الشراء والبيع) -->
+        <div class="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
+            <button onclick="toggleSection('secInv')" class="w-full flex items-center justify-between p-4 text-right">
+                <h2 class="text-lg font-bold text-gray-700">📊 رصيد المخزون الحالي</h2>
+                <span id="secInv-icon" class="text-gray-400">▼</span>
+            </button>
+            <div id="secInv" class="hidden px-6 pb-6 space-y-3">
+            <p class="text-xs text-gray-400">يتحدث تلقائياً: يزيد مع كل شراء، وينقص تلقائياً مع البيع لو حددت وصفة للمنتج من "إدارة المنيو"</p>
+            <div id="inventoryList" class="space-y-2 max-h-72 overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast" class="hidden fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg text-center z-50"></div>
+    </div>
+
+    <script>
+        function toggleSection(id) {
+            const el = document.getElementById(id);
+            const icon = document.getElementById(id + '-icon');
+            el.classList.toggle('hidden');
+            icon.textContent = el.classList.contains('hidden') ? '▼' : '▲';
+        }
+
+        let materials = [];
+        let suppliers = [];
+        let currentEditId = null;
+        let currentCurrency = 'SYP', usdRate = 0, eurRate = 0;
+
+        async function loadCurrency() {
+            try {
+                const r = await fetch('/api/settings/currency');
+                const d = await r.json();
+                if (d) { currentCurrency = d.currency || 'SYP'; usdRate = d.usd_rate || 0; eurRate = d.eur_rate || 0; }
+            } catch (e) {}
+        }
+        function formatPrice(p) {
+            p = p || 0;
+            if (currentCurrency === 'USD') return usdRate ? '$' + (p / usdRate).toFixed(2) : (p.toLocaleString() + ' ل.س');
+            if (currentCurrency === 'EUR') return eurRate ? '€' + (p / eurRate).toFixed(2) : (p.toLocaleString() + ' ل.س');
+            return p.toLocaleString() + ' ل.س';
+        }
+
+        async function loadMaterials() {
+            await loadCurrency();
+            try {
+                const r = await fetch('/api/materials');
+                materials = await r.json();
+                await loadSuppliers();
+                fillSelects();
+                renderMaterials();
+            } catch(e) { console.error(e); }
+            await loadInventory();
+        }
+
+        async function loadSuppliers() {
+            try {
+                const r = await fetch('/api/suppliers');
+                suppliers = await r.json();
+                const select = document.getElementById('newSupplier');
+                select.innerHTML = '<option value="">▼ المورد (اختياري)</option>' + suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                const box = document.getElementById('supplierSummary');
+                box.innerHTML = suppliers.length ? suppliers.map(s => `<div class="flex items-center justify-between gap-2 p-3 rounded-lg border bg-indigo-50 border-indigo-100"><div><div class="font-bold text-indigo-900">${s.name}</div><div class="text-xs text-gray-500">${s.phone || 'بدون هاتف'} · ${s.purchase_count} مشتريات</div></div><div class="text-left"><div class="text-xs text-gray-500">المستحق</div><div class="font-bold ${s.due_total > 0 ? 'text-red-600' : 'text-green-600'}">${formatPrice(s.due_total)}</div></div></div>`).join('') : '<p class="text-sm text-gray-400 text-center">لا يوجد موردون بعد</p>';
+            } catch(e) { console.error(e); }
+        }
+
+        async function addSupplier() {
+            const name = document.getElementById('supplierName').value.trim();
+            if (!name) return showToast('⚠️ أدخل اسم المورد');
+            const r = await fetch('/api/suppliers', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, phone: document.getElementById('supplierPhone').value.trim(), notes: document.getElementById('supplierNotes').value.trim()})});
+            const d = await r.json();
+            if (!d.ok) return showToast('❌ ' + (d.error || 'فشل إضافة المورد'));
+            ['supplierName','supplierPhone','supplierNotes'].forEach(id => document.getElementById(id).value = '');
+            await loadSuppliers();
+            showToast('✅ تم إضافة المورد');
+        }
+
+        async function loadInventory() {
+            try {
+                const r = await fetch('/api/inventory');
+                const inv = await r.json();
+                renderInventorySummary(inv);
+                renderInventory(inv);
+            } catch(e) { console.error(e); }
+        }
+
+        function renderInventorySummary(inv) {
+            const summary = document.getElementById('inventorySummary');
+            const text = document.getElementById('inventorySummaryText');
+            const out = (inv || []).filter(x => x.status === 'out');
+            const low = (inv || []).filter(x => x.status === 'low');
+            if (!out.length && !low.length) {
+                summary.classList.add('hidden');
+                return;
+            }
+            const parts = [];
+            if (out.length) parts.push(`${out.length} مادة نافدة`);
+            if (low.length) parts.push(`${low.length} مادة تحت حد التنبيه`);
+            text.textContent = '⚠️ ' + parts.join(' و');
+            summary.classList.remove('hidden');
+        }
+
+        function renderInventory(inv) {
+            const box = document.getElementById('inventoryList');
+            if (!inv || inv.length === 0) {
+                box.innerHTML = '<p class="text-gray-400 text-center py-4 text-sm">ما في رصيد مخزون بعد - رح يتكون تلقائياً أول ما تشتري مادة</p>';
+                return;
+            }
+            box.innerHTML = inv.map(item => {
+                                    const isLow = item.low;
+                    const isOut = item.status === 'out';
+
+                return `
+                <div class="flex items-center justify-between p-3 rounded-lg border ${isLow ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'}">
+                    <div>
+                        <div class="font-bold ${isLow ? 'text-red-700' : 'text-gray-800'}">${isOut ? '⛔ ' : (isLow ? '⚠️ ' : '')}${item.name}</div>
+                        <div class="text-sm ${isLow ? 'text-red-500' : 'text-gray-500'}">${item.stock} ${item.unit || ''}</div>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="adjustStock(${item.id}, '${item.name}', ${item.stock})" class="bg-blue-50 text-blue-600 px-2 py-1.5 rounded-lg text-xs hover:bg-blue-100">✏️ تصحيح</button>
+                        <button onclick="setThreshold(${item.id}, '${item.name}', ${item.low_stock_threshold || 0})" class="bg-orange-50 text-orange-600 px-2 py-1.5 rounded-lg text-xs hover:bg-orange-100">🔔 حد التنبيه</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function adjustStock(id, name, current) {
+            const val = prompt(`تصحيح رصيد "${name}" (الرصيد الحالي: ${current}) - أدخل الرصيد الصحيح:`, current);
+            if (val === null) return;
+            const newStock = parseFloat(val);
+            if (isNaN(newStock)) return showToast('⚠️ رقم غير صحيح');
+            try {
+                await fetch('/api/inventory/' + id + '/adjust', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ stock: newStock })
+                });
+                showToast('✅ تم تصحيح الرصيد');
+                await loadInventory();
+            } catch(e) { showToast('❌ خطأ'); }
+        }
+
+        async function setThreshold(id, name, current) {
+            const val = prompt(`حد التنبيه لنفاد "${name}" (0 = بدون تنبيه):`, current);
+            if (val === null) return;
+            const threshold = parseFloat(val);
+            if (isNaN(threshold)) return showToast('⚠️ رقم غير صحيح');
+            try {
+                await fetch('/api/inventory/' + id + '/threshold', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ threshold })
+                });
+                showToast('✅ تم تحديد حد التنبيه');
+                await loadInventory();
+            } catch(e) { showToast('❌ خطأ'); }
+        }
+
+        function fillSelects() {
+            const sel = document.getElementById('editSelect');
+            const val = sel.value;
+            sel.innerHTML = '<option value="">▼ اختر المادة...</option>';
+            materials.forEach(m => {
+                sel.innerHTML += `<option value="${m.id}">${m.name} - ${m.quantity} ${m.unit} - ${formatPrice(m.price)}</option>`;
+            });
+            if (val) sel.value = val;
+        }
+
+        function renderMaterials() {
+            const q = document.getElementById('searchBox').value.toLowerCase();
+            const filtered = materials.filter(m =>
+                m.name.toLowerCase().includes(q) || m.unit.toLowerCase().includes(q)
+            );
+            const list = document.getElementById('materialsList');
+            let total = 0;
+            if (filtered.length === 0) {
+                list.innerHTML = '<p class="text-gray-500 text-center py-4">لا توجد مواد</p>';
+            } else {
+                list.innerHTML = filtered.map(m => {
+                    total += m.price || 0;
+                    return `
+                    <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <div><span class="font-bold">${m.name}</span><div class="text-xs text-gray-500">${(suppliers.find(s => s.id === m.supplier_id)?.name) || 'بدون مورد'}${m.invoice_no ? ' · فاتورة ' + m.invoice_no : ''}</div></div>
+                        <span class="text-gray-600">${m.quantity} ${m.unit}</span>
+                        <div class="text-left"><span class="text-red-500 font-bold">${formatPrice(m.price||0)}</span><div class="text-xs text-gray-500">مدفوع ${formatPrice(m.paid_amount ?? m.price ?? 0)}</div></div>
+                    </div>`;
+                }).join('');
+            }
+            document.getElementById('totalPrice').textContent =
+                filtered.length > 0 ? `💰 إجمالي المشتريات: ${formatPrice(total)}` : '';
+        }
+
+        // ===== إضافة =====
+        async function addMaterial() {
+            const name = document.getElementById('newName').value.trim();
+            const quantity = parseFloat(document.getElementById('newQty').value) || 0;
+            const unit = document.getElementById('newUnit').value.trim();
+            const price = parseInt(document.getElementById('newPrice').value) || 0;
+            const supplier_id = parseInt(document.getElementById('newSupplier').value) || null;
+            const paid_amount = parseFloat(document.getElementById('newPaid').value || price) || 0;
+            const invoice_no = document.getElementById('newInvoice').value.trim();
+            const notes = document.getElementById('newNotes').value.trim();
+            if (!name || !quantity || !unit || !price) return showToast('⚠️ املأ جميع الحقول');
+            if (paid_amount < 0 || paid_amount > price) return showToast('⚠️ المدفوع يجب أن يكون بين صفر وقيمة الشراء');
+
+            const res = await fetch('/api/materials', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, quantity, unit, price, supplier_id, paid_amount, invoice_no, notes })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                document.getElementById('newName').value = '';
+                document.getElementById('newQty').value = '';
+                document.getElementById('newUnit').value = '';
+                document.getElementById('newPrice').value = '';
+                document.getElementById('newPaid').value = '';
+                document.getElementById('newInvoice').value = '';
+                document.getElementById('newNotes').value = '';
+                document.getElementById('newSupplier').value = '';
+                await loadMaterials();
+                showToast('✅ تم الشراء وتلقائياً خصم من الجرد');
+            } else {
+                showToast('❌ فشل الإضافة');
+            }
+        }
+
+        // ===== تعديل =====
+        function onEditSelect() {
+            const id = parseInt(document.getElementById('editSelect').value);
+            if (!id) {
+                document.getElementById('editFields').classList.add('hidden');
+                return;
+            }
+            currentEditId = id;
+            const m = materials.find(x => x.id === id);
+            if (m) {
+                document.getElementById('editName').value = m.name;
+                document.getElementById('editQty').value = m.quantity;
+                document.getElementById('editUnit').value = m.unit;
+                document.getElementById('editPrice').value = m.price || 0;
+                document.getElementById('editFields').classList.remove('hidden');
+            }
+        }
+
+        async function updateMaterial() {
+            if (!currentEditId) return;
+            const name = document.getElementById('editName').value.trim();
+            const quantity = parseFloat(document.getElementById('editQty').value) || 0;
+            const unit = document.getElementById('editUnit').value.trim();
+            const price = parseInt(document.getElementById('editPrice').value) || 0;
+            if (!name || !quantity || !unit) return showToast('⚠️ املأ جميع الحقول');
+
+            const res = await fetch('/api/materials/' + currentEditId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, quantity, unit, price })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                await loadMaterials();
+                document.getElementById('editSelect').value = '';
+                document.getElementById('editFields').classList.add('hidden');
+                currentEditId = null;
+                showToast('✅ تم التحديث');
+            } else {
+                showToast('❌ فشل التحديث');
+            }
+        }
+
+        async function deleteMaterial() {
+            if (!currentEditId) return;
+            if (!confirm('حذف هذه المادة؟ سيرجع المبلغ للجرد')) return;
+
+            const res = await fetch('/api/materials/' + currentEditId, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.ok) {
+                await loadMaterials();
+                document.getElementById('editSelect').value = '';
+                document.getElementById('editFields').classList.add('hidden');
+                currentEditId = null;
+                showToast('✅ تم الحذف ورجع المبلغ للجرد');
+            } else {
+                showToast('❌ فشل الحذف');
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 2500);
+        }
+
+        loadMaterials();
+    </script>
+</body>
+</html>

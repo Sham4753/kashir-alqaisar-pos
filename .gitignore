@@ -1,0 +1,48 @@
+# Python cache and diagnostics
+__pycache__/
+*.py[cod]
+*.pyo
+*.log
+
+# Runtime data and local backups
+data_vault/
+Deliveries/
+app/data_vault/
+app/Deliveries/
+*.bak
+*.tmp
+
+# QA and local development artifacts
+qa_*/
+acceptance_*/
+*.zip
+*.sha256
+
+# Environment and editor settings
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local Windows shortcuts may contain machine-specific paths
+*.lnk
+
+# Bundled Python runtime is not source code; the app launcher remains under app/
+/Lib/
+/Scripts/
+/Include/
+/get-pip.py
+/*.pyd
+/*.dll
+/python.exe
+/pythonw.exe
+/python3.dll
+/python312.dll
+/python312.zip
+/python312._pth
+/python.cat
+/pyexpat.pyd
+/LICENSE.txt

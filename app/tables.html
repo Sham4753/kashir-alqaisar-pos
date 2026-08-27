@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>إدارة الصالة والطاولات - كاشير القيصر</title>
+  <link rel="stylesheet" href="tailwind.css">
+  <link rel="stylesheet" href="design-system.css">
+  <style>
+    .dine-main{max-width:1440px;margin:0 auto;padding:14px 24px 30px}.dine-head{display:flex;gap:16px;justify-content:space-between;align-items:center;margin-bottom:16px}.dine-head h1{font-size:24px;font-weight:900;margin:0}.dine-head p{margin:5px 0 0;color:var(--q-muted)}.dine-actions{display:flex;gap:8px;flex-wrap:wrap}.dine-action{min-height:43px;padding:0 14px;border-radius:12px;font-weight:800}.dine-primary{background:var(--q-brand);color:#fff}.dine-muted{background:var(--q-surface);color:var(--q-ink);border:1px solid var(--q-line)}.dine-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}.dine-stat{padding:15px;border:1px solid var(--q-line);border-radius:16px;background:var(--q-surface);box-shadow:var(--q-shadow-soft)}.dine-stat span{display:block;color:var(--q-muted);font-size:11px;font-weight:800}.dine-stat b{display:block;margin-top:7px;color:var(--q-ink);font-size:23px}.dine-stat.busy b{color:var(--q-brand-strong)}.dine-stat.ready b{color:var(--q-success)}.table-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:14px}.table-card{min-height:230px;padding:16px;border:1px solid var(--q-line);border-top:5px solid var(--q-success);border-radius:18px;background:var(--q-surface);box-shadow:var(--q-shadow-soft)}.table-card.busy{border-top-color:var(--q-brand)}.table-card.ready{border-top-color:var(--q-success)}.table-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.table-number{color:var(--q-ink);font-size:17px;font-weight:900}.table-meta{margin-top:4px;color:var(--q-muted);font-size:11px}.status-pill{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:999px;font-size:10px;font-weight:900}.status-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}.status-free{color:var(--q-success);background:var(--q-success-soft)}.status-busy{color:var(--q-brand-strong);background:var(--q-brand-soft)}.session-box{min-height:74px;margin-top:15px;padding:10px 11px;border-radius:12px;background:var(--q-surface-soft)}.session-box b{color:var(--q-ink);font-size:12px}.session-box small{display:block;margin-top:4px;color:var(--q-muted);font-size:11px}.table-card-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}.table-card-actions button,.table-card-actions a{min-height:39px;display:flex;align-items:center;justify-content:center;border:1px solid var(--q-line);border-radius:10px;color:var(--q-ink);background:var(--q-surface);font-size:11px;font-weight:900}.table-card-actions .continue{border-color:transparent;background:var(--q-brand);color:#fff}.table-card-actions .move{background:var(--q-surface-muted)}.empty-state{grid-column:1/-1;padding:70px 18px;border:1px dashed var(--q-line);border-radius:18px;background:var(--q-surface);text-align:center;color:var(--q-muted)}.toast{position:fixed;left:22px;bottom:22px;z-index:50;max-width:330px;padding:11px 14px;border-radius:12px;background:#101827;color:#fff;box-shadow:var(--q-shadow);font-size:12px;font-weight:800;opacity:0;pointer-events:none;transform:translateY(10px);transition:.2s}.toast.show{opacity:1;transform:translateY(0)}
+    @media(max-width:720px){.dine-main{padding:12px}.dine-head{align-items:flex-start;flex-direction:column}.dine-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.table-grid{grid-template-columns:1fr}.dine-actions{width:100%}.dine-action{flex:1}}
+  </style>
+  <script defer src="design-system.js"></script>
+  <script defer src="currency-manager.js"></script>
+</head>
+<body class="bg-slate-100 min-h-screen">
+  <nav class="q-appbar" aria-label="التنقل الرئيسي">
+    <a class="q-appbar-brand" href="index.html"><span class="q-appbar-brand-mark"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg></span><span>كاشير القيصر</span></a>
+    <div class="q-appbar-links"><a class="q-appbar-link" href="index.html"><span>نقطة البيع</span></a><a class="q-appbar-link active" href="tables.html"><span>الطاولات</span></a><a class="q-appbar-link" href="kitchen.html"><span>المطبخ</span></a><a class="q-appbar-link" href="orders_list.html"><span>الطلبات</span></a></div>
+    <span class="q-appbar-status">محلي وآمن</span>
+  </nav>
+  <main class="dine-main">
+    <section class="dine-head">
+      <div><h1>إدارة الصالة والطاولات</h1><p>افتح طلبًا للطاولة، تابع المطبخ، وانقل الطلب بين الطاولات قبل الدفع.</p></div>
+      <div class="dine-actions"><button type="button" class="dine-action dine-primary" onclick="addTable()">إضافة طاولة</button><a class="dine-action dine-muted" href="index.html">فتح الكاشير</a></div>
+    </section>
+    <section class="dine-stats" aria-label="ملخص الصالة"><div class="dine-stat"><span>إجمالي الطاولات</span><b id="totalTables">0</b></div><div class="dine-stat"><span>الطاولات الشاغرة</span><b id="freeTables">0</b></div><div class="dine-stat busy"><span>طلبات صالة مفتوحة</span><b id="busyTables">0</b></div><div class="dine-stat ready"><span>جاهز للتقديم</span><b id="readyTables">0</b></div></section>
+    <section id="tablesGrid" class="table-grid" aria-live="polite"></section>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script>
+  let tables = [];
+  const money = value => window.QaisarCurrency ? window.QaisarCurrency.money(value) : `${Number(value || 0).toLocaleString('ar-SY')} ل.س`;
+  const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+  function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),2600)}
+  function kitchenLabel(status){return ({new:'جديد للمطبخ',preparing:'قيد التحضير',ready:'جاهز للتقديم',served:'تم التقديم'})[status]||'جديد للمطبخ'}
+  function render(){
+    const total=tables.length, free=tables.filter(t=>t.status==='free').length, busy=tables.filter(t=>t.status==='busy').length, ready=tables.filter(t=>t.active_session?.kitchen_status==='ready').length;
+    document.getElementById('totalTables').textContent=total;document.getElementById('freeTables').textContent=free;document.getElementById('busyTables').textContent=busy;document.getElementById('readyTables').textContent=ready;
+    const grid=document.getElementById('tablesGrid');
+    grid.innerHTML=total?tables.map(t=>{
+      const session=t.active_session, busy=t.status==='busy'&&session, ready=session?.kitchen_status==='ready';
+      return `<article class="table-card ${busy?'busy':''} ${ready?'ready':''}"><div class="table-top"><div><div class="table-number">${esc(t.name)}</div><div class="table-meta">${esc(t.zone||'الصالة')} · ${Number(t.seats||4)} مقاعد</div></div><span class="status-pill ${busy?'status-busy':'status-free'}">${busy?(ready?'جاهز':'مشغولة'):'شاغرة'}</span></div>${busy?`<div class="session-box"><b>طلب ${esc(session.id)}</b><small>${kitchenLabel(session.kitchen_status)} · ${session.items.length} أصناف · ${money(session.total)}</small></div><div class="table-card-actions"><a class="continue" href="index.html?dine_in_session=${encodeURIComponent(session.id)}">متابعة الطلب</a><button class="move" onclick="moveSession('${esc(session.id)}')">نقل الطاولة</button></div>`:`<div class="session-box"><b>جاهزة لاستقبال طلب جديد</b><small>افتح الكاشير وأضف الأصناف ثم احفظ الطلب للطاولة.</small></div><div class="table-card-actions"><a class="continue" href="index.html?dine_in_table=${encodeURIComponent(t.id)}">فتح طلب صالة</a><button class="move" onclick="copyTableName('${esc(t.name)}')">نسخ اسم الطاولة</button></div>`}</article>`;
+    }).join(''):'<div class="empty-state"><b>لا توجد طاولات بعد</b><p>أضف طاولات الصالة لتبدأ استقبال الطلبات داخل المطعم.</p></div>';
+  }
+  async function loadTables(){try{const r=await fetch('/api/tables',{cache:'no-store'});const data=await r.json();if(!r.ok)throw new Error(data.error||'تعذر تحميل الطاولات');tables=Array.isArray(data)?data:[];render()}catch(e){toast('❌ '+e.message)}}
+  async function addTable(){const name=prompt('اسم أو رقم الطاولة (مثال: طاولة 1):');if(!name?.trim())return;const seats=prompt('عدد المقاعد:', '4');if(seats===null)return;const zone=prompt('اسم القسم أو المنطقة:', 'الصالة');if(zone===null)return;try{const r=await fetch('/api/tables',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim(),seats:Number(seats)||4,zone:zone.trim()||'الصالة'})});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||'تعذر إضافة الطاولة');toast('✅ تمت إضافة '+data.table.name);loadTables()}catch(e){toast('❌ '+e.message)}}
+  async function moveSession(id){const choices=tables.filter(t=>t.status==='free');if(!choices.length)return toast('لا توجد طاولة شاغرة لنقل الطلب إليها');const text=choices.map((t,i)=>`${i+1}. ${t.name}`).join('\n');const selected=prompt(`اختر رقم طاولة الوجهة:\n${text}`);const index=Number(selected)-1;if(!Number.isInteger(index)||!choices[index])return;try{const r=await fetch(`/api/dine-in/sessions/${encodeURIComponent(id)}/move`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({table_id:choices[index].id})});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||'تعذر نقل الطلب');toast('✅ تم نقل الطلب إلى '+data.session.table_name);loadTables()}catch(e){toast('❌ '+e.message)}}
+  async function copyTableName(name){try{await navigator.clipboard.writeText(name);toast('تم نسخ '+name)}catch(e){toast(name)}}
+  window.addEventListener('qaisar:currency-changed',render);loadTables();setInterval(loadTables,8000);
+</script>
+</body>
+</html>
