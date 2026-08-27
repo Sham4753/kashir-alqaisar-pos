@@ -2357,6 +2357,12 @@ def create_client_copy():
                 json.dump(sanitize_client_data(client_data, restaurant_name, license_id), f, ensure_ascii=False, indent=2)
         with open(os.path.join(tmp, 'CLIENT_SETUP.txt'), 'w', encoding='utf-8') as f:
             f.write(f'نسخة مستقلة للمطعم: {restaurant_name}\\nالمالك: {owner_name}\\nرقم الترخيص: {license_id}\\n\\n1. شغّل app\\\\QaisarDesktop.exe.\\n2. أكمل الإعداد الأولي وأنشئ المدير.\\n3. لا تنسخ بيانات هذه النسخة إلى مطعم آخر.\\n')
+        with open(os.path.join(tmp, 'CLIENT_SETUP.txt'), 'a', encoding='utf-8') as f:
+            f.write(
+                '\nتشغيل USB: شغّل USB_Start.bat من جذر المجلد أو الفلاشة.\n'
+                'اقرأ دليل_التشغيل_الكامل_AR.md وتقرير DELIVERY_QA_REPORT_AR.md قبل أول وردية.\n'
+                'راجع تشغيل_من_USB_AR.md لاختبار النسخة المحمولة.\n'
+            )
         os.replace(tmp, target)
         zip_path = shutil.make_archive(target, 'zip', deliveries, folder)
         return jsonify({'ok': True, 'folder': target, 'zip': zip_path, 'license_id': license_id,
@@ -2369,7 +2375,7 @@ def create_client_copy():
 def get_restaurant():
     data = load()
     r = data.get('settings', {}).get('restaurant', {})
-    return jsonify({"name": r.get('name', ''), "phone": r.get('phone', ''), "address": r.get('address', '')})
+    return jsonify({"name": r.get('name', ''), "phone": r.get('phone', ''), "address": r.get('address', ''), "brand_logo_data": r.get('brand_logo_data', '')})
 
 @app.route('/api/settings/restaurant', methods=['POST'])
 def set_restaurant():
@@ -2377,10 +2383,15 @@ def set_restaurant():
     if 'settings' not in data:
         data['settings'] = {}
     existing = data['settings'].get('restaurant', {})
+    payload = request.get_json(silent=True) or {}
+    brand_logo_data = str(payload.get('brand_logo_data', existing.get('brand_logo_data', '')) or '')
+    if brand_logo_data and (not brand_logo_data.startswith('data:image/') or len(brand_logo_data) > 300000):
+        return jsonify({'ok': False, 'error': 'شعار واجهات المطعم يجب أن يكون صورة محلية لا تتجاوز 200 كيلوبايت'}), 400
     data['settings']['restaurant'] = {
-        'name': request.json.get('name', existing.get('name', '')),
-        'phone': request.json.get('phone', existing.get('phone', '')),
-        'address': request.json.get('address', existing.get('address', ''))
+        'name': str(payload.get('name', existing.get('name', '')) or '')[:80],
+        'phone': str(payload.get('phone', existing.get('phone', '')) or '')[:50],
+        'address': str(payload.get('address', existing.get('address', '')) or '')[:180],
+        'brand_logo_data': brand_logo_data
     }
     save(data)
     return jsonify({"ok": True})
@@ -2391,6 +2402,13 @@ def get_restaurant_name():
     data = load()
     r = data.get('settings', {}).get('restaurant', {})
     return jsonify({"name": r.get('name', '')})
+
+@app.route('/api/restaurant/identity', methods=['GET'])
+def get_restaurant_identity():
+    """هوية عرض آمنة للواجهات؛ لا تشمل أي بيانات تشغيل أو مستخدمين."""
+    data = load()
+    r = data.get('settings', {}).get('restaurant', {})
+    return jsonify({"name": r.get('name', ''), "brand_logo_data": r.get('brand_logo_data', '')})
 
 
 @app.route('/api/settings/support-info', methods=['GET'])
@@ -3169,7 +3187,7 @@ def permission_error():
 
 PUBLIC_API_PATHS = {
     '/api/setup/status', '/api/setup/initialize', '/api/network/info',
-    '/api/restaurant/name', '/api/settings/support-info', '/api/settings/users',
+    '/api/restaurant/name', '/api/restaurant/identity', '/api/settings/support-info', '/api/settings/users',
     '/api/auth/login', '/api/auth/logout', '/api/auth/me', '/api/auth/verify',
 }
 CASHIER_READ_PREFIXES = (

@@ -41,6 +41,7 @@
             <input type="text" id="resName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="اسم المطعم">
             <input type="text" id="resPhone" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="رقم الهاتف">
             <input type="text" id="resAddress" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="العنوان">
+            <div class="rounded-xl border border-orange-100 bg-orange-50 p-3"><label class="block text-sm font-black text-slate-700">شعار واجهات الكاشير</label><p class="mt-1 text-xs leading-5 text-slate-500">يظهر في شريط أعلى صفحات الكاشير. هذا شعار الهوية العامة ولا يستبدل شعار الإيصال في إعدادات الطابعة.</p><input id="restaurantLogoFile" type="file" accept="image/png,image/jpeg,image/webp" onchange="loadRestaurantLogo(event)" class="mt-2 block w-full text-sm"><div class="mt-2 flex items-center gap-3"><img id="restaurantLogoPreview" class="hidden h-14 w-14 rounded-xl border border-orange-200 bg-white object-cover p-1" alt="معاينة شعار واجهات الكاشير"><button type="button" onclick="clearRestaurantLogo()" class="rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-700">حذف الشعار</button></div></div>
             <button onclick="saveRestaurant()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">💾 حفظ</button>
             </div>
         </div>
@@ -282,23 +283,46 @@
         }
 
         // ===== مطعم =====
+        let restaurantLogoData = '';
         async function loadRestaurant() {
             const r = await fetch('/api/settings/restaurant');
             const d = await r.json();
             document.getElementById('resName').value = d.name || '';
             document.getElementById('resPhone').value = d.phone || '';
             document.getElementById('resAddress').value = d.address || '';
+            restaurantLogoData = d.brand_logo_data || '';
+            renderRestaurantLogoPreview();
+        }
+        function loadRestaurantLogo(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            if (file.size > 200 * 1024) { showToast('⚠️ حجم شعار الواجهات يجب ألا يتجاوز 200 كيلوبايت'); event.target.value = ''; return; }
+            const reader = new FileReader();
+            reader.onload = () => { restaurantLogoData = String(reader.result || ''); renderRestaurantLogoPreview(); };
+            reader.readAsDataURL(file);
+        }
+        function renderRestaurantLogoPreview() {
+            const preview = document.getElementById('restaurantLogoPreview');
+            preview.src = restaurantLogoData;
+            preview.classList.toggle('hidden', !restaurantLogoData);
+        }
+        function clearRestaurantLogo() {
+            restaurantLogoData = '';
+            document.getElementById('restaurantLogoFile').value = '';
+            renderRestaurantLogoPreview();
         }
         async function saveRestaurant() {
-            await fetch('/api/settings/restaurant', {
+            const response = await fetch('/api/settings/restaurant', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     name: document.getElementById('resName').value,
                     phone: document.getElementById('resPhone').value,
-                    address: document.getElementById('resAddress').value
+                    address: document.getElementById('resAddress').value,
+                    brand_logo_data: restaurantLogoData
                 })
             });
-            showToast('✅ تم الحفظ');
+            const data = await response.json();
+            showToast(response.ok && data.ok ? '✅ تم حفظ معلومات وشعار المطعم' : '❌ ' + (data.error || 'تعذر الحفظ'));
         }
 
         // ===== الدعم الفني =====

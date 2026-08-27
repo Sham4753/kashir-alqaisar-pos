@@ -7,6 +7,8 @@ body.qaisar-page-index > header {
 }
 body.qaisar-page-index .brand-mark { width: 42px; height: 42px; border-radius: 14px; font-size: 0; background: linear-gradient(135deg, #ff8a4c, #e95416) !important; }
 body.qaisar-page-index .brand-mark::after { content: '⌁'; color: #fff; font-size: 27px; font-weight: 900; line-height: 1; }
+body.qaisar-page-index .brand-mark.has-restaurant-logo::after { content: none; }
+body.qaisar-page-index .brand-mark.has-restaurant-logo { background: var(--q-surface) !important; }
 body.qaisar-page-index .brand-copy h1 { color: #fff !important; font-size: 17px !important; }
 body.qaisar-page-index .header-tools { margin-inline-start: auto; }
 body.qaisar-page-index .top-field { height: 44px !important; border: 1px solid #536478 !important; background: #f9fbff !important; border-radius: 13px !important; }

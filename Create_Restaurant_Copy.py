@@ -66,5 +66,6 @@ for filename in ('data_backup.json','factory_data.json'):
     '2. أكمل معالج الإعداد الأولي وأنشئ حساب المدير.\n'
     '3. لا تنسخ أي ملفات بيانات تشغيلية بين العملاء.\n'
     '4. اقرأ دليل_التشغيل_الكامل_AR.md وتقرير DELIVERY_QA_REPORT_AR.md قبل أول وردية.\n'
-    '5. لتشغيل تطبيق النادل استخدم app/Start_LAN_Mode.bat ثم أدخل عنوان IP:8080 وحساب النادل في التطبيق.\n', encoding='utf-8')
+    '5. لنسخة USB شغّل USB_Start.bat من جذر الفلاشة، ثم راجع تشغيل_من_USB_AR.md.\n'
+    '6. لتشغيل تطبيق النادل استخدم app/Start_LAN_Mode.bat ثم أدخل عنوان IP:8080 وحساب النادل في التطبيق.\n', encoding='utf-8')
 print(f'CLIENT_COPY_CREATED: {output}')

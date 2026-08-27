@@ -126,6 +126,10 @@
             <button onclick="saveSettings()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition text-lg">
                 💾 حفظ الإعدادات
             </button>
+            <button id="saveAndTestPrintButton" onclick="saveAndTestPrint()" class="w-full bg-emerald-700 text-white font-bold py-3 rounded-lg hover:bg-emerald-800 transition text-lg disabled:opacity-60 disabled:cursor-not-allowed">
+                💾🖨️ حفظ الإعدادات وطباعة اختبار
+            </button>
+            <p class="text-center text-xs leading-5 text-slate-500">يحفظ الزر الإعدادات أولًا ثم يرسل اختبارًا للطابعة المحددة. تظهر النتيجة الفعلية من Windows بعد الإرسال.</p>
 
             <div id="toast" class="hidden fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg text-center z-50"></div>
         </div>
@@ -210,7 +214,7 @@
             }
         }
 
-        async function saveSettings() {
+        async function saveSettings(options = {}) {
             const config = {
                 paper_width: parseInt(document.getElementById('paper_width').value),
                 font_size: document.getElementById('font_size').value,
@@ -240,19 +244,25 @@
                 social_whatsapp: document.getElementById('social_whatsapp').value.trim()
             };
             try {
-                await fetch('/api/printer/settings', {
+                const printResponse = await fetch('/api/printer/settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)
                 });
-                await fetch('/api/settings/restaurant', {
+                const printData = await printResponse.json();
+                if (!printResponse.ok || !printData.ok) throw new Error(printData.error || 'تعذر حفظ إعدادات الطابعة');
+                const restaurantResponse = await fetch('/api/settings/restaurant', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: document.getElementById('restaurant_name').value })
                 });
-                showToast('✅ تم حفظ الإعدادات بنجاح');
+                const restaurantData = await restaurantResponse.json();
+                if (!restaurantResponse.ok || !restaurantData.ok) throw new Error(restaurantData.error || 'تعذر حفظ معلومات المطعم');
+                if (!options.silent) showToast('✅ تم حفظ الإعدادات بنجاح');
+                return true;
             } catch (e) {
-                showToast('❌ خطأ في الحفظ');
+                showToast('❌ ' + (e.message || 'خطأ في الحفظ'));
+                return false;
             }
         }
 
@@ -305,8 +315,10 @@
         function setTestPrintLoading(active, width) {
             const overlay = document.getElementById('testPrintLoading');
             const button = document.getElementById('testPrintButton');
+            const saveAndPrintButton = document.getElementById('saveAndTestPrintButton');
             testPrintInProgress = active;
             button.disabled = active;
+            if (saveAndPrintButton) saveAndPrintButton.disabled = active;
             button.innerHTML = active ? '⏳ جارِ إرسال اختبار ' + width + 'mm…' : '🧪 طباعة تجريبية';
             document.getElementById('testPrintLoadingText').textContent = active ? 'جارِ إرسال اختبار قالب ' + width + 'mm إلى الطابعة المحددة. لا تغلق الصفحة.' : '';
             overlay.classList.toggle('hidden', !active);
@@ -322,6 +334,13 @@
             } catch (e) {
                 showToast('❌ خطأ في الطباعة');
             } finally { setTestPrintLoading(false, width); }
+        }
+        async function saveAndTestPrint() {
+            if (testPrintInProgress) return;
+            const saved = await saveSettings({silent: true});
+            if (!saved) return;
+            showToast('✅ تم الحفظ؛ جارِ إرسال اختبار الطباعة…');
+            await testPrint();
         }
 
         function loadLogoFile(event) {

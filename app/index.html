@@ -11,12 +11,14 @@
         .category-item { transition: all 0.15s ease; cursor: pointer; }
         .category-item:hover { transform: translateX(-4px); }
         .category-active { background: #F97316 !important; color: white !important; font-weight: bold; }
-        .product-card { transition: all 0.15s ease; cursor: pointer; }
+        .product-card { transition: all 0.15s ease; cursor: pointer; touch-action: manipulation; user-select: none; }
         .product-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .product-card:focus-visible { outline: 3px solid #f97316; outline-offset: 2px; }
         .type-btn { transition: all 0.15s ease; }
         .type-selected { background: #7C3AED !important; color: white !important; border-color: #7C3AED !important; }
         .cart-item { transition: all 0.15s ease; }
         .cart-item:hover { background: #F9FAFB; }
+        .cart-item .qty-control button, .cart-item .remove-cart-item { min-width: 34px; min-height: 34px; }
         .num-btn { transition: all 0.1s ease; }
         .num-btn:active { transform: scale(0.95); background: #E5E7EB; }
         .quick-pay-btn { transition: all 0.2s ease; }
@@ -73,6 +75,7 @@
         #sectionTitle { font-size:15px; color:var(--q-slate); background:transparent; border-radius:0; padding:0; box-shadow:none; margin:0 !important; }
         .product-card { border:1px solid var(--q-line) !important; border-radius:15px !important; background:var(--q-surface) !important; box-shadow:0 4px 13px rgba(15,23,42,.045) !important; overflow:hidden; }
         .product-card:hover { transform:translateY(-3px); border-color:#fdba74 !important; box-shadow:0 10px 22px rgba(15,23,42,.11) !important; }
+        .product-card:active { transform:translateY(0) scale(.985); }
         .product-card button { border-radius:10px !important; font-weight:800; }
         .cart-panel { order:3; width:365px; min-width:365px; border:0 !important; border-radius:16px; box-shadow:0 10px 28px rgba(15,23,42,.11); overflow:hidden; background:#fff; }
         .cart-head { background:linear-gradient(135deg,#f8fafc,#eef5ff); border-bottom:1px solid var(--q-line) !important; }
@@ -427,15 +430,16 @@
             const items = menu[cat] || [];
             document.getElementById('productCountHint').textContent = items.length + ' صنف';
             document.getElementById('productsGrid').innerHTML = items.map(p => `
-                <div class="product-card bg-white border border-gray-200 rounded-xl p-3 text-center relative group">
-                    <button onclick="toggleFavorite(${Number(p.id)})" class="absolute top-1 left-1 text-lg ${favorites.includes(p.id)?'':'opacity-0 group-hover:opacity-100'} transition">
+                <div class="product-card bg-white border border-gray-200 rounded-xl p-3 text-center relative group" role="button" tabindex="0" onclick="addProductFromCard(event,${Number(p.id)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();addProductFromCard(event,${Number(p.id)})}" aria-label="إضافة الصنف إلى السلة">
+                    <button type="button" data-product-favorite onclick="event.stopPropagation();toggleFavorite(${Number(p.id)})" class="absolute top-1 left-1 text-lg ${favorites.includes(p.id)?'':'opacity-70'} transition" aria-label="تبديل المفضلة">
                         ${favorites.includes(p.id)?'⭐':'☆'}
                     </button>
                     ${p.image ? `<img src="${p.image}" class="w-full h-16 object-cover rounded-lg mb-2">` : `<div class="text-3xl mb-2">🍽️</div>`}
                     <div class="font-bold text-sm mb-1">${p.name}</div>
                     ${p.barcode ? `<div class="text-[10px] text-gray-400 mb-1">▦ ${p.barcode}</div>` : ''}
                     <div class="text-orange-600 font-bold text-sm mb-2">${formatPrice(p.price)}</div>
-                    <button onclick="addToCartById(${Number(p.id)},1)" class="w-full bg-orange-500 text-white py-1.5 rounded-lg text-sm font-bold hover:bg-orange-600 transition">➕ إضافة</button>
+                    <div class="mt-2 text-[11px] font-bold text-orange-700">المس أي مكان في البطاقة للإضافة</div>
+                    <button type="button" onclick="event.stopPropagation();addToCartById(${Number(p.id)},1)" class="w-full mt-1 bg-orange-500 text-white py-2 rounded-lg text-sm font-bold hover:bg-orange-600 transition">➕ إضافة</button>
                 </div>
             `).join('');
         }
@@ -467,12 +471,13 @@
             document.getElementById('sectionTitle').textContent = 'نتائج البحث';
             document.getElementById('productCountHint').textContent = results.length + ' نتيجة';
             document.getElementById('productsGrid').innerHTML = results.map(p => `
-                <div class="product-card bg-white border border-gray-200 rounded-xl p-3 text-center">
+                <div class="product-card bg-white border border-gray-200 rounded-xl p-3 text-center" role="button" tabindex="0" onclick="addProductFromCard(event,${Number(p.id)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();addProductFromCard(event,${Number(p.id)})}" aria-label="إضافة الصنف إلى السلة">
                     ${p.image ? `<img src="${p.image}" class="w-full h-16 object-cover rounded-lg mb-2">` : ''}
                     <div class="font-bold text-sm mb-1">${p.name}</div>
                     ${p.barcode ? `<div class="text-[10px] text-gray-400 mb-1">▦ ${p.barcode}</div>` : ''}
                     <div class="text-orange-600 font-bold text-sm mb-2">${formatPrice(p.price)}</div>
-                    <button onclick="addToCartById(${Number(p.id)},1)" class="w-full bg-orange-500 text-white py-1.5 rounded-lg text-sm font-bold hover:bg-orange-600 transition">➕ إضافة</button>
+                    <div class="mt-2 text-[11px] font-bold text-orange-700">المس أي مكان في البطاقة للإضافة</div>
+                    <button type="button" onclick="event.stopPropagation();addToCartById(${Number(p.id)},1)" class="w-full mt-1 bg-orange-500 text-white py-2 rounded-lg text-sm font-bold hover:bg-orange-600 transition">➕ إضافة</button>
                 </div>
             `).join('');
         }
@@ -485,6 +490,11 @@
             localStorage.setItem('favorites', JSON.stringify(favorites));
             renderFavorites();
             if(currentCategory) renderProducts(currentCategory);
+        }
+
+        function addProductFromCard(event, productId) {
+            if (event?.target?.closest?.('[data-product-favorite]')) return;
+            addToCartById(productId, 1);
         }
 
         function addToCartById(productId, qty) {
@@ -519,18 +529,18 @@
             document.getElementById('itemCount').textContent = count + ' قطع';
 
             if(cart.length === 0) {
-                list.innerHTML = '<p class="text-gray-400 text-center py-8">السلة فارغة</p>';
+                list.innerHTML = '<div class="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-9 text-center"><div class="text-3xl">🧺</div><p class="mt-2 font-black text-slate-600">السلة فارغة</p><p class="mt-1 text-xs leading-5 text-slate-400">المس بطاقة أي صنف لإضافته إلى الطلب الحالي.</p></div>';
             } else {
                 list.innerHTML = cart.map((item, i) => `
-                    <div class="cart-item flex justify-between items-center bg-gray-50 p-2 rounded-lg text-sm animate-slide">
-                        <button onclick="removeFromCart(${i})" class="text-red-400 hover:text-red-600 ml-1">✕</button>
-                        <span class="flex-1"><span>${item.name}</span>${item.modifiers?.length ? `<small class="block text-[11px] text-indigo-600 mt-0.5">+ ${item.modifiers.map(option => typeof option === 'object' ? option.name + (option.price ? ' (' + formatPrice(option.price) + ')' : '') : option).join('، ')}</small>` : ''}</span>
-                        <div class="flex items-center gap-1">
-                            <button onclick="updateCartQty(${i},-1)" class="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 text-xs font-bold">-</button>
-                            <span class="w-6 text-center font-bold">${item.qty}</span>
-                            <button onclick="updateCartQty(${i},1)" class="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 text-xs font-bold">+</button>
+                    <div class="cart-item flex justify-between items-center gap-2 border border-slate-100 bg-gray-50 p-3 rounded-xl text-sm animate-slide">
+                        <button type="button" onclick="removeFromCart(${i})" class="remove-cart-item shrink-0 rounded-lg bg-rose-50 text-red-500 hover:bg-rose-100" aria-label="حذف ${item.name}">✕</button>
+                        <span class="min-w-0 flex-1"><span class="block truncate font-black text-slate-800">${item.name}</span>${item.modifiers?.length ? `<small class="block text-[11px] text-indigo-600 mt-0.5 leading-5">+ ${item.modifiers.map(option => typeof option === 'object' ? option.name + (option.price ? ' (' + formatPrice(option.price) + ')' : '') : option).join('، ')}</small>` : ''}</span>
+                        <div class="qty-control flex items-center gap-1 rounded-lg bg-white border border-slate-200 p-0.5">
+                            <button type="button" onclick="updateCartQty(${i},-1)" class="rounded-md bg-slate-100 hover:bg-slate-200 text-sm font-black" aria-label="تقليل كمية ${item.name}">−</button>
+                            <span class="w-7 text-center font-black text-slate-800">${item.qty}</span>
+                            <button type="button" onclick="updateCartQty(${i},1)" class="rounded-md bg-orange-500 text-white hover:bg-orange-600 text-sm font-black" aria-label="زيادة كمية ${item.name}">+</button>
                         </div>
-                        <span class="font-bold w-20 text-left">${formatPrice(item.price * item.qty)}</span>
+                        <span class="font-black w-20 text-left text-slate-800">${formatPrice(item.price * item.qty)}</span>
                     </div>
                 `).join('');
             }
