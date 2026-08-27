@@ -17,7 +17,7 @@ def ignore_commercial_artifacts(directory, names):
     ignored = set()
     for name in names:
         low = name.lower()
-        if low in {'.git', '__pycache__', 'data_vault', 'deliveries'} or low.endswith(('.pyc', '.log')) or low.startswith(('qa_', 'acceptance_')) or low == 'ui_redesign_notes.md':
+        if low in {'.git', '__pycache__', 'data_vault', 'deliveries'} or low.endswith(('.pyc', '.log')) or low.startswith('qa_') or (low.startswith('acceptance_') and low.endswith(('.py', '.json', '.log'))) or low == 'ui_redesign_notes.md':
             ignored.add(name)
         if low.endswith('.zip') and ('kashir' in low or 'qaisar' in low):
             ignored.add(name)
@@ -65,5 +65,6 @@ for filename in ('data_backup.json','factory_data.json'):
     '1. شغّل Start.bat أو app/QaisarDesktop.exe.\n'
     '2. أكمل معالج الإعداد الأولي وأنشئ حساب المدير.\n'
     '3. لا تنسخ أي ملفات بيانات تشغيلية بين العملاء.\n'
-    '4. لتشغيل تطبيق النادل استخدم app/Start_LAN_Mode.bat ثم أدخل عنوان IP:8080 وحساب النادل في التطبيق.\n', encoding='utf-8')
+    '4. اقرأ دليل_التشغيل_الكامل_AR.md وتقرير DELIVERY_QA_REPORT_AR.md قبل أول وردية.\n'
+    '5. لتشغيل تطبيق النادل استخدم app/Start_LAN_Mode.bat ثم أدخل عنوان IP:8080 وحساب النادل في التطبيق.\n', encoding='utf-8')
 print(f'CLIENT_COPY_CREATED: {output}')

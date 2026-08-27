@@ -88,8 +88,10 @@
             <div id="secMobile" class="hidden px-6 pb-6 space-y-3">
                 <p class="text-sm text-gray-600">امسح الرمز من جوال الموظف لفتح بوابة المطبخ والطاولات والقائمة داخل شبكة المطعم.</p>
                 <div id="mobileQrStatus" class="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">جار التحقق من وضع الشبكة…</div>
-                <div id="mobileQrBox" class="hidden text-center rounded-xl border border-slate-200 bg-white p-4"><img id="mobileQrImage" class="mx-auto w-52 h-52" alt="رمز QR لربط الجوال"><p class="text-xs text-slate-500 mt-3">افتح كاميرا الجوال وامسح الرمز</p></div>
+                <div id="mobileQrBox" class="hidden text-center rounded-xl border border-slate-200 bg-white p-4"><img id="mobileQrImage" class="mx-auto w-52 h-52" alt="رمز QR لفتح بوابة الجوال"><p class="text-xs text-slate-500 mt-3">رمز بوابة الجوال: افتحه من كاميرا الهاتف</p></div>
                 <div id="mobileUrlBox" class="hidden"><label class="text-xs text-gray-500">رابط الجوال</label><div class="flex gap-2 mt-1"><input id="mobileUrl" readonly class="flex-1 text-left direction-ltr border border-gray-300 rounded-lg px-3 py-2 text-xs" value=""><button onclick="copyMobileUrl()" class="bg-indigo-600 text-white px-4 rounded-lg font-bold text-sm">نسخ</button></div></div>
+                <div id="waiterBaseBox" class="hidden"><label class="text-xs text-gray-500">عنوان تطبيق النادل</label><p class="mt-1 text-xs text-slate-500">أدخل هذا العنوان في شاشة «بدء الربط» داخل تطبيق النادل، من دون إضافة <code>/mobile.html</code>.</p><div class="flex gap-2 mt-1"><input id="waiterBaseUrl" readonly class="flex-1 text-left direction-ltr border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold" value=""><button onclick="copyWaiterBaseUrl()" class="bg-emerald-600 text-white px-4 rounded-lg font-bold text-sm">نسخ</button></div></div>
+                <div id="waiterQrBox" class="hidden text-center rounded-xl border-2 border-emerald-100 bg-emerald-50 p-4"><p class="font-bold text-emerald-900">رمز ربط تطبيق النادل</p><p class="mt-1 text-xs leading-5 text-emerald-800">من تطبيق النادل اضغط «مسح رمز الربط»، ثم امسح هذا الرمز لتعبئة عنوان الكاشير تلقائيًا. لا يحمل الرمز كلمة مرور أو جلسة.</p><img id="waiterQrImage" class="mx-auto mt-3 w-52 h-52 rounded-lg bg-white p-2" alt="رمز QR لربط تطبيق النادل"><p class="mt-2 text-xs text-emerald-800">تبقى كلمة مرور حساب النادل مطلوبة لتسجيل الدخول.</p></div>
                 <p class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-3">إذا ظهر أن وضع الجوال غير مفعّل، أغلق النظام ثم شغّل <b>Start_LAN_Mode.bat</b> من مجلد التطبيق. اسمح بجدار حماية Windows على الشبكات الخاصة فقط.</p>
             </div>
         </div>
@@ -117,6 +119,33 @@
             </select>
             <textarea id="footerText" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="نص نهاية الإيصال"></textarea>
             <button onclick="savePrinter()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">💾 حفظ</button>
+            </div>
+        </div>
+
+        <!-- دليل الإغلاق والنسخ الاحتياطي -->
+        <div class="bg-white rounded-xl shadow-md mb-6 overflow-hidden border border-emerald-100">
+            <button onclick="toggleSection('secDailyGuide')" class="w-full flex items-center justify-between p-4 text-right">
+                <h2 class="text-lg font-bold text-gray-700">✅ دليل الإغلاق والنسخ الاحتياطي اليومي</h2>
+                <span id="secDailyGuide-icon" class="text-gray-400">▼</span>
+            </button>
+            <div id="secDailyGuide" class="hidden px-6 pb-6 space-y-3">
+                <p class="text-sm text-gray-600 leading-6">مسار تدريبي قصير للطاقم قبل نهاية الوردية، مع تقدم محفوظ على هذا الجهاز وأزرار آمنة للنسخ الاحتياطي والتنزيل.</p>
+                <a href="daily_guide.html" class="block w-full text-center bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition">فتح الدليل التفاعلي</a>
+            </div>
+        </div>
+
+        <!-- موافقات المدير -->
+        <div class="bg-white rounded-xl shadow-md mb-6 overflow-hidden border border-amber-100">
+            <button onclick="toggleSection('secManagerApprovals'); loadManagerApprovals()" class="w-full flex items-center justify-between p-4 text-right">
+                <h2 class="text-lg font-bold text-gray-700">🛡️ موافقات المدير للعمليات الحساسة</h2>
+                <span id="secManagerApprovals-icon" class="text-gray-400">▼</span>
+            </button>
+            <div id="secManagerApprovals" class="hidden px-6 pb-6 space-y-3">
+                <p class="text-sm leading-6 text-gray-600">تحتاج الخصومات التي تتجاوز الحد، وكذلك إلغاء فاتورة مع استرجاع دفعتها، إلى اعتماد مدير. لا تُخزَّن كلمة المرور في السجل.</p>
+                <div class="grid gap-3 sm:grid-cols-2"><label class="text-sm font-bold text-gray-700">حد الخصم النسبي دون اعتماد<input id="approvalDiscountPct" type="number" min="0" max="100" step="0.5" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2" placeholder="10"></label><label class="text-sm font-bold text-gray-700">حد الخصم بالمبلغ دون اعتماد<input id="approvalDiscountAmount" type="number" min="0" step="1" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2" placeholder="0"></label></div>
+                <p class="text-xs text-gray-500">ضع 0 في حد المبلغ لتعطيله. يبقى اعتماد المدير لإلغاء/استرجاع الفاتورة مفعّلًا دائمًا.</p>
+                <button onclick="saveManagerApprovalPolicy()" class="w-full rounded-lg bg-amber-600 px-4 py-3 font-bold text-white hover:bg-amber-700">💾 حفظ سياسة الموافقة</button>
+                <div><h3 class="text-sm font-bold text-gray-700">آخر الاعتمادات</h3><div id="managerApprovalLog" class="mt-2 max-h-64 space-y-2 overflow-y-auto text-sm"></div></div>
             </div>
         </div>
 
@@ -245,6 +274,7 @@
             await loadCommercialAccess();
             await loadMobileQR();
             await loadPrinter();
+            await loadManagerApprovals();
             await loadUsers();
             await loadLock();
             await loadBackups();
@@ -320,23 +350,30 @@
 
         // ===== ربط الجوال عبر QR =====
         async function loadMobileQR() {
-            const status = document.getElementById('mobileQrStatus'), box = document.getElementById('mobileQrBox'), urlBox = document.getElementById('mobileUrlBox');
+            const status = document.getElementById('mobileQrStatus'), box = document.getElementById('mobileQrBox'), urlBox = document.getElementById('mobileUrlBox'), waiterBox = document.getElementById('waiterBaseBox'), waiterQrBox = document.getElementById('waiterQrBox');
             try {
                 const r = await fetch('/api/network/info'); const info = await r.json();
                 if (!info.lan_enabled || !info.urls || !info.urls.length) {
                     status.innerHTML = '<b class="text-amber-700">● وضع الجوال غير مفعّل</b><br>شغّل Start_LAN_Mode.bat على الكمبيوتر الرئيسي ثم افتح الإعدادات من جديد.';
-                    box.classList.add('hidden'); urlBox.classList.add('hidden'); return;
+                    box.classList.add('hidden'); urlBox.classList.add('hidden'); waiterBox.classList.add('hidden'); waiterQrBox.classList.add('hidden'); return;
                 }
                 document.getElementById('mobileUrl').value = info.urls[0];
+                document.getElementById('waiterBaseUrl').value = (info.waiter_base_urls || [info.urls[0].replace('/mobile.html', '')])[0];
                 document.getElementById('mobileQrImage').src = '/api/network/qr.svg?t=' + Date.now();
-                status.innerHTML = '<b class="text-emerald-700">● جاهز للربط المحلي</b><br>امسح رمز QR من الجوال المتصل بالشبكة نفسها.';
-                box.classList.remove('hidden'); urlBox.classList.remove('hidden');
-            } catch (e) { status.textContent = 'تعذر قراءة معلومات الشبكة. تأكد من تشغيل النظام.'; box.classList.add('hidden'); urlBox.classList.add('hidden'); }
+                document.getElementById('waiterQrImage').src = '/api/network/waiter-qr.svg?t=' + Date.now();
+                status.innerHTML = '<b class="text-emerald-700">● جاهز للربط المحلي</b><br>عنوان الكمبيوتر المحلي: <code class="font-bold">' + (info.primary_ip || 'غير متاح') + ':' + info.port + '</code><br>امسح رمز QR أو انسخ عنوان تطبيق النادل من الجوال المتصل بالشبكة نفسها.';
+                box.classList.remove('hidden'); urlBox.classList.remove('hidden'); waiterBox.classList.remove('hidden'); waiterQrBox.classList.remove('hidden');
+            } catch (e) { status.textContent = 'تعذر قراءة معلومات الشبكة. تأكد من تشغيل النظام.'; box.classList.add('hidden'); urlBox.classList.add('hidden'); waiterBox.classList.add('hidden'); waiterQrBox.classList.add('hidden'); }
         }
         async function copyMobileUrl() {
             const input = document.getElementById('mobileUrl'); input.select();
             try { if (navigator.clipboard) await navigator.clipboard.writeText(input.value); else document.execCommand('copy'); showToast('✅ تم نسخ رابط الجوال'); }
             catch (e) { document.execCommand('copy'); showToast('✅ تم تحديد الرابط للنسخ'); }
+        }
+        async function copyWaiterBaseUrl() {
+            const input = document.getElementById('waiterBaseUrl'); input.select();
+            try { if (navigator.clipboard) await navigator.clipboard.writeText(input.value); else document.execCommand('copy'); showToast('✅ تم نسخ عنوان تطبيق النادل'); }
+            catch (e) { document.execCommand('copy'); showToast('✅ تم تحديد العنوان للنسخ'); }
         }
 
         // ===== عملة =====
@@ -379,6 +416,27 @@
                 })
             });
             showToast('✅ تم الحفظ');
+        }
+
+        // ===== موافقات المدير =====
+        function renderManagerApprovals(rows) {
+            const box = document.getElementById('managerApprovalLog');
+            box.innerHTML = rows.length ? rows.map(row => `<div class="rounded-lg border border-amber-100 bg-amber-50 p-3"><div class="flex justify-between gap-3"><b>${row.action || 'اعتماد'}</b><span>${row.approved_by || 'مدير'}</span></div><div class="mt-1 text-xs text-gray-600">${row.reference_id ? 'المرجع: ' + row.reference_id + ' · ' : ''}${Number(row.amount || 0).toLocaleString()} · ${row.approved_at ? new Date(row.approved_at).toLocaleString('ar') : ''}</div></div>`).join('') : '<p class="rounded-lg bg-slate-50 p-3 text-center text-sm text-slate-500">لا توجد موافقات مسجلة بعد.</p>';
+        }
+        async function loadManagerApprovals() {
+            try {
+                const response = await fetch('/api/settings/manager-approvals'); const data = await response.json();
+                if (!response.ok || !data.ok) throw new Error(data.error || 'تعذر تحميل سياسة الموافقات');
+                document.getElementById('approvalDiscountPct').value = data.policy.discount_percent_limit;
+                document.getElementById('approvalDiscountAmount').value = data.policy.discount_amount_limit;
+                renderManagerApprovals(data.approvals || []);
+            } catch (e) { document.getElementById('managerApprovalLog').innerHTML = '<p class="text-rose-600">تعذر تحميل سجل الموافقات.</p>'; }
+        }
+        async function saveManagerApprovalPolicy() {
+            const payload = {discount_percent_limit: Number(document.getElementById('approvalDiscountPct').value), discount_amount_limit: Number(document.getElementById('approvalDiscountAmount').value)};
+            const response = await fetch('/api/settings/manager-approvals', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}); const data = await response.json();
+            if (!response.ok || !data.ok) return showToast('❌ ' + (data.error || 'تعذر حفظ السياسة'));
+            showToast('✅ تم حفظ سياسة موافقات المدير'); await loadManagerApprovals(); await loadAuditLog();
         }
 
         // ===== مستخدمين =====

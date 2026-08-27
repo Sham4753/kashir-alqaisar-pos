@@ -708,6 +708,77 @@ def normalize_payment(total, payload):
     return {'payment': payment, 'cash_amount': cash, 'card_amount': card}, None
 
 
+DEFAULT_MANAGER_APPROVAL_POLICY = {
+    'discount_percent_limit': 10.0,
+    'discount_amount_limit': 0.0,
+    'require_void_refund': True,
+}
+
+
+def manager_approval_policy(data):
+    raw = data.get('settings', {}).get('manager_approval_policy', {})
+    raw = raw if isinstance(raw, dict) else {}
+    percent_limit = as_money(raw.get('discount_percent_limit'), DEFAULT_MANAGER_APPROVAL_POLICY['discount_percent_limit'])
+    amount_limit = as_money(raw.get('discount_amount_limit'), DEFAULT_MANAGER_APPROVAL_POLICY['discount_amount_limit'])
+    return {
+        'discount_percent_limit': min(100, max(0, percent_limit if percent_limit is not None else 10.0)),
+        'discount_amount_limit': max(0, amount_limit if amount_limit is not None else 0.0),
+        'require_void_refund': bool(raw.get('require_void_refund', True)),
+    }
+
+
+def manager_approval_required(data, discount_pct=0, discount_amount=0):
+    policy = manager_approval_policy(data)
+    return ((discount_pct > policy['discount_percent_limit']) or
+            (policy['discount_amount_limit'] > 0 and discount_amount > policy['discount_amount_limit'])), policy
+
+
+def verify_manager_approval(data, payload, action, amount=0, reference_id=''):
+    """يتحقق من اعتماد مدير حقيقي ولا يخزن كلمة المرور، ثم يجهز سجلًا موجزًا للعملية."""
+    approval = payload.get('manager_approval', {}) if isinstance(payload, dict) else {}
+    approval = approval if isinstance(approval, dict) else {}
+    users = data.get('settings', {}).get('users', [])
+    if not users:
+        return {'action': action, 'approved_by': 'مدير النظام المحلي', 'approved_at': datetime.now().isoformat(),
+                'amount': round(float(amount or 0), 2), 'reference_id': str(reference_id)}, None
+    if session.get('role') == 'manager' and not approval:
+        username = session.get('username', 'مدير')
+    else:
+        username = str(approval.get('username', '')).strip()
+        password = str(approval.get('password', ''))
+        manager = next((u for u in users if u.get('username') == username and u.get('role') == 'manager'), None)
+        if not manager or not verify_password(manager.get('password_hash'), password):
+            return None, (jsonify({'ok': False, 'approval_required': True,
+                                   'error': 'هذه العملية تحتاج موافقة مدير وكلمة مرور صحيحة'}), 403)
+    record = {'id': uuid.uuid4().hex[:12], 'action': action, 'approved_by': username,
+              'approved_at': datetime.now().isoformat(), 'amount': round(float(amount or 0), 2),
+              'reference_id': str(reference_id)}
+    data.setdefault('manager_approvals', []).append(record)
+    data['manager_approvals'] = data['manager_approvals'][-500:]
+    return record, None
+
+
+@app.route('/api/settings/manager-approvals', methods=['GET', 'POST'])
+def manager_approval_settings():
+    if not has_role('manager'):
+        return permission_error()
+    data = load()
+    if request.method == 'GET':
+        return jsonify({'ok': True, 'policy': manager_approval_policy(data),
+                        'approvals': list(reversed(data.get('manager_approvals', [])))[:80]})
+    payload = request.get_json(silent=True) or {}
+    percent_limit = as_money(payload.get('discount_percent_limit'))
+    amount_limit = as_money(payload.get('discount_amount_limit'))
+    if percent_limit is None or amount_limit is None or not 0 <= percent_limit <= 100 or amount_limit < 0:
+        return jsonify({'ok': False, 'error': 'حدود الموافقة غير صالحة'}), 400
+    data.setdefault('settings', {})['manager_approval_policy'] = {
+        'discount_percent_limit': percent_limit, 'discount_amount_limit': amount_limit,
+        'require_void_refund': True,
+    }
+    save(data); backup()
+    return jsonify({'ok': True, 'policy': manager_approval_policy(data)})
+
+
 @app.route('/api/orders', methods=['GET', 'POST'])
 def orders():
     data = load()
@@ -725,19 +796,33 @@ def orders():
         if discount_amount > after_percent:
             return jsonify({'ok': False, 'error': 'الخصم أكبر من إجمالي الفاتورة'}), 400
         total = round(after_percent - discount_amount, 2)
+        total_discount = round(subtotal - total, 2)
+        approval_record = None
+        needs_approval, approval_policy = manager_approval_required(data, discount_pct, total_discount)
+        if needs_approval:
+            approval_record, approval_error = verify_manager_approval(data, payload, 'خصم فاتورة', total_discount)
+            if approval_error:
+                return approval_error
         payment_data, payment_error = normalize_payment(total, payload)
         if payment_error:
             return jsonify({'ok': False, 'error': payment_error}), 400
         order_type = str(payload.get('type', 'سفري') or 'سفري')
         if order_type not in {'سفري', 'صالة', 'ديليفري'}:
             return jsonify({'ok': False, 'error': 'نوع الطلب غير صالح'}), 400
+        kitchen_release = str(payload.get('kitchen_release', 'now') or 'now')
+        if kitchen_release not in {'now', 'later'}:
+            return jsonify({'ok': False, 'error': 'خيار إطلاق المطبخ غير صالح'}), 400
         o = {
             'id': next_order_id(data), 'timestamp': datetime.now().isoformat(), 'items': items,
             'subtotal': subtotal, 'discount_pct': discount_pct, 'discount_amount': discount_amount,
             'total': total, 'type': order_type, 'note': str(payload.get('note', ''))[:500],
             'customer': str(payload.get('customer', ''))[:120], 'table': str(payload.get('table', ''))[:60],
-            'cashier_name': session.get('username', 'غير محدد'), **payment_data
+            'cashier_name': session.get('username', 'غير محدد'),
+            'kitchen_status': 'held' if kitchen_release == 'later' else 'new', 'kitchen_release': kitchen_release,
+            **payment_data
         }
+        if approval_record:
+            approval_record['reference_id'] = o['id']; o['manager_approval'] = approval_record
         if order_type == 'ديليفري':
             o['delivery_status'] = 'pending'
         snap = currency_snapshot(data, payload)
@@ -753,7 +838,8 @@ def orders():
                                  note='فاتورة ' + str(o['id']), currency=o['currency'], exchange_rate=o['exchange_rate'])
         consume_inventory_for_order(data, o['items'], o['id'])
         receipt_print = queue_thermal_print(data, o, 'receipt')
-        kitchen_print = queue_thermal_print(data, o, 'kitchen')
+        kitchen_print = queue_thermal_print(data, o, 'kitchen') if kitchen_release == 'now' else {
+            'ok': True, 'status': 'deferred', 'message': 'تذكرة المطبخ مؤجلة حتى إطلاق الطلب'}
         o['print_status'] = {'receipt': receipt_print, 'kitchen': kitchen_print}
         drawer_result = maybe_auto_open_cash_drawer(data, o, payment_data.get('cash_amount', 0))
         if drawer_result:
@@ -802,10 +888,11 @@ def void_order(order_id):
     محمي بكلمة مرور: لو في مستخدمين مسجّلين بالنظام، لازم تحقق ناجح قبل الإلغاء - لمنع أي كاشير
     من إلغاء طلب مدفوع فعلياً لإخفاء سرقة."""
     data = load()
-    ok, err = check_manager_password(data, request.json)
-    if not ok:
-        return err
-    reason = request.json.get('reason', '') if request.json else ''
+    payload = request.get_json(silent=True) or {}
+    approval_record, approval_error = verify_manager_approval(data, payload, 'إلغاء واسترجاع فاتورة', reference_id=order_id)
+    if approval_error:
+        return approval_error
+    reason = payload.get('reason', '')
     for lst_name in ('orders', 'orders_archive'):
         for o in data.get(lst_name, []):
             if str(o.get('id')) == str(order_id):
@@ -814,6 +901,7 @@ def void_order(order_id):
                 o['voided'] = True
                 o['void_reason'] = reason
                 o['void_date'] = datetime.now().isoformat()
+                approval_record['reference_id'] = o.get('id'); o['void_manager_approval'] = approval_record
                 # إرجاع المخزون المستهلك من هذا الطلب مع سجل تدقيقي للحركة العكسية.
                 item_recipes = build_item_recipes(data)
                 for i in o.get('items', []):
@@ -948,8 +1036,11 @@ def local_network_addresses():
 def network_info():
     port = int(os.environ.get('QAISAR_PORT', '8080'))
     enabled = os.environ.get('QAISAR_LAN') == '1'
-    urls = [f'http://{ip}:{port}/mobile.html' for ip in local_network_addresses()] if enabled else []
-    return jsonify({'lan_enabled': enabled, 'port': port, 'urls': urls, 'mobile_path': '/mobile.html'})
+    addresses = local_network_addresses()
+    urls = [f'http://{ip}:{port}/mobile.html' for ip in addresses] if enabled else []
+    waiter_base_urls = [f'http://{ip}:{port}' for ip in addresses] if enabled else []
+    return jsonify({'lan_enabled': enabled, 'port': port, 'urls': urls, 'waiter_base_urls': waiter_base_urls,
+                    'primary_ip': addresses[0] if enabled and addresses else '', 'mobile_path': '/mobile.html'})
 
 @app.route('/api/network/qr.svg', methods=['GET'])
 def network_qr_svg():
@@ -963,6 +1054,23 @@ def network_qr_svg():
         return jsonify({'ok': False, 'error': 'مولد QR غير متاح في هذه النسخة'}), 503
     qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=10, border=4)
     qr.add_data(info['urls'][0]); qr.make(fit=True)
+    image = qr.make_image(image_factory=SvgPathImage)
+    out = BytesIO(); image.save(out)
+    return Response(out.getvalue(), mimetype='image/svg+xml', headers={'Cache-Control': 'no-store'})
+
+
+@app.route('/api/network/waiter-qr.svg', methods=['GET'])
+def waiter_connection_qr_svg():
+    """يرمز عنوان الخادم المحلي فقط لتطبيق النادل؛ لا يحمل كلمة مرور أو رمز جلسة."""
+    info = network_info().get_json()
+    if not info.get('lan_enabled'):
+        return jsonify({'ok': False, 'error': 'فعّل وضع الشبكة المحلية أولًا عبر Start_LAN_Mode.bat'}), 409
+    if not info.get('waiter_base_urls'):
+        return jsonify({'ok': False, 'error': 'لم يتم العثور على عنوان شبكة محلية. تأكد من اتصال الكمبيوتر بالشبكة.'}), 503
+    if not qrcode or not SvgPathImage:
+        return jsonify({'ok': False, 'error': 'مولد QR غير متاح في هذه النسخة'}), 503
+    qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=10, border=4)
+    qr.add_data('QAISAR_WAITER_V1|' + info['waiter_base_urls'][0]); qr.make(fit=True)
     image = qr.make_image(image_factory=SvgPathImage)
     out = BytesIO(); image.save(out)
     return Response(out.getvalue(), mimetype='image/svg+xml', headers={'Cache-Control': 'no-store'})
@@ -2439,6 +2547,16 @@ def maybe_auto_open_cash_drawer(data, order, cash_amount):
         return None
     return record_cash_drawer_attempt(data, order.get('cashier_name', session.get('username', 'unknown')), f"فتح تلقائي بعد دفع نقدي للفاتورة {order.get('id', '')}", 'auto_payment')
 
+RECEIPT_LAYOUT_DEFAULT = ('logo', 'header', 'details', 'items', 'totals', 'footer')
+
+
+def is_valid_receipt_layout(value):
+    return isinstance(value, list) and len(value) == len(RECEIPT_LAYOUT_DEFAULT) and set(value) == set(RECEIPT_LAYOUT_DEFAULT) and len(set(value)) == len(value)
+
+
+def normalize_receipt_layout(value):
+    return list(value) if is_valid_receipt_layout(value) else list(RECEIPT_LAYOUT_DEFAULT)
+
 
 def thermal_receipt_text(data, order, ticket_type='receipt'):
     """ينشئ نصًا بسيطًا للطابعات الحرارية، ويضمن بقاء البيع ناجحًا إن فشلت الطابعة."""
@@ -2448,9 +2566,18 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
     restaurant_name = restaurant.get('name') or 'كاشير القيصر'
     caption = str(printer.get('logo_caption', '') or '').strip()
     width = 42 if int(printer.get('paper_width', 80) or 80) >= 80 else 32
-    divider = '-' * width
+    divider_char = {'line': '-', 'double': '=', 'dots': '.'}.get(printer.get('receipt_divider', 'line'), '-')
+    divider = divider_char * width
+    align_center = printer.get('receipt_alignment', 'center') == 'center'
+    density = printer.get('receipt_density', 'standard')
+    gap = '' if density == 'compact' else ('\n\n' if density == 'spacious' else '\n')
+
+    def format_line(value):
+        text = str(value or '')
+        return text.center(width) if align_center else text
+
     if ticket_type == 'kitchen':
-        lines = [restaurant_name, caption, divider, 'طلب مطبخ', f"الطلب: {order.get('id', '')}", f"النوع: {order.get('type', 'سفري')}"]
+        lines = [format_line(restaurant_name), format_line(caption), divider, format_line('طلب مطبخ'), f"الطلب: {order.get('id', '')}", f"النوع: {order.get('type', 'سفري')}"]
         if order.get('table'):
             lines.append('الطاولة: ' + str(order.get('table')))
         if order.get('customer'):
@@ -2459,15 +2586,27 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
         if order.get('notes'):
             lines.extend([divider, 'ملاحظة: ' + str(order.get('notes'))])
     else:
-        lines = [restaurant_name, caption, divider, 'إيصال مبيعات', f"الفاتورة: {order.get('id', '')}", f"التاريخ: {(order.get('timestamp') or order.get('date', ''))[:16]}", divider]
-        lines.extend([f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', [])])
-        lines.append(divider)
-        lines.append('الإجمالي: ' + str(order.get('total', 0)))
-        lines.append('الدفع: ' + str(order.get('payment', '')))
-        if order.get('cashier_name'):
-            lines.append('الكاشير: ' + str(order.get('cashier_name')))
-        lines.extend([divider, str(printer.get('footer_text', '') or ''), '\n\n\n'])
-    return '\n'.join(line for line in lines if line is not None)
+        header = str(printer.get('receipt_header', 'إيصال مبيعات') or 'إيصال مبيعات')[:36]
+        header_lines = [format_line(restaurant_name)] + ([format_line(caption)] if caption else []) + [divider, format_line(header)]
+        detail_lines = [f"الفاتورة: {order.get('id', '')}", f"التاريخ: {(order.get('timestamp') or order.get('date', ''))[:16]}", divider]
+        item_lines = [f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', [])] + [divider]
+        total_lines = ['الإجمالي: ' + str(order.get('total', 0)), 'الدفع: ' + str(order.get('payment', ''))]
+        footer_lines = []
+        if printer.get('receipt_show_cashier', True) and order.get('cashier_name'):
+            footer_lines.append('الكاشير: ' + str(order.get('cashier_name')))
+        if printer.get('receipt_show_order_type', True):
+            footer_lines.append('الطلب: ' + str(order.get('type', 'سفري')))
+        social_lines = []
+        for label, key in [('Facebook', 'social_facebook'), ('Instagram', 'social_instagram'), ('WhatsApp', 'social_whatsapp')]:
+            value = str(printer.get(key, '') or '').strip()
+            if value:
+                social_lines.append(f'{label}: {value}')
+        footer_lines.extend([divider, str(printer.get('footer_text', '') or '')] + social_lines + [gap + '\n\n'])
+        blocks = {'logo': [], 'header': header_lines, 'details': detail_lines, 'items': item_lines, 'totals': total_lines, 'footer': footer_lines}
+        lines = []
+        for block_id in normalize_receipt_layout(printer.get('receipt_layout')):
+            lines.extend(blocks[block_id])
+    return gap.join(line for line in lines if line is not None)
 
 
 def queue_thermal_print(data, order, ticket_type='receipt'):
@@ -2533,7 +2672,21 @@ def get_printer_settings():
         "cash_drawer_printer": p.get('cash_drawer_printer', p.get('printer_name', '')),
         "cash_drawer_pulse_profile": p.get('cash_drawer_pulse_profile', 'pin2_standard'),
         "logo_data": p.get('logo_data', ''),
-        "logo_caption": p.get('logo_caption', '')
+        "logo_caption": p.get('logo_caption', ''),
+        "receipt_header": p.get('receipt_header', 'إيصال مبيعات'),
+        "receipt_alignment": p.get('receipt_alignment', 'center'),
+        "receipt_divider": p.get('receipt_divider', 'line'),
+        "receipt_density": p.get('receipt_density', 'standard'),
+        "receipt_show_cashier": bool(p.get('receipt_show_cashier', True)),
+        "receipt_show_order_type": bool(p.get('receipt_show_order_type', True)),
+        "logo_size": p.get('logo_size', 'medium'),
+        "logo_alignment": p.get('logo_alignment', 'center'),
+        "social_facebook": p.get('social_facebook', ''),
+        "social_instagram": p.get('social_instagram', ''),
+        "social_whatsapp": p.get('social_whatsapp', ''),
+        "receipt_layout": normalize_receipt_layout(p.get('receipt_layout')),
+        "receipt_font_family": p.get('receipt_font_family', 'system'),
+        "receipt_font_scale": p.get('receipt_font_scale', p.get('font_size', 'medium'))
     })
 
 @app.route('/api/printer/settings', methods=['POST'])
@@ -2551,11 +2704,43 @@ def set_printer_settings():
     pulse_profile = str(payload.get('cash_drawer_pulse_profile', existing.get('cash_drawer_pulse_profile', 'pin2_standard')) or 'pin2_standard')
     if pulse_profile not in CASH_DRAWER_PULSE_PROFILES:
         return jsonify({'ok': False, 'error': 'نمط نبضة درج النقد غير صالح'}), 400
+    paper_width = payload.get('paper_width', existing.get('paper_width', 80))
+    try:
+        paper_width = int(paper_width)
+    except (TypeError, ValueError):
+        paper_width = 80
+    if paper_width not in (58, 80, 112):
+        return jsonify({'ok': False, 'error': 'عرض الورق يجب أن يكون 58mm أو 80mm أو 112mm'}), 400
+    font_size = str(payload.get('font_size', existing.get('font_size', 'medium')) or 'medium')
+    if font_size not in {'small', 'medium', 'large'}:
+        return jsonify({'ok': False, 'error': 'حجم خط الإيصال غير صالح'}), 400
+    receipt_alignment = str(payload.get('receipt_alignment', existing.get('receipt_alignment', 'center')) or 'center')
+    receipt_divider = str(payload.get('receipt_divider', existing.get('receipt_divider', 'line')) or 'line')
+    receipt_density = str(payload.get('receipt_density', existing.get('receipt_density', 'standard')) or 'standard')
+    logo_size = str(payload.get('logo_size', existing.get('logo_size', 'medium')) or 'medium')
+    logo_alignment = str(payload.get('logo_alignment', existing.get('logo_alignment', 'center')) or 'center')
+    receipt_layout = payload.get('receipt_layout', existing.get('receipt_layout', list(RECEIPT_LAYOUT_DEFAULT)))
+    receipt_font_family = str(payload.get('receipt_font_family', existing.get('receipt_font_family', 'system')) or 'system')
+    receipt_font_scale = str(payload.get('receipt_font_scale', existing.get('receipt_font_scale', font_size)) or font_size)
+    if receipt_alignment not in {'center', 'right'} or receipt_divider not in {'line', 'double', 'dots'} or receipt_density not in {'compact', 'standard', 'spacious'}:
+        return jsonify({'ok': False, 'error': 'خيارات تصميم الإيصال غير صالحة'}), 400
+    if logo_size not in {'small', 'medium', 'large'} or logo_alignment not in {'right', 'center', 'left'}:
+        return jsonify({'ok': False, 'error': 'خيارات حجم أو محاذاة الشعار غير صالحة'}), 400
+    if not is_valid_receipt_layout(receipt_layout):
+        return jsonify({'ok': False, 'error': 'ترتيب عناصر الإيصال غير صالح'}), 400
+    if receipt_font_family not in {'system', 'cairo', 'serif', 'mono'} or receipt_font_scale not in {'small', 'medium', 'large'}:
+        return jsonify({'ok': False, 'error': 'نوع أو حجم خط الإيصال غير صالح'}), 400
+    social_links = {}
+    for key in ('social_facebook', 'social_instagram', 'social_whatsapp'):
+        value = str(payload.get(key, existing.get(key, '')) or '').strip()[:160]
+        if value and not re.match(r'^https?://[^\s]+$', value, re.IGNORECASE):
+            return jsonify({'ok': False, 'error': 'روابط التواصل يجب أن تبدأ بـ http:// أو https://'}), 400
+        social_links[key] = value
     data['settings']['printer'] = {
-        'paper_width': payload.get('paper_width', 80),
-        'font_size': payload.get('font_size', 'medium'),
-        'copies': payload.get('copies', 1),
-        'footer_text': str(payload.get('footer_text', '') or '')[:160],
+        'paper_width': paper_width,
+        'font_size': font_size,
+        'copies': payload.get('copies', existing.get('copies', 1)),
+        'footer_text': str(payload.get('footer_text', existing.get('footer_text', '')) or '')[:160],
         'printer_name': payload.get('printer_name', existing.get('printer_name', '')),
         'auto_print_receipt': bool(payload.get('auto_print_receipt', existing.get('auto_print_receipt', False))),
         'auto_print_kitchen': bool(payload.get('auto_print_kitchen', existing.get('auto_print_kitchen', False))),
@@ -2564,10 +2749,167 @@ def set_printer_settings():
         'cash_drawer_printer': str(payload.get('cash_drawer_printer', existing.get('cash_drawer_printer', existing.get('printer_name', ''))) or '')[:160],
         'cash_drawer_pulse_profile': pulse_profile,
         'logo_data': logo_data,
-        'logo_caption': str(payload.get('logo_caption', '') or '')[:36]
+        'logo_caption': str(payload.get('logo_caption', existing.get('logo_caption', '')) or '')[:36],
+        'receipt_header': str(payload.get('receipt_header', existing.get('receipt_header', 'إيصال مبيعات')) or 'إيصال مبيعات')[:36],
+        'receipt_alignment': receipt_alignment,
+        'receipt_divider': receipt_divider,
+        'receipt_density': receipt_density,
+        'receipt_show_cashier': bool(payload.get('receipt_show_cashier', existing.get('receipt_show_cashier', True))),
+        'receipt_show_order_type': bool(payload.get('receipt_show_order_type', existing.get('receipt_show_order_type', True))),
+        'logo_size': logo_size,
+        'logo_alignment': logo_alignment,
+        'receipt_layout': list(receipt_layout),
+        'receipt_font_family': receipt_font_family,
+        'receipt_font_scale': receipt_font_scale,
+        **social_links,
+        'receipt_templates': existing.get('receipt_templates', [])
     }
     save(data)
     return jsonify({"ok": True})
+
+
+RECEIPT_TEMPLATE_FIELDS = ('paper_width', 'font_size', 'footer_text', 'receipt_header', 'receipt_alignment', 'receipt_divider', 'receipt_density', 'receipt_show_cashier', 'receipt_show_order_type', 'logo_size', 'logo_alignment', 'logo_caption', 'social_facebook', 'social_instagram', 'social_whatsapp', 'receipt_layout', 'receipt_font_family', 'receipt_font_scale')
+
+
+def receipt_template_design(printer):
+    """يعيد حقول تصميم قابلة للنقل دون الطابعة أو صورة الشعار أو خيارات الدرج."""
+    design = {key: printer.get(key, '') for key in RECEIPT_TEMPLATE_FIELDS}
+    design['receipt_layout'] = normalize_receipt_layout(design.get('receipt_layout'))
+    return design
+
+
+@app.route('/api/printer/templates', methods=['GET'])
+def get_receipt_templates():
+    if not has_role('manager'):
+        return permission_error()
+    printer = load().get('settings', {}).get('printer', {})
+    templates = printer.get('receipt_templates', [])
+    safe_templates = [row for row in templates if isinstance(row, dict) and row.get('id') and row.get('name') and isinstance(row.get('design'), dict)]
+    return jsonify({'ok': True, 'templates': safe_templates})
+
+
+@app.route('/api/printer/templates', methods=['POST'])
+def save_receipt_template():
+    if not has_role('manager'):
+        return permission_error()
+    payload = request.get_json(silent=True) or {}
+    name = str(payload.get('name', '') or '').strip()[:36]
+    if len(name) < 2:
+        return jsonify({'ok': False, 'error': 'اكتب اسمًا من حرفين على الأقل للقالب'}), 400
+    data = load(); printer = data.setdefault('settings', {}).setdefault('printer', {})
+    templates = [row for row in printer.get('receipt_templates', []) if isinstance(row, dict) and row.get('id')]
+    template = {'id': uuid.uuid4().hex[:12], 'name': name, 'design': receipt_template_design(printer), 'created_at': datetime.now().isoformat()}
+    templates.append(template)
+    printer['receipt_templates'] = templates[-8:]
+    save(data)
+    return jsonify({'ok': True, 'template': template})
+
+
+@app.route('/api/printer/templates/<template_id>/apply', methods=['POST'])
+def apply_receipt_template(template_id):
+    if not has_role('manager'):
+        return permission_error()
+    data = load(); printer = data.setdefault('settings', {}).setdefault('printer', {})
+    template = next((row for row in printer.get('receipt_templates', []) if isinstance(row, dict) and row.get('id') == template_id), None)
+    if not template:
+        return jsonify({'ok': False, 'error': 'قالب الإيصال غير موجود'}), 404
+    design = template.get('design', {})
+    for key in RECEIPT_TEMPLATE_FIELDS:
+        if key in design:
+            printer[key] = design[key]
+    save(data)
+    return jsonify({'ok': True, 'name': template.get('name'), 'design': receipt_template_design(printer)})
+
+
+@app.route('/api/printer/templates/<template_id>', methods=['DELETE'])
+def delete_receipt_template(template_id):
+    if not has_role('manager'):
+        return permission_error()
+    data = load(); printer = data.setdefault('settings', {}).setdefault('printer', {})
+    templates = printer.get('receipt_templates', [])
+    remaining = [row for row in templates if not isinstance(row, dict) or row.get('id') != template_id]
+    if len(remaining) == len(templates):
+        return jsonify({'ok': False, 'error': 'قالب الإيصال غير موجود'}), 404
+    printer['receipt_templates'] = remaining
+    save(data)
+    return jsonify({'ok': True})
+
+
+def clean_imported_receipt_design(raw):
+    """يتحقق من بيانات تصميم قابلة للمشاركة، دون قبول طابعة أو شعار أو إعدادات تشغيل."""
+    if not isinstance(raw, dict):
+        return None
+    try:
+        paper_width = int(raw.get('paper_width', 80))
+    except (TypeError, ValueError):
+        return None
+    if paper_width not in (58, 80, 112):
+        return None
+    values = {
+        'paper_width': paper_width,
+        'font_size': str(raw.get('font_size', 'medium') or 'medium'),
+        'footer_text': str(raw.get('footer_text', '') or '')[:160],
+        'receipt_header': str(raw.get('receipt_header', 'إيصال مبيعات') or 'إيصال مبيعات')[:36],
+        'receipt_alignment': str(raw.get('receipt_alignment', 'center') or 'center'),
+        'receipt_divider': str(raw.get('receipt_divider', 'line') or 'line'),
+        'receipt_density': str(raw.get('receipt_density', 'standard') or 'standard'),
+        'receipt_show_cashier': bool(raw.get('receipt_show_cashier', True)),
+        'receipt_show_order_type': bool(raw.get('receipt_show_order_type', True)),
+        'logo_size': str(raw.get('logo_size', 'medium') or 'medium'),
+        'logo_alignment': str(raw.get('logo_alignment', 'center') or 'center'),
+        'logo_caption': str(raw.get('logo_caption', '') or '')[:36],
+        'receipt_layout': normalize_receipt_layout(raw.get('receipt_layout')),
+        'receipt_font_family': str(raw.get('receipt_font_family', 'system') or 'system'),
+        'receipt_font_scale': str(raw.get('receipt_font_scale', raw.get('font_size', 'medium')) or 'medium'),
+    }
+    valid = values['font_size'] in {'small', 'medium', 'large'} and values['receipt_alignment'] in {'center', 'right'} and values['receipt_divider'] in {'line', 'double', 'dots'} and values['receipt_density'] in {'compact', 'standard', 'spacious'} and values['logo_size'] in {'small', 'medium', 'large'} and values['logo_alignment'] in {'right', 'center', 'left'} and values['receipt_font_family'] in {'system', 'cairo', 'serif', 'mono'} and values['receipt_font_scale'] in {'small', 'medium', 'large'} and is_valid_receipt_layout(raw.get('receipt_layout', list(RECEIPT_LAYOUT_DEFAULT)))
+    if not valid:
+        return None
+    for key in ('social_facebook', 'social_instagram', 'social_whatsapp'):
+        link = str(raw.get(key, '') or '').strip()[:160]
+        if link and not re.match(r'^https?://[^\s]+$', link, re.IGNORECASE):
+            return None
+        values[key] = link
+    return values
+
+
+@app.route('/api/printer/templates/export', methods=['GET'])
+def export_receipt_templates():
+    if not has_role('manager'):
+        return permission_error()
+    printer = load().get('settings', {}).get('printer', {})
+    templates = []
+    for row in printer.get('receipt_templates', []):
+        if isinstance(row, dict) and isinstance(row.get('design'), dict) and row.get('name'):
+            templates.append({'name': str(row.get('name'))[:36], 'design': receipt_template_design(row['design'])})
+    exported = {'format': 'qaisar-receipt-templates', 'version': 1, 'exported_at': datetime.now().isoformat(), 'templates': templates}
+    response = Response(json.dumps(exported, ensure_ascii=False, indent=2), mimetype='application/json')
+    response.headers['Content-Disposition'] = 'attachment; filename="qaisar-receipt-templates.json"'
+    return response
+
+
+@app.route('/api/printer/templates/import', methods=['POST'])
+def import_receipt_templates():
+    if not has_role('manager'):
+        return permission_error()
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict) or payload.get('format') != 'qaisar-receipt-templates' or payload.get('version') != 1 or not isinstance(payload.get('templates'), list):
+        return jsonify({'ok': False, 'error': 'ملف القوالب غير متوافق'}), 400
+    incoming = payload['templates']
+    if not 1 <= len(incoming) <= 8:
+        return jsonify({'ok': False, 'error': 'يجب أن يحوي الملف من قالب واحد إلى 8 قوالب'}), 400
+    prepared = []
+    for row in incoming:
+        name = str(row.get('name', '') if isinstance(row, dict) else '').strip()[:36]
+        design = clean_imported_receipt_design(row.get('design') if isinstance(row, dict) else None)
+        if len(name) < 2 or not design:
+            return jsonify({'ok': False, 'error': 'يتضمن الملف قالبًا أو تصميمًا غير صالح'}), 400
+        prepared.append({'id': uuid.uuid4().hex[:12], 'name': name, 'design': design, 'created_at': datetime.now().isoformat()})
+    data = load(); printer = data.setdefault('settings', {}).setdefault('printer', {})
+    existing = [row for row in printer.get('receipt_templates', []) if isinstance(row, dict) and row.get('id')]
+    printer['receipt_templates'] = (existing + prepared)[-8:]
+    save(data)
+    return jsonify({'ok': True, 'imported': len(prepared), 'templates': printer['receipt_templates']})
 
 
 @app.route('/api/cash-drawer/open', methods=['POST'])
@@ -2652,16 +2994,35 @@ def test_printer():
     """طباعة تجريبية فعلية: ترسل صفحة اختبار حقيقية للطابعة المختارة وتتأكد من نجاح الاتصال،
     بدل الرد بنجاح وهمي دائماً بغض النظر عن وجود طابعة أصلاً."""
     if sys.platform != 'win32':
-        return jsonify({"ok": True, "message": "تشغيل تجريبي (بيئة غير ويندوز) - الاختبار الفعلي متاح فقط عند التشغيل على ويندوز"})
+        payload = request.get_json(silent=True) or {}
+        width = payload.get('paper_width', 80)
+        try:
+            width = int(width)
+        except (ValueError, TypeError):
+            width = 80
+        if width not in {58, 80, 112}:
+            return jsonify({"ok": False, "message": "عرض ورق غير صالح للطباعة التجريبية"}), 400
+        return jsonify({"ok": True, "message": f"تشغيل تجريبي لقالب {width}mm (بيئة غير ويندوز) - الاختبار الفعلي متاح فقط عند التشغيل على ويندوز", "paper_width": width})
     data = load()
     printer_name = data.get('settings', {}).get('printer', {}).get('printer_name') or get_default_windows_printer()
     if not printer_name:
         return jsonify({"ok": False, "message": "ما في طابعة محددة بعد - اختر طابعة من الإعدادات أولاً"})
+    printer = data.get('settings', {}).get('printer', {})
+    payload = request.get_json(silent=True) or {}
+    try:
+        width = int(payload.get('paper_width', printer.get('paper_width', 80)) or 80)
+    except (ValueError, TypeError):
+        width = 80
+    if width not in {58, 80, 112}:
+        return jsonify({"ok": False, "message": "عرض ورق غير صالح للطباعة التجريبية"}), 400
+    chars = 42 if width >= 80 else 32
     restaurant = data.get('settings', {}).get('restaurant', {}).get('name', 'كاشير القيصر')
-    test_text = f"{restaurant}\n{'-'*32}\nPRINTER TEST / طباعة تجريبية\n{datetime.now().strftime('%Y-%m-%d %H:%M')}\n{'-'*32}\nOK\n\n\n"
+    header = str(payload.get('receipt_header', printer.get('receipt_header', 'إيصال مبيعات')) or 'إيصال مبيعات')[:36]
+    divider = '-' * chars
+    test_text = f"{restaurant.center(chars)}\n{divider}\n{header.center(chars)}\n{'اختبار مقاس ' + str(width) + 'mm'.center(chars)}\n{datetime.now().strftime('%Y-%m-%d %H:%M')}\n{divider}\nOK\n\n\n"
     ok = print_text_to_printer(printer_name, test_text)
     msg = f"تم إرسال طباعة تجريبية إلى: {printer_name}" if ok else f"تعذر الإرسال للطابعة: {printer_name} - تأكد أنها متصلة وشغالة"
-    return jsonify({"ok": ok, "message": msg})
+    return jsonify({"ok": ok, "message": msg, "paper_width": width})
 
 
 @app.route('/api/settings/users', methods=['GET'])
@@ -2867,6 +3228,8 @@ def enforce_api_access():
         if (method, path) == ('POST', '/api/auth/verify-current'):
             return None
         if (method, path) == ('POST', '/api/orders'):
+            return None
+        if method == 'POST' and re.fullmatch(r'/api/orders/[^/]+/void', path):
             return None
         if re.fullmatch(r'/api/dine-in/sessions(?:/[^/]+)?(?:/(?:move|close))?', path):
             return None
@@ -3126,7 +3489,7 @@ def split_order(order_id):
     return jsonify({'ok': False, 'error': 'الطلب غير موجود'}), 404
 
 DINE_IN_STATUSES = {'open', 'closed', 'cancelled'}
-KITCHEN_STATUSES = {'new', 'preparing', 'ready', 'served'}
+KITCHEN_STATUSES = {'held', 'new', 'preparing', 'ready', 'served'}
 
 
 def normalize_tables(data):
@@ -3194,7 +3557,8 @@ def dine_in_session_view(session_row):
         'status': session_row.get('status'), 'items': session_row.get('items', []), 'subtotal': session_row.get('subtotal', 0),
         'discount_pct': session_row.get('discount_pct', 0), 'discount_amount': session_row.get('discount_amount', 0),
         'total': session_row.get('total', 0), 'note': session_row.get('note', ''), 'customer': session_row.get('customer', ''),
-        'kitchen_status': session_row.get('kitchen_status', 'new'), 'opened_by': session_row.get('opened_by', ''),
+        'kitchen_status': session_row.get('kitchen_status', 'new'), 'kitchen_release': session_row.get('kitchen_release', 'now'),
+        'manager_approval': session_row.get('manager_approval'), 'opened_by': session_row.get('opened_by', ''),
         'created_at': session_row.get('created_at', ''), 'updated_at': session_row.get('updated_at', '')
     }
 
@@ -3374,14 +3738,27 @@ def dine_in_sessions():
     totals, error = dine_in_totals(data, payload)
     if error:
         return jsonify({'ok': False, 'error': error}), 400
+    discount_total = round(totals['subtotal'] - totals['total'], 2)
+    approval_record = None
+    needs_approval, _ = manager_approval_required(data, totals['discount_pct'], discount_total)
+    if needs_approval:
+        approval_record, approval_error = verify_manager_approval(data, payload, 'خصم طلب صالة', discount_total)
+        if approval_error:
+            return approval_error
+    kitchen_release = str(payload.get('kitchen_release', 'now') or 'now')
+    if kitchen_release not in {'now', 'later'}:
+        return jsonify({'ok': False, 'error': 'خيار إطلاق المطبخ غير صالح'}), 400
     now = datetime.now().isoformat()
     session_row = {
         'id': 'DINE-' + uuid.uuid4().hex[:10].upper(), 'status': 'open',
         'table_id': str(table['id']), 'table_name': table['name'], **totals,
         'note': str(payload.get('note', ''))[:500], 'customer': str(payload.get('customer', ''))[:120],
-        'kitchen_status': 'new', 'opened_by': session.get('username', 'غير محدد'),
+        'kitchen_status': 'held' if kitchen_release == 'later' else 'new', 'kitchen_release': kitchen_release,
+        'opened_by': session.get('username', 'غير محدد'),
         'created_at': now, 'updated_at': now
     }
+    if approval_record:
+        approval_record['reference_id'] = session_row['id']; session_row['manager_approval'] = approval_record
     sessions.append(session_row)
     table['status'] = 'busy'; table['active_session_id'] = session_row['id']
     table['active_since'] = now
@@ -3403,9 +3780,22 @@ def dine_in_session_detail(session_id):
     totals, error = dine_in_totals(data, payload)
     if error:
         return jsonify({'ok': False, 'error': error}), 400
+    discount_total = round(totals['subtotal'] - totals['total'], 2)
+    needs_approval, _ = manager_approval_required(data, totals['discount_pct'], discount_total)
+    if needs_approval:
+        approval_record, approval_error = verify_manager_approval(data, payload, 'تعديل خصم طلب صالة', discount_total, session_id)
+        if approval_error:
+            return approval_error
+        session_row['manager_approval'] = approval_record
     session_row.update(totals)
     session_row['note'] = str(payload.get('note', ''))[:500]
     session_row['customer'] = str(payload.get('customer', ''))[:120]
+    kitchen_release = str(payload.get('kitchen_release', session_row.get('kitchen_release', 'now')) or 'now')
+    if kitchen_release not in {'now', 'later'}:
+        return jsonify({'ok': False, 'error': 'خيار إطلاق المطبخ غير صالح'}), 400
+    if session_row.get('kitchen_status') in {'new', 'held'}:
+        session_row['kitchen_release'] = kitchen_release
+        session_row['kitchen_status'] = 'held' if kitchen_release == 'later' else 'new'
     session_row['updated_at'] = datetime.now().isoformat()
     session_row['updated_by'] = session.get('username', 'غير محدد')
     save(data); backup()
@@ -3441,6 +3831,13 @@ def close_dine_in_session(session_id):
     if not session_row or session_row.get('status') != 'open':
         return jsonify({'ok': False, 'error': 'طلب الصالة المفتوح غير موجود'}), 404
     payload = request.get_json(silent=True) or {}
+    total_discount = round(float(session_row.get('subtotal', 0) or 0) - float(session_row.get('total', 0) or 0), 2)
+    needs_approval, _ = manager_approval_required(data, float(session_row.get('discount_pct', 0) or 0), total_discount)
+    if needs_approval and not session_row.get('manager_approval'):
+        approval_record, approval_error = verify_manager_approval(data, payload, 'خصم طلب صالة عند الدفع', total_discount, session_id)
+        if approval_error:
+            return approval_error
+        session_row['manager_approval'] = approval_record
     payment_data, payment_error = normalize_payment(session_row.get('total', 0), payload)
     if payment_error:
         return jsonify({'ok': False, 'error': payment_error}), 400
@@ -3451,8 +3848,11 @@ def close_dine_in_session(session_id):
         'total': session_row['total'], 'type': 'صالة', 'note': session_row.get('note', ''),
         'customer': session_row.get('customer', ''), 'table': session_row.get('table_name', ''),
         'table_id': session_row.get('table_id'), 'cashier_name': session.get('username', 'غير محدد'),
-        'kitchen_status': session_row.get('kitchen_status', 'new'), 'dine_in_session_id': session_row['id'], **payment_data
+        'kitchen_status': session_row.get('kitchen_status', 'new'), 'kitchen_release': session_row.get('kitchen_release', 'now'),
+        'dine_in_session_id': session_row['id'], **payment_data
     }
+    if session_row.get('manager_approval'):
+        order['manager_approval'] = session_row['manager_approval']
     snap = currency_snapshot(data, payload)
     order['currency'] = snap['currency']; order['exchange_rate'] = snap['exchange_rate']
     data.setdefault('orders', []).append(order)
@@ -3632,7 +4032,11 @@ def kitchen_status(order_id):
         session_row = find_dine_in_session(data, str(order_id)[8:])
         if session_row and session_row.get('status') == 'open':
             prior_status = session_row.get('kitchen_status', 'new')
+            if prior_status == 'held' and status != 'new':
+                return jsonify({'ok': False, 'error': 'أطلق الطلب المؤجل أولاً قبل بدء التحضير'}), 409
             session_row['kitchen_status'] = status; session_row['updated_at'] = datetime.now().isoformat()
+            if prior_status == 'held' and status == 'new':
+                session_row['kitchen_release'] = 'now'; session_row['kitchen_released_at'] = datetime.now().isoformat()
             if status == 'preparing' and prior_status != 'preparing':
                 session_row['preparation_started_at'] = datetime.now().isoformat()
             if status == 'ready' and prior_status != 'ready':
@@ -3642,12 +4046,19 @@ def kitchen_status(order_id):
     for order in data.get('orders', []):
         if str(order.get('id')) == str(order_id):
             prior_status = order.get('kitchen_status', 'new')
+            if prior_status == 'held' and status != 'new':
+                return jsonify({'ok': False, 'error': 'أطلق الطلب المؤجل أولاً قبل بدء التحضير'}), 409
             order['kitchen_status'] = status
+            released_print = None
+            if prior_status == 'held' and status == 'new':
+                order['kitchen_release'] = 'now'; order['kitchen_released_at'] = datetime.now().isoformat()
+                released_print = queue_thermal_print(data, order, 'kitchen')
+                order.setdefault('print_status', {})['kitchen'] = released_print
             if status == 'preparing' and prior_status != 'preparing':
                 order['preparation_started_at'] = datetime.now().isoformat()
             if status == 'ready' and prior_status != 'ready':
                 record_kitchen_ready_metrics(data, order, order.get('id'))
-            save(data); return jsonify({'ok': True, 'status': status})
+            save(data); return jsonify({'ok': True, 'status': status, 'print': released_print})
     return jsonify({'ok': False, 'error': 'الطلب غير موجود'}), 404
 
 

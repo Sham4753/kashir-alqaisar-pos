@@ -155,6 +155,7 @@
                     <button onclick="setOrderType('ديليفري')" id="btnDelivery" class="order-type-btn type-btn flex-1 border border-slate-300 text-xs">🛵 دليفري</button>
                 </div>
                 <details class="group"><summary class="cursor-pointer text-xs font-bold text-slate-600 select-none">بيانات إضافية للطلب <span class="text-slate-400 font-normal">(الزبون والطاولة والملاحظات)</span></summary><div class="mt-2 space-y-2"><input type="text" id="customerName" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="اسم الزبون (اختياري)"><select id="tableNumber" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm hidden"><option value="">اختر طاولة للصالة</option></select><input type="text" id="orderNote" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="ملاحظة للمطبخ أو الطلب"></div></details>
+                <div class="mt-3 rounded-xl border border-indigo-100 bg-indigo-50 p-3"><div class="flex items-center justify-between gap-2"><b class="text-xs text-indigo-950">إطلاق الطلب للمطبخ</b><span class="text-[10px] text-indigo-700">يمكن إطلاقه لاحقًا من شاشة المطبخ</span></div><div class="mt-2 grid grid-cols-2 gap-2"><label class="cursor-pointer rounded-lg border border-indigo-200 bg-white px-2 py-2 text-center text-xs font-bold text-indigo-900"><input name="kitchenRelease" type="radio" value="now" checked class="ml-1 accent-indigo-600">ابدأ الآن</label><label class="cursor-pointer rounded-lg border border-indigo-200 bg-white px-2 py-2 text-center text-xs font-bold text-indigo-900"><input name="kitchenRelease" type="radio" value="later" class="ml-1 accent-indigo-600">أطلق لاحقًا</label></div></div>
             </div>
 
             <div id="dineInSessionBanner" class="hidden mx-3 mt-3 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-800"></div>
@@ -559,8 +560,24 @@
                 note: document.getElementById('orderNote').value,
                 customer: document.getElementById('customerName').value,
                 discount_pct: pct,
-                discount_amount: amount
+                discount_amount: amount,
+                kitchen_release: getKitchenRelease()
             };
+        }
+
+        function getKitchenRelease() { return document.querySelector('input[name="kitchenRelease"]:checked')?.value || 'now'; }
+        function setKitchenRelease(value) { const option = document.querySelector(`input[name="kitchenRelease"][value="${value === 'later' ? 'later' : 'now'}"]`); if (option) option.checked = true; }
+        async function requestManagerApproval(actionMessage) {
+            const username = prompt('اسم مستخدم المدير لاعتماد: ' + actionMessage) || '';
+            if (!username) return null;
+            const password = prompt('كلمة مرور المدير:') || '';
+            return password ? {username, password} : null;
+        }
+        async function postWithManagerApproval(url, method, payload, actionMessage) {
+            const send = async () => { const response = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}); const data = await response.json(); return {response, data}; };
+            let result = await send();
+            if (result.data?.approval_required) { const approval = await requestManagerApproval(actionMessage); if (!approval) throw new Error('لم تُمنح موافقة المدير'); payload.manager_approval = approval; result = await send(); delete payload.manager_approval; }
+            return result;
         }
 
         async function loadDineInTables() {
@@ -615,6 +632,7 @@
             document.getElementById('discountPct').value = sessionRow.discount_pct || '0';
             document.getElementById('discountAmount').value = sessionRow.discount_amount || '0';
             document.getElementById('tableNumber').value = sessionRow.table_id || '';
+            setKitchenRelease(sessionRow.kitchen_release || (sessionRow.kitchen_status === 'held' ? 'later' : 'now'));
             setOrderType('صالة');
             renderCart();
         }
@@ -649,8 +667,7 @@
             const method = activeDineInSession ? 'PUT' : 'POST';
             setSaleBusy(true, 'جارِ حفظ طلب الطاولة وتجهيز تذكرة المطبخ…');
             try {
-                const r = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
-                const data = await r.json();
+                const {response:r, data} = await postWithManagerApproval(url, method, payload, 'خصم طلب الصالة');
                 if (!r.ok || !data.ok) throw new Error(data.error || 'تعذر حفظ طلب الصالة');
                 activeDineInSession = data.session;
                 document.getElementById('tableNumber').value = activeDineInSession.table_id;
@@ -683,7 +700,8 @@
                 table: document.getElementById('tableNumber').value,
                 note: document.getElementById('orderNote').value,
                 discountPct: document.getElementById('discountPct').value,
-                discountAmount: document.getElementById('discountAmount').value
+                discountAmount: document.getElementById('discountAmount').value,
+                kitchenRelease: getKitchenRelease()
             });
             localStorage.setItem('heldOrders', JSON.stringify(heldOrders));
             cart = []; document.getElementById('customerName').value = '';
@@ -701,6 +719,7 @@
             document.getElementById('orderNote').value = h.note || '';
             document.getElementById('discountPct').value = h.discountPct || '0';
             document.getElementById('discountAmount').value = h.discountAmount || '0';
+            setKitchenRelease(h.kitchenRelease || 'now');
             heldOrders.splice(index,1);
             localStorage.setItem('heldOrders', JSON.stringify(heldOrders));
             setOrderType(orderType); renderCart(); renderHeldOrders();
@@ -775,6 +794,7 @@
             document.getElementById('orderNote').value = ''; document.getElementById('customerName').value = '';
             document.getElementById('tableNumber').value = ''; document.getElementById('discountPct').value = '0';
             document.getElementById('discountAmount').value = '0'; paymentMethod = ''; cashAmount = 0; cardAmount = 0;
+            setKitchenRelease('now');
             setOrderType('سفري'); renderCart();
         }
 
@@ -790,7 +810,7 @@
                 customer: document.getElementById('customerName').value, table: document.getElementById('tableNumber').value,
                 payment: paymentMethod, cash_amount: cashAmount, card_amount: cardAmount,
                 discount_pct: pct, discount_amount: amt, total,
-                subtotal: cart.reduce((s,i) => s + (i.price * i.qty), 0), date: new Date().toISOString()
+                subtotal: cart.reduce((s,i) => s + (i.price * i.qty), 0), date: new Date().toISOString(), kitchen_release: getKitchenRelease()
             };
             setSaleBusy(true, printerSettings.auto_print_receipt ? 'جارِ حفظ الفاتورة وإرسال الإيصال للطابعة…' : 'جارِ حفظ الفاتورة…');
             try {
@@ -799,9 +819,9 @@
                     const payment = {payment: paymentMethod, cash_amount: cashAmount, card_amount: cardAmount, currency: currentCurrency};
                     res = await fetch('/api/dine-in/sessions/' + encodeURIComponent(activeDineInSession.id) + '/close', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payment)});
                 } else {
-                    res = await fetch('/api/orders', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(order)});
+                    ({response:res, data:resData} = await postWithManagerApproval('/api/orders', 'POST', order, 'خصم الفاتورة'));
                 }
-                resData = await res.json();
+                if (activeDineInSession) resData = await res.json();
                 if (!res.ok || !resData.ok) throw new Error(resData.error || 'تعذر حفظ الفاتورة');
                 const paidMethod = paymentMethod;
                 document.getElementById('printReceipt').innerHTML = buildReceiptHTML(resData.id);
@@ -817,13 +837,21 @@
 
         function buildReceiptHTML(orderId) {
             const fontSizeMap = { small: '10px', medium: '12px', large: '14px' };
-            const fs = fontSizeMap[printerSettings.font_size] || '12px';
+            const fs = fontSizeMap[printerSettings.receipt_font_scale || printerSettings.font_size] || '12px';
+            const fontFamilyMap = { system: 'Tahoma, Arial, sans-serif', cairo: 'Cairo, Tahoma, Arial, sans-serif', serif: 'Georgia, Times New Roman, serif', mono: 'ui-monospace, SFMono-Regular, Menlo, monospace' };
+            const receiptFontFamily = fontFamilyMap[printerSettings.receipt_font_family] || fontFamilyMap.system;
             const width = (printerSettings.paper_width || 80) + 'mm';
             const restaurantName = document.getElementById('restaurantTitle').textContent.replace('🍽️','').trim();
             const now = new Date();
+            const logoDimensions = { small: ['42%', '30px'], medium: ['62%', '42px'], large: ['82%', '58px'] }[printerSettings.logo_size] || ['62%', '42px'];
+            const logoMargins = printerSettings.logo_alignment === 'right' ? '0 0 4px auto' : (printerSettings.logo_alignment === 'left' ? '0 auto 4px 0' : '0 auto 4px');
             const receiptLogo = printerSettings.logo_data
-                ? `<img src="${printerSettings.logo_data}" alt="شعار المطعم" style="max-height:42px; max-width:70%; object-fit:contain; margin:0 auto 4px;">`
+                ? `<img src="${printerSettings.logo_data}" alt="شعار المطعم" style="max-height:${logoDimensions[1]}; max-width:${logoDimensions[0]}; object-fit:contain; margin:${logoMargins};">`
                 : (printerSettings.logo_caption ? `<div style="font-size:.85em; margin-bottom:3px;">${printerSettings.logo_caption}</div>` : '');
+            const escapeReceiptText = (value) => String(value || '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+            const socialFooter = [['Facebook', printerSettings.social_facebook], ['Instagram', printerSettings.social_instagram], ['WhatsApp', printerSettings.social_whatsapp]]
+                .filter(([, value]) => value)
+                .map(([label, value]) => `<div dir="ltr" style="text-align:center; margin-top:2px; font-size:.82em;">${label}: ${escapeReceiptText(value)}</div>`).join('');
 
             const itemsHtml = cart.map(i => `
                 <div style="display:flex; justify-content:space-between;">
@@ -846,22 +874,22 @@
             const orderNumberLine = orderId
                 ? `<div style="text-align:center; font-weight:bold;">فاتورة رقم: <span dir="ltr" style="unicode-bidi:isolate;">${orderId}</span></div>`
                 : `<div style="text-align:center; color:#888;">-- معاينة قبل الدفع (بدون رقم فاتورة) --</div>`;
+            const layoutDefault = ['logo', 'header', 'details', 'items', 'totals', 'footer'];
+            const configuredLayout = printerSettings.receipt_layout;
+            const receiptLayout = Array.isArray(configuredLayout) && configuredLayout.length === layoutDefault.length && configuredLayout.every(id => layoutDefault.includes(id)) && new Set(configuredLayout).size === layoutDefault.length ? configuredLayout : layoutDefault;
+            const receiptBlocks = {
+                logo: receiptLogo ? `<div style="text-align:center;">${receiptLogo}</div>` : '',
+                header: `<div style="text-align:center; font-weight:bold; font-size:1.2em;">${restaurantName}</div>`,
+                details: `${orderNumberLine}<div style="text-align:center; margin-bottom:4px;">${now.toLocaleString('ar')}</div><div>نوع الطلب: ${orderType}</div>${customer ? `<div>الزبون: ${customer}</div>` : ''}${table ? `<div>الطاولة: ${table}</div>` : ''}<hr>`,
+                items: `${itemsHtml}<hr>`,
+                totals: `${discountLine}<div style="display:flex; justify-content:space-between; font-weight:bold;"><span>الإجمالي</span><span>${formatPrice(total)}</span></div>`,
+                footer: `${printerSettings.footer_text ? `<div style="text-align:center; margin-top:6px;">${escapeReceiptText(printerSettings.footer_text)}</div>` : ''}${socialFooter}`
+            };
+            const receiptContent = receiptLayout.map(id => receiptBlocks[id] || '').join('');
 
             const receipt = `
-                <div style="font-family:sans-serif; font-size:${fs}; width:${width}; padding:6px; direction:rtl; page-break-after:always;">
-                    <div style="text-align:center;">${receiptLogo}</div>
-                    <div style="text-align:center; font-weight:bold; font-size:1.2em;">${restaurantName}</div>
-                    ${orderNumberLine}
-                    <div style="text-align:center; margin-bottom:4px;">${now.toLocaleString('ar')}</div>
-                    <div>نوع الطلب: ${orderType}</div>
-                    ${customer ? `<div>الزبون: ${customer}</div>` : ''}
-                    ${table ? `<div>الطاولة: ${table}</div>` : ''}
-                    <hr>
-                    ${itemsHtml}
-                    <hr>
-                    ${discountLine}
-                    <div style="display:flex; justify-content:space-between; font-weight:bold;"><span>الإجمالي</span><span>${formatPrice(total)}</span></div>
-                    ${printerSettings.footer_text ? `<div style="text-align:center; margin-top:6px;">${printerSettings.footer_text}</div>` : ''}
+                <div style="font-family:${receiptFontFamily}; font-size:${fs}; width:${width}; padding:6px; direction:rtl; page-break-after:always;">
+                    ${receiptContent}
                 </div>`;
 
             const copies = parseInt(printerSettings.copies) || 1;

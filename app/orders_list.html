@@ -176,9 +176,9 @@
             const usersRes = await fetch('/api/settings/users');
             const users = await usersRes.json();
             if (!users || users.length === 0) return { username: '', password: '', ok: true };
-            const username = prompt('اسم المستخدم (صلاحية مطلوبة):') || '';
+            const username = prompt('اسم مستخدم المدير لاعتماد العملية:') || '';
             if (!username) return { ok: false };
-            const password = prompt('كلمة المرور:') || '';
+            const password = prompt('كلمة مرور المدير:') || '';
             if (!password) return { ok: false };
             return { username, password, ok: true };
         }
@@ -228,7 +228,7 @@
                 const res = await fetch('/api/orders/' + orderId + '/void', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ reason, username: creds.username, password: creds.password })
+                    body: JSON.stringify({ reason, manager_approval: {username: creds.username, password: creds.password} })
                 });
                 const data = await res.json();
                 if (data.ok) {
