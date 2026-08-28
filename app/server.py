@@ -6,6 +6,19 @@ import zipfile
 from xml.sax.saxutils import escape as xml_escape
 from flask import Flask, request, jsonify, send_from_directory, send_file, session, redirect, Response
 from io import BytesIO
+
+try:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_RIGHT, TA_CENTER
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib import colors
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
+
 VENDOR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vendor')
 if VENDOR_PATH not in sys.path:
     sys.path.insert(0, VENDOR_PATH)
@@ -2211,6 +2224,94 @@ def export_financial_xlsx():
         return jsonify({'ok': False, 'error': 'فترة التقرير غير صالحة'}), 400
     report = financial_report_payload(load(), period, request.args.get('from', '').strip(), request.args.get('to', '').strip(), request.args.get('cashier', '').strip())
     return send_file(create_financial_xlsx(report), as_attachment=True, download_name=f"financial_report_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx", mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+def _pdf_text(value):
+    text = str(value if value is not None else '')
+    try:
+        import arabic_reshaper
+        from bidi.algorithm import get_display
+        return get_display(arabic_reshaper.reshape(text))
+    except ImportError:
+        return text
+
+
+def create_financial_pdf(report):
+    """ينشئ تقرير مبيعات PDF عربيًا محليًا باستخدام خط Tajawal المضمّن."""
+    if not REPORTLAB_AVAILABLE:
+        return None
+    output = BytesIO()
+    font_name = 'Helvetica'
+    font_path = os.path.join(APP_PATH, 'fonts', 'Tajawal-Regular.ttf')
+    if os.path.exists(font_path):
+        try:
+            pdfmetrics.registerFont(TTFont('QaisarTajawal', font_path))
+            font_name = 'QaisarTajawal'
+        except Exception:
+            pass
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('QaisarTitle', parent=styles['Title'], fontName=font_name, fontSize=17, leading=22, alignment=TA_CENTER, spaceAfter=12)
+    body_style = ParagraphStyle('QaisarBody', parent=styles['BodyText'], fontName=font_name, fontSize=9.5, leading=14, alignment=TA_RIGHT)
+    small_style = ParagraphStyle('QaisarSmall', parent=body_style, fontSize=8, leading=11)
+    doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=34, bottomMargin=34, title='تقرير مبيعات كاشير القيصر')
+    summary = report.get('summary', {})
+    story = [Paragraph(_pdf_text('كاشير القيصر — تقرير المبيعات اليومية'), title_style)]
+    meta = f"الفترة: {report.get('from') or 'اليوم'} إلى {report.get('to') or 'اليوم'} | الكاشير: {report.get('cashier_filter') or 'جميع الكاشيرات'}"
+    story.extend([Paragraph(_pdf_text(meta), body_style), Spacer(1, 10)])
+    summary_rows = [
+        [_pdf_text('البند'), _pdf_text('القيمة')],
+        [_pdf_text('إجمالي المبيعات'), _pdf_text(summary.get('sales', 0))],
+        [_pdf_text('عدد الفواتير'), _pdf_text(summary.get('orders', 0))],
+        [_pdf_text('النقد الداخل'), _pdf_text(summary.get('cash_in', 0))],
+        [_pdf_text('البطاقات الداخلة'), _pdf_text(summary.get('card_in', 0))],
+        [_pdf_text('رصيد النقد'), _pdf_text(summary.get('cash_balance', 0))],
+    ]
+    summary_table = Table(summary_rows, colWidths=[270, 180], repeatRows=1)
+    summary_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), font_name), ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1d4ed8')), ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#cbd5e1')), ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
+        ('TOPPADDING', (0, 0), (-1, -1), 7), ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+    ]))
+    story.extend([summary_table, Spacer(1, 14), Paragraph(_pdf_text('تفاصيل الفواتير'), body_style), Spacer(1, 6)])
+    invoice_rows = [[_pdf_text('رقم الفاتورة'), _pdf_text('التاريخ'), _pdf_text('الكاشير'), _pdf_text('الدفع'), _pdf_text('الإجمالي')]]
+    for order in report.get('orders', []):
+        invoice_rows.append([
+            _pdf_text(order.get('id', '')),
+            _pdf_text((order.get('timestamp') or order.get('date') or '')[:19]),
+            _pdf_text(order.get('cashier_name', 'غير معروف')),
+            _pdf_text(order.get('payment', '')),
+            _pdf_text(order.get('total', 0)),
+        ])
+    if len(invoice_rows) == 1:
+        invoice_rows.append([_pdf_text('لا توجد فواتير ضمن الفترة'), '', '', '', ''])
+    invoice_table = Table(invoice_rows, colWidths=[92, 130, 105, 80, 70], repeatRows=1)
+    invoice_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), font_name), ('FONTSIZE', (0, 0), (-1, -1), 7.5),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0f172a')), ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#cbd5e1')), ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
+        ('TOPPADDING', (0, 0), (-1, -1), 5), ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    story.append(invoice_table)
+    story.extend([Spacer(1, 12), Paragraph(_pdf_text('تم إنشاء هذا الملف محليًا من بيانات الخزنة الحالية.'), small_style)])
+    doc.build(story)
+    output.seek(0)
+    return output
+
+
+@app.route('/api/analytics/financial.pdf', methods=['GET'])
+def export_financial_pdf():
+    if not has_role('manager', 'supervisor'):
+        return permission_error()
+    if not REPORTLAB_AVAILABLE:
+        return jsonify({'ok': False, 'error': 'تصدير PDF غير متاح في هذه النسخة'}), 503
+    period = request.args.get('period', 'daily')
+    if period not in {'daily', 'monthly', 'yearly', 'custom', 'all'}:
+        return jsonify({'ok': False, 'error': 'فترة التقرير غير صالحة'}), 400
+    report = financial_report_payload(load(), period, request.args.get('from', '').strip(), request.args.get('to', '').strip(), request.args.get('cashier', '').strip())
+    return send_file(create_financial_pdf(report), as_attachment=True, download_name=f"financial_report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf", mimetype='application/pdf')
 
 
 @app.route('/api/analytics/print-log.xlsx', methods=['GET'])

@@ -12,6 +12,10 @@
             #results { position: absolute; top: 0; left: 0; width: 100%; }
             .no-print { display: none !important; }
         }
+        .report-action-button { min-height: 48px; font-weight: 800; }
+        @media (max-width: 720px) {
+            .report-action-button { flex: 1 1 46%; min-height: 54px; }
+        }
     </style>
     <link rel="stylesheet" href="design-system.css">
     <script defer src="design-system.js"></script>
@@ -35,8 +39,10 @@
         <div class="flex items-center justify-between mb-6 no-print">
             <h1 class="text-2xl font-bold text-gray-800">📊 التقارير المالية والربحية</h1>
             <div class="flex gap-2">
-                <button onclick="printReport()" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm">🖨️</button>
-                <button id="exportExcelTop" onclick="openExcelPreview()" class="bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm">👁️ معاينة Excel</button>
+                <button onclick="printReport()" class="report-action-button bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm">🖨️ طباعة / PDF</button>
+                <button onclick="prepareDailyReport()" class="report-action-button bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 text-sm">📅 تقرير اليوم</button>
+                <button id="exportExcelTop" onclick="exportDailyExcel()" class="report-action-button bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm">⬇️ Excel يومي</button>
+                <button id="exportPdfTop" onclick="exportDailyPdf()" class="report-action-button bg-slate-700 text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm">⬇️ PDF يومي</button>
                 <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩️ رجوع</a>
             </div>
         </div>
@@ -176,8 +182,10 @@
 
             <!-- زر طباعة -->
             <div class="no-print flex gap-2">
-                <button onclick="printReport()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">🖨️ طباعة / PDF</button>
-                <button id="exportExcelBottom" onclick="openExcelPreview()" class="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition">👁️ معاينة ثم تصدير Excel</button>
+                <button onclick="printReport()" class="flex-1 min-h-[56px] bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">🖨️ طباعة / PDF</button>
+                <button id="exportExcelBottom" onclick="openExcelPreview()" class="flex-1 min-h-[56px] bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition">👁️ معاينة ثم تصدير Excel</button>
+                <button onclick="exportDailyExcel()" class="flex-1 min-h-[56px] bg-emerald-700 text-white font-bold py-3 rounded-lg hover:bg-emerald-800 transition">⬇️ Excel يومي</button>
+                <button onclick="exportDailyPdf()" class="flex-1 min-h-[56px] bg-slate-700 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition">⬇️ PDF يومي</button>
             </div>
         </div>
 
@@ -285,10 +293,13 @@
             try {
                 const r = await fetch('/api/analytics?' + params.toString());
                 const data = await r.json();
+                if (!r.ok || data.ok === false) throw new Error(data.error || 'تعذر تحميل التقرير');
                 showResults(data);
                 await loadFinancialCashierReport(params);
+                return true;
             } catch(e) {
-                showToast('❌ خطأ في التحميل');
+                showToast('❌ ' + (e.message || 'خطأ في التحميل'));
+                return false;
             }
         }
 
@@ -433,6 +444,69 @@
                 box.innerHTML = html || '<p class="text-gray-400 text-center py-4 text-sm">ما في منتجات لها وصفة محددة بعد</p>';
             } catch (e) {
                 box.innerHTML = '<p class="text-red-400 text-center py-4 text-sm">تعذر تحميل التقرير</p>';
+            }
+        }
+
+        function todayIso() {
+            const now = new Date();
+            const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+            return local.toISOString().slice(0, 10);
+        }
+
+        async function prepareDailyReport() {
+            const today = todayIso();
+            document.getElementById('periodSelect').value = 'daily';
+            document.getElementById('dateFrom').value = today;
+            document.getElementById('dateTo').value = today;
+            onPeriodChange();
+            await loadReport();
+            showToast('✅ تم تحميل تقرير مبيعات اليوم');
+        }
+
+        async function ensureDailyReport() {
+            const today = todayIso();
+            const isDaily = document.getElementById('periodSelect').value === 'daily';
+            const from = document.getElementById('dateFrom').value;
+            const to = document.getElementById('dateTo').value;
+            if (!lastReportData || !isDaily || from !== today || to !== today) {
+                await prepareDailyReport();
+            }
+            return Boolean(lastReportData);
+        }
+
+        async function exportDailyExcel() {
+            if (!await ensureDailyReport()) return;
+            await exportExcel();
+        }
+
+        async function exportDailyPdf() {
+            if (!await ensureDailyReport()) return;
+            const button = document.getElementById('exportPdfTop') || document.querySelector('button[onclick="exportDailyPdf()"]');
+            const previousLabel = button ? button.textContent : '';
+            if (button) { button.disabled = true; button.textContent = '⏳ جارِ تجهيز PDF…'; button.classList.add('opacity-70', 'cursor-wait'); }
+            try {
+                const response = await fetch('/api/analytics/financial.pdf?' + reportParams().toString());
+                if (!response.ok) {
+                    if (response.status === 503) {
+                        showToast('ℹ️ مولّد PDF غير مضمّن في هذه النسخة؛ افتح نافذة الطباعة واختر حفظ كـPDF');
+                        printReport();
+                        return;
+                    }
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.error || 'تعذر إنشاء ملف PDF');
+                }
+                const blob = await response.blob();
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                const cashier = document.getElementById('cashierSelect').value || 'all_cashiers';
+                const today = todayIso();
+                link.href = url; link.download = `cashier_daily_report_${cashier}_${today}.pdf`;
+                document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+                showToast('✅ تم تنزيل تقرير اليوم بصيغة PDF');
+            } catch (error) {
+                showToast('❌ ' + (error.message || 'تعذر تصدير PDF'));
+            } finally {
+                if (button) { button.disabled = false; button.textContent = previousLabel || '⬇️ PDF يومي'; button.classList.remove('opacity-70', 'cursor-wait'); }
             }
         }
 

@@ -111,3 +111,85 @@ body.qaisar-page-index .header-input svg { position: absolute; right: 12px; z-in
 body.qaisar-page-index .header-input input { padding-right: 38px !important; }
 body.qaisar-page-index .nav-link svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 body.qaisar-page-index .nav-link .emoji-fallback { display: none; }
+
+/* وضع اللمس: أهداف تفاعلية كبيرة مع بقاء دعم الماوس ولوحة المفاتيح */
+body.qaisar-page-index {
+  touch-action: manipulation;
+}
+body.qaisar-page-index .nav-link,
+body.qaisar-page-index #lockNowButton,
+body.qaisar-page-index #cashDrawerButton {
+  min-height: 52px !important;
+  padding-inline: 14px !important;
+}
+body.qaisar-page-index .header-input,
+body.qaisar-page-index .header-input input,
+body.qaisar-page-index #currency {
+  min-height: 52px !important;
+}
+body.qaisar-page-index #categoryPanel .category-item {
+  min-height: 54px !important;
+  padding-inline: 14px !important;
+  font-size: 15px !important;
+}
+body.qaisar-page-index #productsGrid {
+  gap: 16px !important;
+}
+body.qaisar-page-index .product-card {
+  min-height: 210px !important;
+  padding: 13px !important;
+  gap: 10px !important;
+}
+body.qaisar-page-index .product-card .product-image {
+  height: 116px !important;
+}
+body.qaisar-page-index .product-card .product-name {
+  font-size: 15px !important;
+  line-height: 1.5 !important;
+}
+body.qaisar-page-index .product-card button,
+body.qaisar-page-index .order-type-btn,
+body.qaisar-page-index .secondary-action {
+  min-height: 52px !important;
+  font-size: 14px !important;
+}
+body.qaisar-page-index .cart-item {
+  gap: 12px !important;
+  padding: 14px !important;
+}
+body.qaisar-page-index .cart-item .qty-control button,
+body.qaisar-page-index .remove-cart-item {
+  min-width: 46px !important;
+  min-height: 46px !important;
+  font-size: 20px !important;
+}
+body.qaisar-page-index .primary-checkout {
+  min-height: 66px !important;
+  font-size: 18px !important;
+}
+body.qaisar-page-index .quick-pay-btn {
+  min-height: 104px !important;
+  padding: 18px !important;
+  font-size: 17px !important;
+}
+body.qaisar-page-index #menuPanel .menu-close-action,
+body.qaisar-page-index #menuPanel .menu-group summary,
+body.qaisar-page-index #menuPanel .menu-group-links a,
+body.qaisar-page-index #menuPanel .menu-group-links button {
+  min-height: 52px !important;
+  font-size: 14px !important;
+}
+@media (max-width: 620px) {
+  body.qaisar-page-index #productsGrid {
+    gap: 12px !important;
+  }
+  body.qaisar-page-index .product-card {
+    min-height: 194px !important;
+  }
+  body.qaisar-page-index .product-card .product-image {
+    height: 98px !important;
+  }
+  body.qaisar-page-index .header-tools {
+    gap: 8px !important;
+  }
+}
