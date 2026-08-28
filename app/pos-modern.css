@@ -193,3 +193,42 @@ body.qaisar-page-index #menuPanel .menu-group-links button {
     gap: 8px !important;
   }
 }
+
+/* لوحة أرقام لمس للكميات والمبالغ */
+.numpad-card { border: 1px solid #cbd5e1; }
+.numpad-display {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 28px;
+  font-weight: 900;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.numpad-grid button,
+.numpad-secondary,
+.numpad-confirm,
+.numpad-close {
+  min-height: 58px;
+  border-radius: 8px;
+  font-size: 22px;
+  font-weight: 900;
+  touch-action: manipulation;
+}
+.numpad-grid button { background: #eff6ff; border: 1px solid #bfdbfe; color: #172554; }
+.numpad-grid button:hover { background: #dbeafe; }
+.numpad-secondary { background: #e2e8f0; color: #334155; }
+.numpad-confirm { background: #2563eb; color: white; }
+.numpad-close { min-height: 44px; min-width: 44px; background: #fee2e2; color: #b91c1c; }
+.numpad-input:focus, .qty-value:focus { outline: 3px solid #93c5fd; outline-offset: 2px; }
+@media (max-width: 520px) {
+  .numpad-card { padding: 12px; }
+  .numpad-grid button, .numpad-secondary, .numpad-confirm { min-height: 62px; }
+}

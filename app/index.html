@@ -101,7 +101,7 @@
     <script defer src="design-system.js"></script>
     <script defer src="currency-manager.js"></script>
 </head>
-<body class="bg-gray-50 h-screen flex flex-col overflow-hidden">
+<body class="qaisar-page-index bg-gray-50 h-screen flex flex-col overflow-hidden">
 
     <!-- شريط تشغيل مختصر: البحث والتنقل الضروريان فقط -->
     <header class="flex items-center justify-between shadow-sm z-10">
@@ -170,7 +170,7 @@
 
             <!-- Cart Footer -->
             <div class="cart-footer border-t border-gray-100 p-3 space-y-3">
-                <div><label class="text-xs text-slate-500 font-bold">الخصم</label><div class="flex gap-2 mt-1"><input type="number" id="discountPct" onchange="updateTotal()" class="w-1/2 border border-slate-200 rounded-lg px-3 py-2 text-sm text-center" placeholder="نسبة %" value="0"><input type="number" id="discountAmount" onchange="updateTotal()" class="w-1/2 border border-slate-200 rounded-lg px-3 py-2 text-sm text-center" placeholder="قيمة الخصم" value="0"></div></div>
+                <div><label class="text-xs text-slate-500 font-bold">الخصم</label><div class="flex gap-2 mt-1"><input type="number" id="discountPct" onchange="updateTotal()" onfocus="openNumpadForInput(this, 'نسبة الخصم')" inputmode="none" class="numpad-input w-1/2 border border-slate-200 rounded-lg px-3 py-2 text-sm text-center" placeholder="نسبة %" value="0"><input type="number" id="discountAmount" onchange="updateTotal()" onfocus="openNumpadForInput(this, 'قيمة الخصم')" inputmode="none" class="numpad-input w-1/2 border border-slate-200 rounded-lg px-3 py-2 text-sm text-center" placeholder="قيمة الخصم" value="0"></div></div>
                 <div class="cart-summary"><div class="flex justify-between items-center"><span class="text-xs text-slate-300">الإجمالي المستحق</span><span class="text-xs bg-white/10 px-2 py-1 rounded">يشمل الخصم</span></div><div id="totalDisplay" class="font-black mt-1">0</div></div>
                 <button onclick="openPaymentModal()" id="checkoutButton" class="primary-checkout w-full text-white">إتمام الدفع وحفظ الفاتورة <span class="opacity-75 text-xs">F4</span></button>
                 <button onclick="saveDineInSession()" id="saveDineInButton" class="hidden w-full min-h-[46px] bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm">حفظ طلب الطاولة وإرساله للمطبخ</button>
@@ -208,11 +208,11 @@
             <div class="space-y-3">
                 <div>
                     <label for="mixedCashInput" class="text-sm text-gray-600 mb-1 block">نقدي</label>
-                    <input type="number" id="mixedCashInput" oninput="onMixedCashChange()" class="w-full border border-green-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="0">
+                    <input type="number" id="mixedCashInput" oninput="onMixedCashChange()" onfocus="openNumpadForInput(this, 'المبلغ النقدي')" inputmode="none" class="numpad-input w-full border border-green-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="0">
                 </div>
                 <div>
                     <label for="mixedCardInput" class="text-sm text-gray-600 mb-1 block">بطاقة</label>
-                    <input type="number" id="mixedCardInput" oninput="onMixedCardChange()" class="w-full border border-blue-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0">
+                    <input type="number" id="mixedCardInput" oninput="onMixedCardChange()" onfocus="openNumpadForInput(this, 'المبلغ بالبطاقة')" inputmode="none" class="numpad-input w-full border border-blue-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0">
                 </div>
             </div>
             <div id="mixedError" class="hidden text-red-600 text-sm text-center mt-2">مجموع المبلغين يجب أن يساوي الإجمالي</div>
@@ -220,6 +220,21 @@
                 <button onclick="confirmMixedPayment()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">تأكيد الدفع</button>
                 <button onclick="closeMixedModal()" class="flex-1 bg-gray-500 text-white font-bold py-2.5 rounded-lg">إلغاء</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Numpad for touch screens -->
+    <div id="numpadPanel" class="hidden fixed inset-0 bg-black/50 z-[70] items-end sm:items-center justify-center p-3" role="dialog" aria-modal="true" aria-labelledby="numpadTitle">
+        <div class="numpad-card bg-white rounded-2xl shadow-2xl w-full max-w-sm p-4">
+            <div class="flex items-center justify-between gap-3 mb-3"><div><h3 id="numpadTitle" class="font-black text-slate-900">لوحة الأرقام</h3><p id="numpadHint" class="text-xs text-slate-500">أدخل القيمة ثم اضغط تأكيد</p></div><button type="button" onclick="closeNumpad()" class="numpad-close" aria-label="إغلاق لوحة الأرقام">×</button></div>
+            <div id="numpadDisplay" class="numpad-display" dir="ltr">0</div>
+            <div class="numpad-grid" aria-label="لوحة الأرقام">
+                <button type="button" onclick="numpadKey('7')">7</button><button type="button" onclick="numpadKey('8')">8</button><button type="button" onclick="numpadKey('9')">9</button>
+                <button type="button" onclick="numpadKey('4')">4</button><button type="button" onclick="numpadKey('5')">5</button><button type="button" onclick="numpadKey('6')">6</button>
+                <button type="button" onclick="numpadKey('1')">1</button><button type="button" onclick="numpadKey('2')">2</button><button type="button" onclick="numpadKey('3')">3</button>
+                <button type="button" onclick="numpadKey('0')">0</button><button type="button" onclick="numpadKey('.')">.</button><button type="button" onclick="numpadBackspace()">⌫</button>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-3"><button type="button" onclick="numpadClear()" class="numpad-secondary">مسح</button><button type="button" onclick="confirmNumpad()" class="numpad-confirm">تأكيد</button></div>
         </div>
     </div>
 
@@ -497,6 +512,51 @@
             showToast('✅ ' + product.name);
         }
 
+        let numpadState = { target: null, cartIndex: null, mode: 'amount', buffer: '' };
+        function openNumpadForInput(input, label) {
+            if (!input || input.disabled) return;
+            numpadState = { target: input, cartIndex: null, mode: 'amount', buffer: String(input.value || '').replace(/[^0-9.]/g, '') };
+            showNumpad(label || 'القيمة');
+        }
+        function openNumpadForQuantity(index) {
+            const item = cart[index];
+            if (!item) return;
+            numpadState = { target: null, cartIndex: index, mode: 'quantity', buffer: String(item.qty || 1) };
+            showNumpad('كمية الصنف');
+        }
+        function showNumpad(label) {
+            document.getElementById('numpadTitle').textContent = 'لوحة الأرقام — ' + label;
+            document.getElementById('numpadHint').textContent = numpadState.mode === 'quantity' ? 'أدخل كمية من 1 إلى 100' : 'أدخل الرقم ثم اضغط تأكيد';
+            updateNumpadDisplay();
+            const panel = document.getElementById('numpadPanel'); panel.classList.remove('hidden'); panel.classList.add('flex');
+        }
+        function closeNumpad() { const panel = document.getElementById('numpadPanel'); panel.classList.add('hidden'); panel.classList.remove('flex'); numpadState = {target:null, cartIndex:null, mode:'amount', buffer:''}; }
+        function updateNumpadDisplay() { document.getElementById('numpadDisplay').textContent = numpadState.buffer || '0'; }
+        function numpadKey(key) {
+            if (key === '.' && (numpadState.mode === 'quantity' || numpadState.buffer.includes('.'))) return;
+            if (numpadState.buffer === '0' && key !== '.') numpadState.buffer = '';
+            if (numpadState.buffer.length >= 12) return;
+            numpadState.buffer += key; updateNumpadDisplay();
+        }
+        function numpadBackspace() { numpadState.buffer = numpadState.buffer.slice(0, -1); updateNumpadDisplay(); }
+        function numpadClear() { numpadState.buffer = ''; updateNumpadDisplay(); }
+        function confirmNumpad() {
+            if (numpadState.mode === 'quantity') {
+                const qty = Math.floor(Number(numpadState.buffer));
+                if (!Number.isFinite(qty) || qty < 1 || qty > 100) return showToast('⚠️ الكمية يجب أن تكون بين 1 و100');
+                if (cart[numpadState.cartIndex]) cart[numpadState.cartIndex].qty = qty;
+                renderCart(); closeNumpad(); return;
+            }
+            const value = Number(numpadState.buffer || 0);
+            if (!Number.isFinite(value) || value < 0) return showToast('⚠️ أدخل مبلغًا صحيحًا');
+            const target = numpadState.target;
+            if (target) {
+                target.value = String(value);
+                target.dispatchEvent(new Event(target.id.startsWith('mixed') ? 'input' : 'change', {bubbles: true}));
+            }
+            closeNumpad();
+        }
+
         function removeFromCart(index) { cart.splice(index,1); renderCart(); }
         function updateCartQty(index, delta) { cart[index].qty += delta; if(cart[index].qty <= 0) cart.splice(index,1); renderCart(); }
         function undoLastItem() { if(cart.length>0){cart.pop();renderCart();showToast('↩️ تراجع');} }
@@ -514,7 +574,7 @@
                         <span class="cart-item-name min-w-0"><span class="block truncate font-black text-slate-800">${item.name}</span>${item.modifiers?.length ? `<small class="block text-[11px] text-indigo-600 mt-0.5 leading-5">+ ${item.modifiers.map(option => typeof option === 'object' ? option.name + (option.price ? ' (' + formatPrice(option.price) + ')' : '') : option).join('، ')}</small>` : ''}</span>
                         <div class="qty-control flex items-center gap-1 rounded-lg bg-white border border-slate-200 p-0.5">
                             <button type="button" onclick="updateCartQty(${i},-1)" class="rounded-md bg-slate-100 hover:bg-slate-200 text-sm font-black" aria-label="تقليل كمية ${item.name}">−</button>
-                            <span class="w-7 text-center font-black text-slate-800">${item.qty}</span>
+                            <button type="button" onclick="openNumpadForQuantity(${i})" class="qty-value w-10 min-h-[46px] text-center font-black text-slate-800 bg-white rounded-md border border-slate-100" aria-label="تعديل كمية ${item.name}">${item.qty}</button>
                             <button type="button" onclick="updateCartQty(${i},1)" class="rounded-md bg-blue-600 text-white hover:bg-blue-700 text-sm font-black" aria-label="زيادة كمية ${item.name}">+</button>
                         </div>
                         <span class="cart-item-total font-black text-left text-slate-800">${formatPrice(item.price * item.qty)}</span>

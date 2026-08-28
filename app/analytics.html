@@ -41,8 +41,8 @@
             <div class="flex gap-2">
                 <button onclick="printReport()" class="report-action-button bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm">🖨️ طباعة / PDF</button>
                 <button onclick="prepareDailyReport()" class="report-action-button bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 text-sm">📅 تقرير اليوم</button>
-                <button id="exportExcelTop" onclick="exportDailyExcel()" class="report-action-button bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm">⬇️ Excel يومي</button>
-                <button id="exportPdfTop" onclick="exportDailyPdf()" class="report-action-button bg-slate-700 text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm">⬇️ PDF يومي</button>
+                <button id="exportExcelTop" onclick="exportSelectedExcel()" class="report-action-button bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm">⬇️ Excel حسب التاريخ</button>
+                <button id="exportPdfTop" onclick="exportSelectedPdf()" class="report-action-button bg-slate-700 text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm">⬇️ PDF حسب التاريخ</button>
                 <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩️ رجوع</a>
             </div>
         </div>
@@ -77,6 +77,8 @@
                     <input type="date" id="dateFrom" aria-label="من تاريخ" class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
                     <span class="self-center text-gray-500">إلى</span>
                     <input type="date" id="dateTo" aria-label="إلى تاريخ" class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="flex gap-2"><button type="button" onclick="applySelectedDateRange()" class="flex-1 min-h-[50px] bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700">عرض التاريخ المحدد</button><button type="button" onclick="clearSelectedDateRange()" class="min-h-[50px] px-4 bg-slate-100 text-slate-700 rounded-lg font-bold hover:bg-slate-200">مسح التاريخ</button>
                 </div>
             </div>
 
@@ -184,8 +186,8 @@
             <div class="no-print flex gap-2">
                 <button onclick="printReport()" class="flex-1 min-h-[56px] bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">🖨️ طباعة / PDF</button>
                 <button id="exportExcelBottom" onclick="openExcelPreview()" class="flex-1 min-h-[56px] bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition">👁️ معاينة ثم تصدير Excel</button>
-                <button onclick="exportDailyExcel()" class="flex-1 min-h-[56px] bg-emerald-700 text-white font-bold py-3 rounded-lg hover:bg-emerald-800 transition">⬇️ Excel يومي</button>
-                <button onclick="exportDailyPdf()" class="flex-1 min-h-[56px] bg-slate-700 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition">⬇️ PDF يومي</button>
+                <button onclick="exportSelectedExcel()" class="flex-1 min-h-[56px] bg-emerald-700 text-white font-bold py-3 rounded-lg hover:bg-emerald-800 transition">⬇️ Excel حسب التاريخ</button>
+                <button onclick="exportSelectedPdf()" class="flex-1 min-h-[56px] bg-slate-700 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition">⬇️ PDF حسب التاريخ</button>
             </div>
         </div>
 
@@ -289,12 +291,19 @@
 
         async function loadReport() {
             const params = reportParams();
+            const from = document.getElementById('dateFrom').value;
+            const to = document.getElementById('dateTo').value;
+            if (from && to && from > to) {
+                showToast('⚠️ تاريخ البداية يجب أن يسبق تاريخ النهاية');
+                return false;
+            }
 
             try {
                 const r = await fetch('/api/analytics?' + params.toString());
                 const data = await r.json();
                 if (!r.ok || data.ok === false) throw new Error(data.error || 'تعذر تحميل التقرير');
                 showResults(data);
+                lastReportParams = params.toString();
                 await loadFinancialCashierReport(params);
                 return true;
             } catch(e) {
@@ -331,6 +340,7 @@
         }
 
         let lastReportData = null;
+        let lastReportParams = '';
         let lastFinancialReport = null;
         let lastFinancialParams = '';
         let previewOrders = [];
@@ -453,6 +463,25 @@
             return local.toISOString().slice(0, 10);
         }
 
+        async function applySelectedDateRange() {
+            const from = document.getElementById('dateFrom').value;
+            const to = document.getElementById('dateTo').value;
+            if (!from || !to) return showToast('⚠️ اختر تاريخ البداية والنهاية أولًا');
+            if (from > to) return showToast('⚠️ تاريخ البداية يجب أن يسبق تاريخ النهاية');
+            document.getElementById('periodSelect').value = 'custom';
+            onPeriodChange();
+            await loadReport();
+            showToast('✅ تم تحميل التقرير للفترة المحددة');
+        }
+
+        async function clearSelectedDateRange() {
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            document.getElementById('periodSelect').value = 'daily';
+            onPeriodChange();
+            await loadReport();
+        }
+
         async function prepareDailyReport() {
             const today = todayIso();
             document.getElementById('periodSelect').value = 'daily';
@@ -463,24 +492,19 @@
             showToast('✅ تم تحميل تقرير مبيعات اليوم');
         }
 
-        async function ensureDailyReport() {
-            const today = todayIso();
-            const isDaily = document.getElementById('periodSelect').value === 'daily';
-            const from = document.getElementById('dateFrom').value;
-            const to = document.getElementById('dateTo').value;
-            if (!lastReportData || !isDaily || from !== today || to !== today) {
-                await prepareDailyReport();
-            }
-            return Boolean(lastReportData);
+        async function ensureSelectedReport() {
+            const params = reportParams().toString();
+            if (!lastReportData || lastReportParams !== params) await loadReport();
+            return Boolean(lastReportData && lastReportParams === params);
         }
 
-        async function exportDailyExcel() {
-            if (!await ensureDailyReport()) return;
+        async function exportSelectedExcel() {
+            if (!await ensureSelectedReport()) return;
             await exportExcel();
         }
 
-        async function exportDailyPdf() {
-            if (!await ensureDailyReport()) return;
+        async function exportSelectedPdf() {
+            if (!await ensureSelectedReport()) return;
             const button = document.getElementById('exportPdfTop') || document.querySelector('button[onclick="exportDailyPdf()"]');
             const previousLabel = button ? button.textContent : '';
             if (button) { button.disabled = true; button.textContent = '⏳ جارِ تجهيز PDF…'; button.classList.add('opacity-70', 'cursor-wait'); }
@@ -488,7 +512,7 @@
                 const response = await fetch('/api/analytics/financial.pdf?' + reportParams().toString());
                 if (!response.ok) {
                     if (response.status === 503) {
-                        showToast('ℹ️ مولّد PDF غير مضمّن في هذه النسخة؛ افتح نافذة الطباعة واختر حفظ كـPDF');
+                        showToast('ℹ️ مولّد PDF غير مضمّن؛ افتح الطباعة واحفظ التقرير المحدد كـPDF');
                         printReport();
                         return;
                     }
@@ -500,7 +524,9 @@
                 const url = URL.createObjectURL(blob);
                 const cashier = document.getElementById('cashierSelect').value || 'all_cashiers';
                 const today = todayIso();
-                link.href = url; link.download = `cashier_daily_report_${cashier}_${today}.pdf`;
+                link.href = url; const from = document.getElementById('dateFrom').value || today;
+                const to = document.getElementById('dateTo').value || today;
+                link.download = `cashier_report_${cashier}_${from}_${to}.pdf`;
                 document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
                 showToast('✅ تم تنزيل تقرير اليوم بصيغة PDF');
             } catch (error) {
