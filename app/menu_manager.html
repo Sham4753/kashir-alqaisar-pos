@@ -25,33 +25,33 @@
 
         <!-- Header -->
         <div class="flex items-center justify-between mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">🍽️ إدارة المنيو</h1>
-            <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩️ رجوع</a>
+            <h1 class="text-2xl font-bold text-gray-800"> إدارة المنيو</h1>
+            <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩ رجوع</a>
         </div>
 
         <!-- إضافة قسم -->
         <div class="bg-white rounded-xl shadow-md p-6 space-y-5 mb-6">
-            <h2 class="text-lg font-bold text-gray-700">🗂️ إضافة قسم جديد</h2>
+            <h2 class="text-lg font-bold text-gray-700"> إضافة قسم جديد</h2>
             <input type="text" id="newCatName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="اسم القسم الجديد">
-            <button onclick="addCategory()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition">➕ إضافة</button>
+            <button onclick="addCategory()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition"> إضافة</button>
         </div>
 
         <!-- تعديل وحذف قسم -->
         <div class="bg-white rounded-xl shadow-md p-6 space-y-5 mb-6">
-            <h2 class="text-lg font-bold text-gray-700">✏️ تعديل الأقسام</h2>
+            <h2 class="text-lg font-bold text-gray-700"> تعديل الأقسام</h2>
             <select id="editCatSelect" onchange="onEditCatChange()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500 outline-none">
                 <option value="">▼ اختر القسم...</option>
             </select>
             <input type="text" id="editCatName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500 outline-none hidden" placeholder="اسم القسم الجديد">
             <div class="flex gap-2">
-                <button onclick="updateCategory()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition hidden" id="btnSaveCat">💾 حفظ التعديل</button>
-                <button onclick="deleteCategory()" class="flex-1 bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition hidden" id="btnDeleteCat">✕ حذف القسم</button>
+                <button onclick="updateCategory()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition hidden" id="btnSaveCat"> حفظ التعديل</button>
+                <button onclick="deleteCategory()" class="flex-1 bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition hidden" id="btnDeleteCat">حذف حذف القسم</button>
             </div>
         </div>
 
         <!-- إدارة المنتجات -->
         <div class="bg-white rounded-xl shadow-md p-6 space-y-5 mb-6">
-            <h2 class="text-lg font-bold text-gray-700">📝 إدارة المنتجات</h2>
+            <h2 class="text-lg font-bold text-gray-700"> إدارة المنتجات</h2>
             <select id="prodCatSelect" onchange="onProdCatChange()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
                 <option value="">▼ اختر القسم...</option>
             </select>
@@ -62,7 +62,7 @@
                 <input type="text" id="prodName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="اسم المنتج">
                 <input type="number" id="prodPrice" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="السعر بالليرة السورية (ل.س)">
                 <input type="text" id="prodBarcode" inputmode="numeric" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="الباركود (اختياري)">
-                <p class="text-xs text-gray-400 -mt-2">💡 السعر هون دايماً بالليرة السورية الأساسية، بغض النظر عن عملة العرض بالإعدادات</p>
+                <p class="text-xs text-gray-400 -mt-2"> السعر هون دايماً بالليرة السورية الأساسية، بغض النظر عن عملة العرض بالإعدادات</p>
                 <input type="text" id="prodModifiers" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="إضافات وسعرها: بدون بصل, زيادة جبنة:+500">
                 <input type="text" id="prodComboItems" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="مكونات الوجبة المركبة مفصولة بفاصلة (اختياري)">
                 <div class="flex gap-2"><select id="prodKitchenStation" class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5"><option value="main">المطبخ الرئيسي</option><option value="grill">الشواية</option><option value="drinks">المشروبات</option><option value="fryer">المقالي</option><option value="dessert">الحلويات</option></select><input type="number" id="prodOfferId" class="w-32 border border-gray-300 rounded-lg px-4 py-2.5" placeholder="رقم العرض"></div>
@@ -72,16 +72,16 @@
                     <div class="flex items-center gap-3">
                         <img id="prodImagePreview" class="hidden w-16 h-16 rounded-lg object-cover border border-gray-200" />
                         <input type="file" id="prodImageInput" accept="image/*" onchange="onProdImageSelected()" class="flex-1 text-sm">
-                        <button id="prodImageRemoveBtn" onclick="removeProdImage()" class="hidden text-xs text-red-500 hover:text-red-700">✕ حذف</button>
+                        <button id="prodImageRemoveBtn" onclick="removeProdImage()" class="hidden text-xs text-red-500 hover:text-red-700">حذف حذف</button>
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="updateProduct()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">💾 حفظ</button>
-                    <button onclick="deleteProduct()" class="flex-1 bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition">✕ حذف</button>
+                    <button onclick="updateProduct()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition"> حفظ</button>
+                    <button onclick="deleteProduct()" class="flex-1 bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition">حذف حذف</button>
                 </div>
 
                 <div class="border-t border-gray-200 pt-4 mt-2">
-                    <h3 class="text-sm font-bold text-gray-600 mb-2">🧾 الوصفة (تخصم من المخزون تلقائياً عند البيع)</h3>
+                    <h3 class="text-sm font-bold text-gray-600 mb-2"> الوصفة (تخصم من المخزون تلقائياً عند البيع)</h3>
                     <div id="recipeList" class="space-y-2 mb-2"></div>
                     <div id="profitBox" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2 text-sm"></div>
                     <div class="flex gap-2">
@@ -89,14 +89,14 @@
                             <option value="">▼ اختر مادة...</option>
                         </select>
                         <input type="number" id="recipeQtyInput" step="0.01" class="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none" placeholder="الكمية">
-                        <button onclick="addRecipeIngredient()" class="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700">➕</button>
+                        <button onclick="addRecipeIngredient()" class="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700"></button>
                     </div>
-                    <button onclick="saveRecipe()" class="w-full mt-2 bg-purple-600 text-white font-bold py-2.5 rounded-lg hover:bg-purple-700 transition text-sm">💾 حفظ الوصفة</button>
+                    <button onclick="saveRecipe()" class="w-full mt-2 bg-purple-600 text-white font-bold py-2.5 rounded-lg hover:bg-purple-700 transition text-sm"> حفظ الوصفة</button>
                 </div>
             </div>
             <div id="newProdFields" class="space-y-4 hidden">
                 <div class="border-t border-gray-200 pt-4">
-                    <h3 class="text-md font-bold text-gray-600 mb-2">➕ إضافة منتج جديد</h3>
+                    <h3 class="text-md font-bold text-gray-600 mb-2"> إضافة منتج جديد</h3>
                     <input type="text" id="newProdName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none mb-3" placeholder="اسم المنتج الجديد">
                     <input type="number" id="newProdPrice" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none mb-3" placeholder="السعر بالليرة السورية (ل.س)">
                     <input type="text" id="newProdBarcode" inputmode="numeric" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none mb-3" placeholder="الباركود (اختياري)">
@@ -107,7 +107,7 @@
                         <img id="newProdImagePreview" class="hidden w-16 h-16 rounded-lg object-cover border border-gray-200" />
                         <input type="file" id="newProdImageInput" accept="image/*" onchange="onNewProdImageSelected()" class="flex-1 text-sm">
                     </div></div>
-                    <button onclick="addProduct()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition">➕ إضافة منتج</button>
+                    <button onclick="addProduct()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition"> إضافة منتج</button>
                 </div>
             </div>
         </div>
@@ -170,7 +170,7 @@
                 const sel = document.getElementById(id);
                 const val = sel.value;
                 sel.innerHTML = '<option value="">▼ اختر القسم...</option>';
-                cats.forEach(c => { sel.innerHTML += `<option value="${c}">📂 ${c}</option>`; });
+                cats.forEach(c => { sel.innerHTML += `<option value="${c}"> ${c}</option>`; });
                 if (val && cats.includes(val)) sel.value = val;
             });
         }
@@ -200,24 +200,24 @@
 
         async function addCategory() {
             const n = document.getElementById('newCatName').value.trim();
-            if (!n) return showToast('⚠️ أدخل اسم القسم');
+            if (!n) return showToast(' أدخل اسم القسم');
             await fetch('/api/category', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: n }) });
             document.getElementById('newCatName').value = '';
             await loadMenu();
-            showToast('✅ تم إضافة القسم');
+            showToast(' تم إضافة القسم');
         }
 
         async function updateCategory() {
             const oldName = currentEditCat;
             const newName = document.getElementById('editCatName').value.trim();
-            if (!newName) return showToast('⚠️ أدخل اسم القسم');
+            if (!newName) return showToast(' أدخل اسم القسم');
             const res = await fetch('/api/category/' + encodeURIComponent(oldName) + '/rename', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName }) });
             const data = await res.json();
-            if (!data.ok) return showToast('❌ ' + (data.error || 'فشل التعديل'));
+            if (!data.ok) return showToast(' ' + (data.error || 'فشل التعديل'));
             await loadMenu();
             document.getElementById('editCatSelect').value = '';
             onEditCatChange();
-            showToast('✅ تم تعديل القسم (مع الحفاظ على منتجاته)');
+            showToast(' تم تعديل القسم (مع الحفاظ على منتجاته)');
         }
 
         async function deleteCategory() {
@@ -227,7 +227,7 @@
             await loadMenu();
             document.getElementById('editCatSelect').value = '';
             onEditCatChange();
-            showToast('✅ تم حذف القسم');
+            showToast(' تم حذف القسم');
         }
 
         // ===== منتجات =====
@@ -305,17 +305,17 @@
                 const d = await r.json();
                 if (!d.has_recipe) {
                     box.classList.remove('hidden');
-                    box.innerHTML = '💡 ما في وصفة محددة بعد - أضف مواد فوق حتى يظهر هامش الربح';
+                    box.innerHTML = ' ما في وصفة محددة بعد - أضف مواد فوق حتى يظهر هامش الربح';
                 } else if (d.cost === null) {
                     box.classList.remove('hidden');
-                    box.innerHTML = '⚠️ في مادة بالوصفة بدون أي سجل شراء بعد - أضف شراء لها من "المواد الخام" حتى تُحسب التكلفة';
+                    box.innerHTML = ' في مادة بالوصفة بدون أي سجل شراء بعد - أضف شراء لها من "المواد الخام" حتى تُحسب التكلفة';
                 } else {
                     box.classList.remove('hidden');
                     const color = d.margin_pct >= 30 ? 'text-emerald-700' : (d.margin_pct >= 10 ? 'text-orange-600' : 'text-red-600');
                     box.innerHTML = `
-                        <div class="flex justify-between mb-1"><span>💰 التكلفة</span><span class="font-bold">${formatPrice(d.cost)}</span></div>
-                        <div class="flex justify-between mb-1"><span>📈 الربح للوحدة</span><span class="font-bold">${formatPrice(d.profit)}</span></div>
-                        <div class="flex justify-between"><span>📊 هامش الربح</span><span class="font-bold ${color}">${d.margin_pct}%</span></div>`;
+                        <div class="flex justify-between mb-1"><span> التكلفة</span><span class="font-bold">${formatPrice(d.cost)}</span></div>
+                        <div class="flex justify-between mb-1"><span> الربح للوحدة</span><span class="font-bold">${formatPrice(d.profit)}</span></div>
+                        <div class="flex justify-between"><span> هامش الربح</span><span class="font-bold ${color}">${d.margin_pct}%</span></div>`;
                 }
             } catch(e) { box.classList.add('hidden'); }
         }
@@ -329,14 +329,14 @@
             box.innerHTML = currentRecipe.map((ing, idx) => `
                 <div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 text-sm">
                     <span>${ing.material} — ${ing.qty}</span>
-                    <button onclick="removeRecipeIngredient(${idx})" class="text-red-500 text-xs">✕ حذف</button>
+                    <button onclick="removeRecipeIngredient(${idx})" class="text-red-500 text-xs">حذف حذف</button>
                 </div>`).join('');
         }
 
         function addRecipeIngredient() {
             const material = document.getElementById('recipeMaterialSelect').value;
             const qty = parseFloat(document.getElementById('recipeQtyInput').value);
-            if (!material || !qty) return showToast('⚠️ اختر مادة وكمية صحيحة');
+            if (!material || !qty) return showToast(' اختر مادة وكمية صحيحة');
             currentRecipe = currentRecipe.filter(i => i.material !== material);
             currentRecipe.push({ material, qty });
             document.getElementById('recipeQtyInput').value = '';
@@ -355,16 +355,16 @@
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ recipe: currentRecipe })
                 });
-                showToast('✅ تم حفظ الوصفة');
+                showToast(' تم حفظ الوصفة');
                 await loadProfitability(currentProdId);
-            } catch(e) { showToast('❌ خطأ بحفظ الوصفة'); }
+            } catch(e) { showToast(' خطأ بحفظ الوصفة'); }
         }
 
         async function updateProduct() {
             if (!currentProdId) return;
             const n = document.getElementById('prodName').value.trim();
             const p = parseInt(document.getElementById('prodPrice').value) || 0;
-            if (!n || !p) return showToast('⚠️ املأ جميع الحقول');
+            if (!n || !p) return showToast(' املأ جميع الحقول');
             const res = await fetch('/api/product/' + currentProdId, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -375,9 +375,9 @@
                 await loadMenu();
                 fillProdSelect(currentProdCat);
                 document.getElementById('prodSelect').value = currentProdId;
-                showToast('✅ تم تحديث المنتج');
+                showToast(' تم تحديث المنتج');
             } else {
-                showToast('❌ فشل التحديث');
+                showToast(' فشل التحديث');
             }
         }
 
@@ -391,17 +391,17 @@
                 document.getElementById('prodSelect').value = '';
                 document.getElementById('prodFields').classList.add('hidden');
                 fillProdSelect(currentProdCat);
-                showToast('✅ تم حذف المنتج');
+                showToast(' تم حذف المنتج');
             } else {
-                showToast('❌ فشل الحذف');
+                showToast(' فشل الحذف');
             }
         }
 
         async function addProduct() {
             const n = document.getElementById('newProdName').value.trim();
             const p = parseInt(document.getElementById('newProdPrice').value) || 0;
-            if (!n || !p) return showToast('⚠️ املأ جميع الحقول');
-            if (!currentProdCat) return showToast('⚠️ اختر قسماً أولاً');
+            if (!n || !p) return showToast(' املأ جميع الحقول');
+            if (!currentProdCat) return showToast(' اختر قسماً أولاً');
             const r = await fetch('/api/menu');
             const m = await r.json();
             const maxId = Math.max(...Object.values(m).flat().map(x => x.id || 0), 0);
@@ -423,9 +423,9 @@
                 newProdImage = '';
                 await loadMenu();
                 fillProdSelect(currentProdCat);
-                showToast('✅ تم إضافة المنتج');
+                showToast(' تم إضافة المنتج');
             } else {
-                showToast('❌ فشل الإضافة');
+                showToast(' فشل الإضافة');
             }
         }
 
@@ -465,7 +465,7 @@
                 preview.src = currentProdImage;
                 preview.classList.remove('hidden');
                 document.getElementById('prodImageRemoveBtn').classList.remove('hidden');
-            } catch (e) { showToast('❌ تعذر معالجة الصورة'); }
+            } catch (e) { showToast(' تعذر معالجة الصورة'); }
         }
 
         function removeProdImage() {
@@ -483,7 +483,7 @@
                 const preview = document.getElementById('newProdImagePreview');
                 preview.src = newProdImage;
                 preview.classList.remove('hidden');
-            } catch (e) { showToast('❌ تعذر معالجة الصورة'); }
+            } catch (e) { showToast(' تعذر معالجة الصورة'); }
         }
 
         function showToast(msg) {

@@ -232,3 +232,45 @@ body.qaisar-page-index #menuPanel .menu-group-links button {
   .numpad-card { padding: 12px; }
   .numpad-grid button, .numpad-secondary, .numpad-confirm { min-height: 62px; }
 }
+
+/* وضوح السلة: مساحة مستقلة قابلة للتمرير دون قص محتوياتها */
+body.qaisar-page-index .cart-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+body.qaisar-page-index #cartItems {
+  flex: 1 1 auto !important;
+  min-height: 180px !important;
+  max-height: calc(100vh - 330px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: auto;
+  scrollbar-color: #64748b #e2e8f0;
+}
+body.qaisar-page-index #cartItems::-webkit-scrollbar { width: 12px; }
+body.qaisar-page-index #cartItems::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 8px; }
+body.qaisar-page-index #cartItems::-webkit-scrollbar-thumb { background: #64748b; border: 2px solid #e2e8f0; border-radius: 8px; }
+body.qaisar-page-index .cart-item-name,
+body.qaisar-page-index .cart-item-name .truncate {
+  min-width: 0 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere !important;
+  color: #0f172a !important;
+}
+body.qaisar-page-index .cart-item-name .block:not(.text-indigo-600) { color: #0f172a !important; }
+body.qaisar-page-index .cart-item-total { color: #0f172a !important; font-size: 14px !important; font-weight: 900 !important; }
+body.qaisar-page-index .qty-control { background: #ffffff !important; border-color: #94a3b8 !important; }
+body.qaisar-page-index .qty-control button,
+body.qaisar-page-index .qty-value { color: #0f172a !important; background: #ffffff !important; border-color: #cbd5e1 !important; }
+body.qaisar-page-index .remove-cart-item { color: #ffffff !important; background: #dc2626 !important; border: 1px solid #b91c1c !important; font-weight: 900 !important; }
+body.qaisar-page-index .primary-checkout { color: #ffffff !important; background: #1d4ed8 !important; }
+body.qaisar-page-index .secondary-action { color: #334155 !important; background: #e2e8f0 !important; border-color: #94a3b8 !important; font-weight: 900 !important; }
+body.qaisar-page-index .secondary-action.bg-red-600 { color: #ffffff !important; background: #dc2626 !important; border-color: #b91c1c !important; }
+body.qaisar-page-index .cart-footer { flex: 0 0 auto !important; }
+@media (max-width: 860px) {
+  body.qaisar-page-index #cartItems { max-height: none !important; }
+}

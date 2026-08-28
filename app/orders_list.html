@@ -25,33 +25,33 @@
 
         <!-- Header -->
         <div class="flex items-center justify-between mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">📋 قائمة الطلبات</h1>
-            <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩️ رجوع</a>
+            <h1 class="text-2xl font-bold text-gray-800"> قائمة الطلبات</h1>
+            <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩ رجوع</a>
         </div>
 
         <!-- بحث وفلترة -->
         <div class="bg-white rounded-xl shadow-md p-6 space-y-5 mb-6">
-            <h2 class="text-lg font-bold text-gray-700">🔍 بحث وفلترة</h2>
-            <input type="text" id="searchBox" oninput="renderOrders()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="🔍 بحث برقم الطلب، المنتج، أو النوع...">
+            <h2 class="text-lg font-bold text-gray-700"> بحث وفلترة</h2>
+            <input type="text" id="searchBox" oninput="renderOrders()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder=" بحث برقم الطلب، المنتج، أو النوع...">
             <div class="flex gap-2">
                 <input type="date" id="dateFrom" onchange="renderOrders()" class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
                 <span class="self-center">إلى</span>
                 <input type="date" id="dateTo" onchange="renderOrders()" class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
             </div>
             <select id="typeFilter" onchange="renderOrders()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                <option value="">🪑 كل الأنواع</option>
-                <option value="سفري">🛍️ سفري</option>
-                <option value="صالة">🪑 صالة</option>
-                <option value="ديليفري">🛵 ديليفري</option>
+                <option value=""> كل الأنواع</option>
+                <option value="سفري"> سفري</option>
+                <option value="صالة"> صالة</option>
+                <option value="ديليفري"> ديليفري</option>
             </select>
         </div>
 
         <!-- الطلبات -->
         <div class="bg-white rounded-xl shadow-md p-6 space-y-5">
             <div class="flex justify-between items-center">
-                <h2 class="text-lg font-bold text-gray-700">🧾 الطلبات</h2>
-                <button onclick="printOrders()" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm">🖨️ طباعة</button>
-                <button onclick="exportOrdersCSV()" class="bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm">📊 Excel</button>
+                <h2 class="text-lg font-bold text-gray-700"> الطلبات</h2>
+                <button onclick="printOrders()" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm"> طباعة</button>
+                <button onclick="exportOrdersCSV()" class="bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm"> Excel</button>
             </div>
             <div id="ordersList" class="space-y-3 max-h-96 overflow-y-auto"></div>
             <div class="border-t border-gray-200 pt-3 space-y-1">
@@ -131,7 +131,7 @@
                     const items = (o.items || []).map((item, itemIdx) => `
                         <div class="text-sm text-gray-600 flex justify-between items-center">
                             <span>• ${item.name} ×${item.quantity || 1}</span>
-                            ${!o.voided ? `<button onclick="editOrderItem('${o.id}', ${itemIdx})" class="text-xs text-blue-500 hover:text-blue-700">✏️</button>` : ''}
+                            ${!o.voided ? `<button onclick="editOrderItem('${o.id}', ${itemIdx})" class="text-xs text-blue-500 hover:text-blue-700"></button>` : ''}
                         </div>`
                     ).join('');
 
@@ -141,8 +141,8 @@
                         'ديليفري': 'text-purple-600 bg-purple-50'
                     };
                     const typeClass = typeColors[o.type] || 'text-gray-600 bg-gray-50';
-                    const typeIcons = { 'سفري': '🛍️', 'صالة': '🪑', 'ديليفري': '🛵' };
-                    const typeIcon = typeIcons[o.type] || '🧾';
+                    const typeIcons = { 'سفري': '', 'صالة': '', 'ديليفري': '' };
+                    const typeIcon = typeIcons[o.type] || '';
                     const voidedClass = o.voided ? 'opacity-50' : '';
 
                     return `
@@ -151,25 +151,25 @@
                             <div>
                                 <span class="font-bold text-lg">#${i + 1}</span>
                                 <span class="${typeClass} px-2 py-1 rounded text-xs font-bold mr-2">${typeIcon} ${o.type}</span>
-                                ${o.voided ? '<span class="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold mr-2">❌ ملغى</span>' : ''}
-                                ${o.edited ? '<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-bold mr-2">✏️ معدّل</span>' : ''}
+                                ${o.voided ? '<span class="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold mr-2"> ملغى</span>' : ''}
+                                ${o.edited ? '<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-bold mr-2"> معدّل</span>' : ''}
                             </div>
                             <span class="font-bold ${o.voided ? 'text-gray-400 line-through' : 'text-green-600'}">${formatPrice(o.total || 0)}</span>
                         </div>
-                        <div class="text-xs text-gray-500 mb-2">📅 ${(o.date || o.timestamp || '').substring(0, 16)} <span dir="ltr" style="unicode-bidi:isolate;">${o.id || ''}</span></div>
+                        <div class="text-xs text-gray-500 mb-2"> ${(o.date || o.timestamp || '').substring(0, 16)} <span dir="ltr" style="unicode-bidi:isolate;">${o.id || ''}</span></div>
                         ${items}
-                        ${o.note ? `<div class="text-xs text-gray-400 mt-2">📝 ${o.note}</div>` : ''}
+                        ${o.note ? `<div class="text-xs text-gray-400 mt-2"> ${o.note}</div>` : ''}
                         ${o.voided
                             ? `<div class="text-xs text-red-500 mt-2">سبب الإلغاء: ${o.void_reason || 'بدون سبب'}</div>`
-                            : `<button onclick="voidOrder('${o.id}')" class="mt-2 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100">❌ إلغاء الطلب</button>`}
+                            : `<button onclick="voidOrder('${o.id}')" class="mt-2 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100"> إلغاء الطلب</button>`}
                     </div>`;
                 }).join('');
             }
 
             document.getElementById('totalAmount').textContent =
-                filtered.length > 0 ? `💰 إجمالي الطلبات: ${formatPrice(totalAmount)}` : '';
+                filtered.length > 0 ? ` إجمالي الطلبات: ${formatPrice(totalAmount)}` : '';
             document.getElementById('totalCount').textContent =
-                filtered.length > 0 ? `🧾 عدد الطلبات: ${filtered.length}` : '';
+                filtered.length > 0 ? ` عدد الطلبات: ${filtered.length}` : '';
         }
 
         async function getManagerCreds() {
@@ -190,7 +190,7 @@
             const val = prompt(`تعديل كمية "${item.name}" (الحالية: ${item.quantity || 1}) - أدخل الكمية الجديدة (0 للحذف):`, item.quantity || 1);
             if (val === null) return;
             const newQty = parseInt(val);
-            if (isNaN(newQty) || newQty < 0) return showToast('⚠️ كمية غير صحيحة');
+            if (isNaN(newQty) || newQty < 0) return showToast(' كمية غير صحيحة');
 
             const creds = await getManagerCreds();
             if (!creds.ok) return;
@@ -209,13 +209,13 @@
                 });
                 const data = await res.json();
                 if (data.ok) {
-                    showToast('✅ تم تعديل الطلب');
+                    showToast(' تم تعديل الطلب');
                     await loadOrders();
                 } else {
-                    showToast('⚠️ ' + (data.error || 'تعذر التعديل'));
+                    showToast(' ' + (data.error || 'تعذر التعديل'));
                 }
             } catch (e) {
-                showToast('❌ خطأ بالتعديل');
+                showToast(' خطأ بالتعديل');
             }
         }
 
@@ -232,13 +232,13 @@
                 });
                 const data = await res.json();
                 if (data.ok) {
-                    showToast('✅ تم إلغاء الطلب');
+                    showToast(' تم إلغاء الطلب');
                     await loadOrders();
                 } else {
-                    showToast('⚠️ ' + (data.error || 'تعذر الإلغاء'));
+                    showToast(' ' + (data.error || 'تعذر الإلغاء'));
                 }
             } catch (e) {
-                showToast('❌ خطأ بالإلغاء');
+                showToast(' خطأ بالإلغاء');
             }
         }
 
@@ -260,7 +260,7 @@
         }
 
         function exportOrdersCSV() {
-            if (!lastFilteredOrders || lastFilteredOrders.length === 0) return showToast('⚠️ ما في طلبات لتصديرها');
+            if (!lastFilteredOrders || lastFilteredOrders.length === 0) return showToast(' ما في طلبات لتصديرها');
             const rows = [['رقم الطلب', 'التاريخ', 'النوع', 'الأصناف', 'طريقة الدفع', 'الإجمالي', 'الحالة']];
             lastFilteredOrders.forEach(o => {
                 const itemsText = (o.items || []).map(i => `${i.name} ×${i.quantity || 1}`).join(' | ');
@@ -270,7 +270,7 @@
                 ]);
             });
             downloadCSV('طلبات_' + new Date().toISOString().slice(0,10) + '.csv', rows);
-            showToast('✅ تم تصدير الملف');
+            showToast(' تم تصدير الملف');
         }
 
         function showToast(msg) {

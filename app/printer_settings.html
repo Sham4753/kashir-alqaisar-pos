@@ -36,18 +36,18 @@
 
     <div class="container mx-auto px-4 py-6 max-w-lg">
         <div class="flex items-center justify-between mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">🖨️ إعدادات الطابعة</h1>
-            <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩️ رجوع</a>
+            <h1 class="text-2xl font-bold text-gray-800"> إعدادات الطابعة</h1>
+            <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩ رجوع</a>
         </div>
 
         <div class="bg-white rounded-xl shadow-md p-6 space-y-5">
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">📛 اسم المطعم</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1"> اسم المطعم</label>
                 <input type="text" id="restaurant_name" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="مطعم القيصر">
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">📏 عرض الورق</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1"> عرض الورق</label>
                 <select id="paper_width" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
                     <option value="58">58mm</option>
                     <option value="80" selected>80mm</option>
@@ -77,7 +77,7 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">🔤 حجم الخط</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1"> حجم الخط</label>
                 <select id="font_size" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
                     <option value="small">صغير</option>
                     <option value="medium" selected>وسط</option>
@@ -86,7 +86,7 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">📋 عدد النسخ</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1"> عدد النسخ</label>
                 <select id="copies" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
                     <option value="1" selected>1</option>
                     <option value="2">2</option>
@@ -119,16 +119,16 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">📝 نص نهاية الإيصال</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1"> نص نهاية الإيصال</label>
                 <textarea id="footer_text" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="شكراً لزيارتكم"></textarea>
             </div>
             <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3"><h2 class="font-bold text-slate-800">روابط التواصل في التذييل</h2><p class="text-xs leading-5 text-slate-500">تظهر كرابط نصي في المعاينة والطباعة الحرارية. اترك الحقل فارغًا إن لم ترغب بإظهاره.</p><div><label for="social_facebook" class="block text-xs font-medium text-gray-600 mb-1">Facebook</label><input id="social_facebook" type="url" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-left direction-ltr text-sm" placeholder="https://facebook.com/store"></div><div><label for="social_instagram" class="block text-xs font-medium text-gray-600 mb-1">Instagram</label><input id="social_instagram" type="url" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-left direction-ltr text-sm" placeholder="https://instagram.com/store"></div><div><label for="social_whatsapp" class="block text-xs font-medium text-gray-600 mb-1">WhatsApp</label><input id="social_whatsapp" type="url" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-left direction-ltr text-sm" placeholder="https://wa.me/963xxxxxxxxx"></div></div>
 
             <button onclick="saveSettings()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition text-lg">
-                💾 حفظ الإعدادات
+                 حفظ الإعدادات
             </button>
             <button id="saveAndTestPrintButton" onclick="saveAndTestPrint()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition text-lg disabled:opacity-60 disabled:cursor-not-allowed">
-                💾🖨️ حفظ الإعدادات وطباعة اختبار
+                 حفظ الإعدادات وطباعة اختبار
             </button>
             <p class="text-center text-xs leading-5 text-slate-500">يحفظ الزر الإعدادات أولًا ثم يرسل اختبارًا للطابعة المحددة. تظهر النتيجة الفعلية من Windows بعد الإرسال.</p>
 
@@ -143,19 +143,19 @@
             </div>
 
             <button onclick="discoverPrinters()" class="w-full bg-gray-700 text-white font-bold py-2.5 rounded-lg hover:bg-gray-800 transition">
-                🔍 البحث عن طابعات متصلة
+                 البحث عن طابعات متصلة
             </button>
 
             <div id="printerListBox" class="hidden space-y-3">
                 <label for="printerSelect" class="block text-sm font-medium text-gray-700">اختر طابعة Windows</label><select id="printerSelect" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
                 </select>
                 <button onclick="selectPrinter()" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 transition">
-                    ✅ استخدام هذه الطابعة
+                     استخدام هذه الطابعة
                 </button>
             </div>
 
             <button id="testPrintButton" onclick="testPrint()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition text-lg disabled:opacity-60 disabled:cursor-not-allowed">
-                🧪 طباعة تجريبية
+                 طباعة تجريبية
             </button>
             <p class="text-xs text-gray-400 text-center">
                 ملاحظة: البحث عن الطابعات والتعيين والاختبار الفعلي متاحين فقط عند تشغيل النظام على جهاز ويندوز فعلي، وليس أثناء التطوير.
@@ -259,25 +259,25 @@
                 });
                 const restaurantData = await restaurantResponse.json();
                 if (!restaurantResponse.ok || !restaurantData.ok) throw new Error(restaurantData.error || 'تعذر حفظ معلومات المطعم');
-                if (!options.silent) showToast('✅ تم حفظ الإعدادات بنجاح');
+                if (!options.silent) showToast(' تم حفظ الإعدادات بنجاح');
                 return true;
             } catch (e) {
-                showToast('❌ ' + (e.message || 'خطأ في الحفظ'));
+                showToast(' ' + (e.message || 'خطأ في الحفظ'));
                 return false;
             }
         }
 
         async function discoverPrinters() {
-            showToast('🔍 جارِ البحث...');
+            showToast(' جارِ البحث...');
             try {
                 const res = await fetch('/api/printer/list');
                 const data = await res.json();
                 if (!data.ok) {
-                    showToast('⚠️ ' + (data.error || 'تعذر البحث عن طابعات'));
+                    showToast(' ' + (data.error || 'تعذر البحث عن طابعات'));
                     return;
                 }
                 if (data.printers.length === 0) {
-                    showToast('⚠️ ما لقيت أي طابعة متصلة بويندوز');
+                    showToast(' ما لقيت أي طابعة متصلة بويندوز');
                     return;
                 }
                 const sel = document.getElementById('printerSelect');
@@ -285,15 +285,15 @@
                     `<option value="${p}" ${p === data.default ? 'selected' : ''}>${p}${p === data.default ? ' (افتراضية بويندوز)' : ''}</option>`
                 ).join('');
                 document.getElementById('printerListBox').classList.remove('hidden');
-                showToast(`✅ لقيت ${data.printers.length} طابعة`);
+                showToast(` لقيت ${data.printers.length} طابعة`);
             } catch (e) {
-                showToast('❌ خطأ بالبحث عن الطابعات');
+                showToast(' خطأ بالبحث عن الطابعات');
             }
         }
 
         async function selectPrinter() {
             const name = document.getElementById('printerSelect').value;
-            if (!name) return showToast('⚠️ اختر طابعة أولاً');
+            if (!name) return showToast(' اختر طابعة أولاً');
             try {
                 const res = await fetch('/api/printer/select', {
                     method: 'POST',
@@ -303,12 +303,12 @@
                 const data = await res.json();
                 if (data.ok) {
                     document.getElementById('currentPrinterName').textContent = name;
-                    showToast('✅ تم تعيين الطابعة: ' + name);
+                    showToast(' تم تعيين الطابعة: ' + name);
                 } else {
-                    showToast('⚠️ ' + (data.error || 'تعذر التعيين'));
+                    showToast(' ' + (data.error || 'تعذر التعيين'));
                 }
             } catch (e) {
-                showToast('❌ خطأ بتعيين الطابعة');
+                showToast(' خطأ بتعيين الطابعة');
             }
         }
 
@@ -320,7 +320,7 @@
             testPrintInProgress = active;
             button.disabled = active;
             if (saveAndPrintButton) saveAndPrintButton.disabled = active;
-            button.innerHTML = active ? '⏳ جارِ إرسال اختبار ' + width + 'mm…' : '🧪 طباعة تجريبية';
+            button.innerHTML = active ? '⏳ جارِ إرسال اختبار ' + width + 'mm…' : ' طباعة تجريبية';
             document.getElementById('testPrintLoadingText').textContent = active ? 'جارِ إرسال اختبار قالب ' + width + 'mm إلى الطابعة المحددة. لا تغلق الصفحة.' : '';
             overlay.classList.toggle('hidden', !active);
         }
@@ -331,16 +331,16 @@
             try {
                 const res = await fetch('/api/printer/test', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({paper_width: width, receipt_header: document.getElementById('receipt_header').value.trim()}) });
                 const data = await res.json();
-                showToast((data.ok ? '✅ ' : '⚠️ ') + data.message);
+                showToast((data.ok ? ' ' : ' ') + data.message);
             } catch (e) {
-                showToast('❌ خطأ في الطباعة');
+                showToast(' خطأ في الطباعة');
             } finally { setTestPrintLoading(false, width); }
         }
         async function saveAndTestPrint() {
             if (testPrintInProgress) return;
             const saved = await saveSettings({silent: true});
             if (!saved) return;
-            showToast('✅ تم الحفظ؛ جارِ إرسال اختبار الطباعة…');
+            showToast(' تم الحفظ؛ جارِ إرسال اختبار الطباعة…');
             await testPrint();
         }
 
@@ -351,10 +351,10 @@
                 const prepared = await window.qaisarPrepareImage(file, {maxDimension: 640, maxBytes: 180 * 1024});
                 logoData = prepared.dataUrl;
                 renderLogoPreview();
-                showToast(`✅ جرى ضغط الشعار إلى ${Math.ceil(prepared.bytes / 1024)} كيلوبايت`);
+                showToast(` جرى ضغط الشعار إلى ${Math.ceil(prepared.bytes / 1024)} كيلوبايت`);
             } catch (error) {
                 event.target.value = '';
-                showToast('⚠️ ' + (error.message || 'تعذر معالجة الشعار'));
+                showToast(' ' + (error.message || 'تعذر معالجة الشعار'));
             }
         }
 
@@ -474,29 +474,29 @@
         }
         async function saveReceiptTemplate() {
             const input = document.getElementById('templateName'); const name = input.value.trim();
-            if (name.length < 2) return showToast('⚠️ اكتب اسمًا من حرفين على الأقل للقالب');
-            try { const res = await fetch('/api/printer/templates', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name})}); const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || 'تعذر حفظ القالب'); input.value=''; await loadReceiptTemplates(); showToast('✅ تم حفظ قالب: ' + data.template.name); }
-            catch(e) { showToast('❌ ' + (e.message || 'تعذر حفظ القالب')); }
+            if (name.length < 2) return showToast(' اكتب اسمًا من حرفين على الأقل للقالب');
+            try { const res = await fetch('/api/printer/templates', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name})}); const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || 'تعذر حفظ القالب'); input.value=''; await loadReceiptTemplates(); showToast(' تم حفظ قالب: ' + data.template.name); }
+            catch(e) { showToast(' ' + (e.message || 'تعذر حفظ القالب')); }
         }
         async function applyReceiptTemplate(id) {
-            try { const res = await fetch('/api/printer/templates/' + encodeURIComponent(id) + '/apply', {method:'POST'}); const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || 'تعذر تطبيق القالب'); Object.entries(data.design || {}).forEach(([key,value]) => { if (key === 'receipt_layout') { receiptLayout = isValidReceiptLayout(value) ? [...value] : [...RECEIPT_LAYOUT_DEFAULT]; return; } const el=document.getElementById(key); if(!el) return; if(el.type==='checkbox') el.checked=!!value; else el.value=value ?? ''; }); renderReceiptLayoutEditor(); updateReceiptPreview(); showToast('✅ تم تطبيق قالب: ' + data.name); }
-            catch(e) { showToast('❌ ' + (e.message || 'تعذر تطبيق القالب')); }
+            try { const res = await fetch('/api/printer/templates/' + encodeURIComponent(id) + '/apply', {method:'POST'}); const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || 'تعذر تطبيق القالب'); Object.entries(data.design || {}).forEach(([key,value]) => { if (key === 'receipt_layout') { receiptLayout = isValidReceiptLayout(value) ? [...value] : [...RECEIPT_LAYOUT_DEFAULT]; return; } const el=document.getElementById(key); if(!el) return; if(el.type==='checkbox') el.checked=!!value; else el.value=value ?? ''; }); renderReceiptLayoutEditor(); updateReceiptPreview(); showToast(' تم تطبيق قالب: ' + data.name); }
+            catch(e) { showToast(' ' + (e.message || 'تعذر تطبيق القالب')); }
         }
         async function deleteReceiptTemplate(id, name) {
             if (!confirm('حذف قالب «' + name + '»؟')) return;
-            try { const res = await fetch('/api/printer/templates/' + encodeURIComponent(id), {method:'DELETE'}); const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || 'تعذر حذف القالب'); await loadReceiptTemplates(); showToast('✅ تم حذف القالب'); }
-            catch(e) { showToast('❌ ' + (e.message || 'تعذر حذف القالب')); }
+            try { const res = await fetch('/api/printer/templates/' + encodeURIComponent(id), {method:'DELETE'}); const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || 'تعذر حذف القالب'); await loadReceiptTemplates(); showToast(' تم حذف القالب'); }
+            catch(e) { showToast(' ' + (e.message || 'تعذر حذف القالب')); }
         }
 
         async function exportReceiptTemplates() {
-            try { const res = await fetch('/api/printer/templates/export'); if (!res.ok) throw new Error('تعذر تصدير القوالب'); const blob = await res.blob(); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'qaisar-receipt-templates.json'; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); showToast('✅ تم تنزيل ملف القوالب.'); }
-            catch (e) { showToast('❌ ' + (e.message || 'تعذر تصدير القوالب')); }
+            try { const res = await fetch('/api/printer/templates/export'); if (!res.ok) throw new Error('تعذر تصدير القوالب'); const blob = await res.blob(); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'qaisar-receipt-templates.json'; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); showToast(' تم تنزيل ملف القوالب.'); }
+            catch (e) { showToast(' ' + (e.message || 'تعذر تصدير القوالب')); }
         }
         async function importReceiptTemplates(event) {
             const file = event.target.files && event.target.files[0]; event.target.value = '';
-            if (!file) return; if (file.size > 100 * 1024) return showToast('⚠️ ملف القوالب يجب ألا يتجاوز 100 كيلوبايت');
-            try { const payload = JSON.parse(await file.text()); const res = await fetch('/api/printer/templates/import', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}); const data = await res.json(); if (!res.ok || !data.ok) throw new Error(data.error || 'تعذر استيراد القوالب'); await loadReceiptTemplates(); showToast('✅ تم استيراد ' + data.imported + ' قالب/قوالب.'); }
-            catch (e) { showToast('❌ ' + (e.message || 'ملف القوالب غير صالح')); }
+            if (!file) return; if (file.size > 100 * 1024) return showToast(' ملف القوالب يجب ألا يتجاوز 100 كيلوبايت');
+            try { const payload = JSON.parse(await file.text()); const res = await fetch('/api/printer/templates/import', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}); const data = await res.json(); if (!res.ok || !data.ok) throw new Error(data.error || 'تعذر استيراد القوالب'); await loadReceiptTemplates(); showToast(' تم استيراد ' + data.imported + ' قالب/قوالب.'); }
+            catch (e) { showToast(' ' + (e.message || 'ملف القوالب غير صالح')); }
         }
 
         ['paper_width','font_size','footer_text','restaurant_name','logo_caption','logo_size','logo_alignment','receipt_font_family','receipt_font_scale','receipt_header','receipt_alignment','receipt_divider','receipt_density','receipt_show_cashier','receipt_show_order_type','social_facebook','social_instagram','social_whatsapp'].forEach(id => document.getElementById(id).addEventListener('input', updateReceiptPreview));

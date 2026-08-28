@@ -143,15 +143,15 @@
   }
 
   function pictographIconType(text) {
-    const value = String(text || '');
-    if (/🖨/.test(value)) return 'printer';
-    if (/👁/.test(value)) return 'eye';
-    if (/🔄/.test(value)) return 'refresh';
-    if (/➕/.test(value)) return 'plus';
-    if (/💾|📦|⬇/.test(value)) return 'download';
-    if (/⚙|🔧/.test(value)) return 'settings';
-    if (/🔒/.test(value)) return 'lock';
-    if (/💵|💳/.test(value)) return 'cash';
+    const value = String(text || '').toLowerCase();
+    if (/طباعة|printer|receipt/.test(value)) return 'printer';
+    if (/عرض|عين|eye|preview/.test(value)) return 'eye';
+    if (/تحديث|إعادة|refresh|retry/.test(value)) return 'refresh';
+    if (/إضافة|plus|add/.test(value)) return 'plus';
+    if (/تنزيل|تحميل|download|excel|pdf/.test(value)) return 'download';
+    if (/إعداد|ضبط|settings|printer settings/.test(value)) return 'settings';
+    if (/قفل|lock|password/.test(value)) return 'lock';
+    if (/نقد|بطاقة|cash|card|payment/.test(value)) return 'cash';
     return '';
   }
 

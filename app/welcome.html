@@ -153,10 +153,10 @@
                 const d = await r.json();
                 const box = document.getElementById('supportBox');
                 const items = [];
-                if (d.support_phone) items.push(`<a href="tel:${d.support_phone}" class="hover:text-white">📞 ${d.support_phone}</a>`);
-                if (d.whatsapp) items.push(`<a href="https://wa.me/${d.whatsapp.replace(/[^0-9]/g,'')}" target="_blank" class="hover:text-white">💬 واتساب</a>`);
-                if (d.facebook) items.push(`<a href="${d.facebook}" target="_blank" class="hover:text-white">📘 فيسبوك</a>`);
-                if (d.instagram) items.push(`<a href="${d.instagram}" target="_blank" class="hover:text-white">📷 انستغرام</a>`);
+                if (d.support_phone) items.push(`<a href="tel:${d.support_phone}" class="hover:text-white">هاتف:  ${d.support_phone}</a>`);
+                if (d.whatsapp) items.push(`<a href="https://wa.me/${d.whatsapp.replace(/[^0-9]/g,'')}" target="_blank" class="hover:text-white"> واتساب</a>`);
+                if (d.facebook) items.push(`<a href="${d.facebook}" target="_blank" class="hover:text-white"> فيسبوك</a>`);
+                if (d.instagram) items.push(`<a href="${d.instagram}" target="_blank" class="hover:text-white"> انستغرام</a>`);
                 box.innerHTML = items.length > 0 ? items.join('<span class="opacity-30">|</span>') : 'الدعم الفني';
             } catch (e) {}
         }

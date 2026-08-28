@@ -260,22 +260,22 @@
         </div>
     </div>
     <div id="printFailureAlert" class="hidden fixed top-5 left-1/2 z-[70] w-[min(94vw,540px)] -translate-x-1/2 rounded-2xl border border-rose-300 bg-white p-4 shadow-2xl" role="alert" aria-live="assertive">
-        <div class="flex items-start gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-100 text-xl font-black text-rose-700 animate-pulse">!</span><div class="min-w-0 flex-1"><div class="flex items-start justify-between gap-3"><div><h2 class="font-black text-rose-800">تدخل مطلوب: فشلت عملية طباعة</h2><p id="printFailureMessage" class="mt-1 text-sm text-slate-600">راجع الطابعة قبل متابعة الطلبات.</p></div><button onclick="dismissPrintFailureAlert()" class="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="إغلاق التنبيه">✕</button></div><div id="printFailureJobs" class="mt-3 flex flex-wrap gap-2"></div><div class="mt-3 flex flex-wrap gap-2"><a href="printer_settings.html" class="rounded-lg bg-rose-700 px-3 py-2 text-xs font-bold text-white hover:bg-rose-800">فتح إعدادات الطابعة</a><button onclick="dismissPrintFailureAlert()" class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200">تمت المراجعة</button></div></div></div>
+        <div class="flex items-start gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-100 text-xl font-black text-rose-700 animate-pulse">!</span><div class="min-w-0 flex-1"><div class="flex items-start justify-between gap-3"><div><h2 class="font-black text-rose-800">تدخل مطلوب: فشلت عملية طباعة</h2><p id="printFailureMessage" class="mt-1 text-sm text-slate-600">راجع الطابعة قبل متابعة الطلبات.</p></div><button onclick="dismissPrintFailureAlert()" class="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="إغلاق التنبيه">حذف</button></div><div id="printFailureJobs" class="mt-3 flex flex-wrap gap-2"></div><div class="mt-3 flex flex-wrap gap-2"><a href="printer_settings.html" class="rounded-lg bg-rose-700 px-3 py-2 text-xs font-bold text-white hover:bg-rose-800">فتح إعدادات الطابعة</a><button onclick="dismissPrintFailureAlert()" class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200">تمت المراجعة</button></div></div></div>
     </div>
     <div id="cashDrawerSuccessAlert" class="hidden fixed top-5 left-1/2 z-[71] w-[min(94vw,460px)] -translate-x-1/2 rounded-2xl border border-emerald-300 bg-white p-4 shadow-2xl" role="status" aria-live="polite">
-        <div class="flex items-start gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xl font-black text-emerald-700">✓</span><div class="min-w-0 flex-1"><div class="flex items-start justify-between gap-3"><div><h2 class="font-black text-emerald-800">تم إرسال أمر فتح الدرج</h2><p id="cashDrawerSuccessMessage" class="mt-1 text-sm text-slate-600">جارِ إرسال الأمر إلى الطابعة.</p></div><button onclick="dismissCashDrawerSuccess()" class="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="إغلاق التأكيد">✕</button></div></div></div>
+        <div class="flex items-start gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xl font-black text-emerald-700"></span><div class="min-w-0 flex-1"><div class="flex items-start justify-between gap-3"><div><h2 class="font-black text-emerald-800">تم إرسال أمر فتح الدرج</h2><p id="cashDrawerSuccessMessage" class="mt-1 text-sm text-slate-600">جارِ إرسال الأمر إلى الطابعة.</p></div><button onclick="dismissCashDrawerSuccess()" class="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="إغلاق التأكيد">حذف</button></div></div></div>
     </div>
     <div id="printReceipt"></div>
 
     <!-- شاشة القفل التلقائي -->
     <div id="lockScreen" class="hidden fixed inset-0 bg-gray-900 z-[100] flex items-center justify-center">
         <div class="bg-white rounded-2xl shadow-2xl p-8 w-80 text-center">
-            <div class="text-4xl mb-3">🔒</div>
+            <div class="text-4xl mb-3"></div>
             <h2 class="text-lg font-bold text-gray-800 mb-1">النظام مقفل</h2>
             <p id="lockCashierLabel" class="text-xs text-slate-500 mb-4">أدخل رمز الكاشير الحالي للمتابعة</p>
             <input type="password" id="lockPassword" onkeydown="if(event.key==='Enter') unlockScreen()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 mb-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="رمز الكاشير">
-            <div id="lockError" class="hidden text-red-600 text-sm mb-2">⚠️ رمز الكاشير غير صحيح</div>
-            <button onclick="unlockScreen()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">🔓 فتح النظام</button>
+            <div id="lockError" class="hidden text-red-600 text-sm mb-2"> رمز الكاشير غير صحيح</div>
+            <button onclick="unlockScreen()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition"> فتح النظام</button>
         </div>
     </div>
 
@@ -313,7 +313,7 @@
             }
         });
 
-        async function loadMenu() { try { const r = await fetch('/api/menu'); menu = await r.json(); } catch(e) { showToast('⚠️ خطأ في تحميل المنيو'); } }
+        async function loadMenu() { try { const r = await fetch('/api/menu'); menu = await r.json(); } catch(e) { showToast(' خطأ في تحميل المنيو'); } }
         async function loadCurrency() {
             try {
                 const r = await fetch('/api/settings/currency');
@@ -335,7 +335,7 @@
             if (control) control.value = currentCurrency;
             renderAll();
         });
-        async function loadRestaurantName() { try { const r = await fetch('/api/restaurant/name'); const d = await r.json(); if(d.name) { document.getElementById('restaurantTitle').textContent='🍽️ '+d.name; document.title=d.name+' - كاشير'; } } catch(e) {} }
+        async function loadRestaurantName() { try { const r = await fetch('/api/restaurant/name'); const d = await r.json(); if(d.name) { document.getElementById('restaurantTitle').textContent=' '+d.name; document.title=d.name+' - كاشير'; } } catch(e) {} }
 
         async function loadInventoryAlerts() {
             try {
@@ -349,7 +349,7 @@
                 const parts = [];
                 if (out) parts.push(`${out} مادة نافدة`);
                 if (low) parts.push(`${low} مادة منخفضة`);
-                text.textContent = '⚠️ تنبيه المخزون: ' + parts.join(' و');
+                text.textContent = ' تنبيه المخزون: ' + parts.join(' و');
                 banner.classList.remove('hidden');
             } catch (e) {}
         }
@@ -448,10 +448,10 @@
             try {
                 const r = await fetch('/api/barcode/' + encodeURIComponent(code));
                 const d = await r.json();
-                if (!d.ok) { showToast('⚠️ ' + (d.error || 'الباركود غير معروف')); input.select(); return; }
+                if (!d.ok) { showToast(' ' + (d.error || 'الباركود غير معروف')); input.select(); return; }
                 addToCartById(d.product.id, 1);
                 input.value = '';
-            } catch (e) { showToast('❌ تعذر قراءة الباركود'); }
+            } catch (e) { showToast(' تعذر قراءة الباركود'); }
         }
 
         document.getElementById('barcodeInput').addEventListener('keydown', e => {
@@ -493,7 +493,7 @@
         function addToCartById(productId, qty) {
             let modifiers = [];
             const product = Object.values(menu).flat().find(p => Number(p.id) === Number(productId));
-            if (!product) return showToast('⚠️ المنتج لم يعد موجوداً؛ حدّث المنيو');
+            if (!product) return showToast(' المنتج لم يعد موجوداً؛ حدّث المنيو');
             if (Array.isArray(product.modifiers) && product.modifiers.length) {
                 const catalog = product.modifiers.map(raw => typeof raw === 'object' ? {name: raw.name, price: Number(raw.price || 0)} : {name: String(raw), price: 0});
                 const options = catalog.map((option, index) => `${index + 1}. ${option.name}${option.price ? ' (+' + formatPrice(option.price) + ')' : ''}`).join('\n');
@@ -509,7 +509,7 @@
             if(existing) existing.qty += qty;
             else cart.push({key, product_id: Number(product.id), name: product.name, base_price: Number(product.price), price: Number(product.price) + modifiers.reduce((sum, option) => sum + Number(option.price || 0), 0), qty, modifiers});
             renderCart();
-            showToast('✅ ' + product.name);
+            showToast(' ' + product.name);
         }
 
         let numpadState = { target: null, cartIndex: null, mode: 'amount', buffer: '' };
@@ -543,12 +543,12 @@
         function confirmNumpad() {
             if (numpadState.mode === 'quantity') {
                 const qty = Math.floor(Number(numpadState.buffer));
-                if (!Number.isFinite(qty) || qty < 1 || qty > 100) return showToast('⚠️ الكمية يجب أن تكون بين 1 و100');
+                if (!Number.isFinite(qty) || qty < 1 || qty > 100) return showToast(' الكمية يجب أن تكون بين 1 و100');
                 if (cart[numpadState.cartIndex]) cart[numpadState.cartIndex].qty = qty;
                 renderCart(); closeNumpad(); return;
             }
             const value = Number(numpadState.buffer || 0);
-            if (!Number.isFinite(value) || value < 0) return showToast('⚠️ أدخل مبلغًا صحيحًا');
+            if (!Number.isFinite(value) || value < 0) return showToast(' أدخل مبلغًا صحيحًا');
             const target = numpadState.target;
             if (target) {
                 target.value = String(value);
@@ -559,7 +559,7 @@
 
         function removeFromCart(index) { cart.splice(index,1); renderCart(); }
         function updateCartQty(index, delta) { cart[index].qty += delta; if(cart[index].qty <= 0) cart.splice(index,1); renderCart(); }
-        function undoLastItem() { if(cart.length>0){cart.pop();renderCart();showToast('↩️ تراجع');} }
+        function undoLastItem() { if(cart.length>0){cart.pop();renderCart();showToast('↩ تراجع');} }
 
         function renderCart() {
             const list = document.getElementById('cartItems');
@@ -571,7 +571,7 @@
             } else {
                 list.innerHTML = cart.map((item, i) => `
                     <div class="cart-item border border-slate-100 bg-gray-50 p-3 rounded-xl text-sm animate-slide">
-                        <span class="cart-item-name min-w-0"><span class="block truncate font-black text-slate-800">${item.name}</span>${item.modifiers?.length ? `<small class="block text-[11px] text-indigo-600 mt-0.5 leading-5">+ ${item.modifiers.map(option => typeof option === 'object' ? option.name + (option.price ? ' (' + formatPrice(option.price) + ')' : '') : option).join('، ')}</small>` : ''}</span>
+                        <span class="cart-item-name min-w-0"><span class="block font-black text-slate-800">${item.name}</span>${item.modifiers?.length ? `<small class="block text-[11px] text-indigo-600 mt-0.5 leading-5">+ ${item.modifiers.map(option => typeof option === 'object' ? option.name + (option.price ? ' (' + formatPrice(option.price) + ')' : '') : option).join('، ')}</small>` : ''}</span>
                         <div class="qty-control flex items-center gap-1 rounded-lg bg-white border border-slate-200 p-0.5">
                             <button type="button" onclick="updateCartQty(${i},-1)" class="rounded-md bg-slate-100 hover:bg-slate-200 text-sm font-black" aria-label="تقليل كمية ${item.name}">−</button>
                             <button type="button" onclick="openNumpadForQuantity(${i})" class="qty-value w-10 min-h-[46px] text-center font-black text-slate-800 bg-white rounded-md border border-slate-100" aria-label="تعديل كمية ${item.name}">${item.qty}</button>
@@ -697,7 +697,7 @@
                     applyDineInSession(data.session);
                     history.replaceState({}, '', 'index.html');
                     return;
-                } catch (e) { showToast('❌ ' + e.message); }
+                } catch (e) { showToast(' ' + e.message); }
             }
             if (tableId) {
                 setOrderType('صالة');
@@ -708,8 +708,8 @@
 
         async function saveDineInSession() {
             if (orderType !== 'صالة') return showToast('اختر نوع الطلب صالة أولاً');
-            if (!document.getElementById('tableNumber').value) return showToast('⚠️ اختر طاولة للصالة');
-            if (!cart.length) return showToast('⚠️ أضف صنفاً واحداً على الأقل');
+            if (!document.getElementById('tableNumber').value) return showToast(' اختر طاولة للصالة');
+            if (!cart.length) return showToast(' أضف صنفاً واحداً على الأقل');
             const payload = dineInPayload();
             const url = activeDineInSession ? '/api/dine-in/sessions/' + encodeURIComponent(activeDineInSession.id) : '/api/dine-in/sessions';
             const method = activeDineInSession ? 'PUT' : 'POST';
@@ -722,14 +722,14 @@
                 updateDineInUi();
                 await loadDineInTables();
                 showPrintFailureAlert(data.print);
-                showToast('✅ تم حفظ طلب ' + activeDineInSession.table_name + ' وإرساله للمطبخ' + autoPrintNotice(data.print) + autoDrawerNotice(data.drawer));
-            } catch (e) { showToast('❌ ' + e.message); }
+                showToast(' تم حفظ طلب ' + activeDineInSession.table_name + ' وإرساله للمطبخ' + autoPrintNotice(data.print) + autoDrawerNotice(data.drawer));
+            } catch (e) { showToast(' ' + e.message); }
             finally { setSaleBusy(false); }
         }
 
         function setOrderType(type) {
             if (activeDineInSession && type !== 'صالة') {
-                showToast('⚠️ يوجد طلب طاولة مفتوح؛ احفظه أو أكمل دفعه قبل بدء طلب آخر.');
+                showToast(' يوجد طلب طاولة مفتوح؛ احفظه أو أكمل دفعه قبل بدء طلب آخر.');
                 type = 'صالة';
             }
             orderType = type;
@@ -741,7 +741,7 @@
         function clearCart() { if(cart.length===0||confirm('مسح السلة؟')){cart=[];renderCart();} }
 
         function holdOrder() {
-            if(cart.length===0) return showToast('⚠️ السلة فارغة');
+            if(cart.length===0) return showToast(' السلة فارغة');
             heldOrders.push({
                 items: [...cart], type: orderType,
                 customer: document.getElementById('customerName').value,
@@ -756,7 +756,7 @@
             document.getElementById('tableNumber').value = ''; document.getElementById('orderNote').value = '';
             document.getElementById('discountPct').value = '0'; document.getElementById('discountAmount').value = '0';
             renderCart(); renderHeldOrders();
-            showToast('⏸️ تم تعليق الطلب');
+            showToast('⏸ تم تعليق الطلب');
         }
 
         function resumeOrder(index) {
@@ -771,18 +771,18 @@
             heldOrders.splice(index,1);
             localStorage.setItem('heldOrders', JSON.stringify(heldOrders));
             setOrderType(orderType); renderCart(); renderHeldOrders();
-            showToast('✅ تم استئناف الطلب');
+            showToast(' تم استئناف الطلب');
         }
 
         function renderHeldOrders() {
             document.getElementById('heldOrders').innerHTML = heldOrders.length > 0 ?
-                '<div class="text-xs text-orange-600 font-bold mt-2">⏸️ طلبات معلقة:</div>' +
-                heldOrders.map((h,i) => `<button onclick="resumeOrder(${i})" class="block w-full text-xs bg-orange-50 px-2 py-1 rounded mt-1 text-right">📋 ${h.items.length} منتجات - ${h.type}</button>`).join('')
+                '<div class="text-xs text-orange-600 font-bold mt-2">⏸ طلبات معلقة:</div>' +
+                heldOrders.map((h,i) => `<button onclick="resumeOrder(${i})" class="block w-full text-xs bg-orange-50 px-2 py-1 rounded mt-1 text-right"> ${h.items.length} منتجات - ${h.type}</button>`).join('')
                 : '';
         }
 
         function openPaymentModal() {
-            if(cart.length===0) return showToast('⚠️ السلة فارغة');
+            if(cart.length===0) return showToast(' السلة فارغة');
             updateTotal();
             document.getElementById('paymentTotal').textContent = document.getElementById('totalDisplay').textContent;
             document.getElementById('paymentModal').classList.remove('hidden');
@@ -847,7 +847,7 @@
         }
 
         async function saveOrder() {
-            if(cart.length===0) return showToast('⚠️ السلة فارغة');
+            if(cart.length===0) return showToast(' السلة فارغة');
             updateTotal();
             const pct = parseFloat(document.getElementById('discountPct').value) || 0;
             const amt = parseFloat(document.getElementById('discountAmount').value) || 0;
@@ -879,8 +879,8 @@
                 await loadDineInTables();
                 showPrintFailureAlert(directPrint?.print ? {receipt: directPrint.print, kitchen: resData.print?.kitchen} : resData.print);
                 const directPrintNotice = directPrint ? ' — ' + (directPrint.message || directPrint.error || 'تحقق من حالة الطباعة') : '';
-                showToast('✅ تم الحفظ - فاتورة رقم ' + resData.id + (paidMethod ? ' - ' + paidMethod : '') + autoPrintNotice(resData.print) + autoDrawerNotice(resData.drawer) + directPrintNotice);
-            } catch(e) { showToast('❌ ' + (e.message || 'خطأ في الحفظ')); }
+                showToast(' تم الحفظ - فاتورة رقم ' + resData.id + (paidMethod ? ' - ' + paidMethod : '') + autoPrintNotice(resData.print) + autoDrawerNotice(resData.drawer) + directPrintNotice);
+            } catch(e) { showToast(' ' + (e.message || 'خطأ في الحفظ')); }
             finally { setSaleBusy(false); }
         }
 
@@ -890,7 +890,7 @@
             const fontFamilyMap = { system: 'Tahoma, Arial, sans-serif', cairo: 'Cairo, Tahoma, Arial, sans-serif', serif: 'Georgia, Times New Roman, serif', mono: 'ui-monospace, SFMono-Regular, Menlo, monospace' };
             const receiptFontFamily = fontFamilyMap[printerSettings.receipt_font_family] || fontFamilyMap.system;
             const width = (printerSettings.paper_width || 80) + 'mm';
-            const restaurantName = document.getElementById('restaurantTitle').textContent.replace('🍽️','').trim();
+            const restaurantName = document.getElementById('restaurantTitle').textContent.replace('','').trim();
             const now = new Date();
             const logoDimensions = { small: ['42%', '30px'], medium: ['62%', '42px'], large: ['82%', '58px'] }[printerSettings.logo_size] || ['62%', '42px'];
             const logoMargins = printerSettings.logo_alignment === 'right' ? '0 0 4px auto' : (printerSettings.logo_alignment === 'left' ? '0 auto 4px 0' : '0 auto 4px');
@@ -946,7 +946,7 @@
         }
 
         function printOrder() {
-            if(cart.length===0) return showToast('⚠️ السلة فارغة');
+            if(cart.length===0) return showToast(' السلة فارغة');
             const total = computeCartTotal();
             paymentMethod = 'نقدي';
             cashAmount = total;
@@ -982,10 +982,10 @@
                 }
                 control.value = currentCurrency;
                 renderAll();
-                showToast(`✅ تم توحيد عملة النظام: ${currentCurrency === 'SYP' ? 'الليرة السورية' : currentCurrency === 'USD' ? 'الدولار' : 'اليورو'}`);
+                showToast(` تم توحيد عملة النظام: ${currentCurrency === 'SYP' ? 'الليرة السورية' : currentCurrency === 'USD' ? 'الدولار' : 'اليورو'}`);
             } catch(e) {
                 control.value = currentCurrency;
-                showToast('❌ ' + (e.message || 'تعذر تغيير العملة. يحتاج هذا الإجراء صلاحية مدير أو مشرف.'));
+                showToast(' ' + (e.message || 'تعذر تغيير العملة. يحتاج هذا الإجراء صلاحية مدير أو مشرف.'));
             }
         }
 
@@ -997,10 +997,10 @@
         async function closeShift() {
             if(!confirm('إغلاق الوردية؟ سيتم حفظ تقرير النقد والمبيعات قبل الأرشفة.')) return;
             const actual = prompt('أدخل النقد الفعلي الموجود في الدرج:');
-            if (actual === null || actual.trim() === '' || isNaN(Number(actual))) return showToast('⚠️ أدخل مبلغًا صحيحًا');
+            if (actual === null || actual.trim() === '' || isNaN(Number(actual))) return showToast(' أدخل مبلغًا صحيحًا');
             const reason = prompt('سبب الفرق إن وجد (اختياري):') || '';
             try { const r = await fetch('/api/shifts/close',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({actual_cash:Number(actual),reason})}); const d = await r.json();
-                if(d.ok) showToast('✅ تم إغلاق الوردية، الفرق: ' + (d.shift.difference ?? 0)); else showToast('❌ ' + (d.error || 'تعذر الإغلاق')); } catch(e) { showToast('❌ تعذر الاتصال'); }
+                if(d.ok) showToast(' تم إغلاق الوردية، الفرق: ' + (d.shift.difference ?? 0)); else showToast(' ' + (d.error || 'تعذر الإغلاق')); } catch(e) { showToast(' تعذر الاتصال'); }
         }
 
         let lockTimeoutMinutes = 0, lockEnabled = false, lockTimer = null, screenLocked = false;
@@ -1045,7 +1045,7 @@
             const name = activeCashier.username || 'المستخدم الحالي';
             document.getElementById('lockCashierLabel').textContent = `الكاشير المقفل: ${name} — أدخل رمزه للمتابعة`;
             setTimeout(() => document.getElementById('lockPassword')?.focus(), 50);
-            if (manual) showToast('🔒 تم قفل النظام. يلزم رمز الكاشير الحالي للفتح.');
+            if (manual) showToast(' تم قفل النظام. يلزم رمز الكاشير الحالي للفتح.');
         }
 
         async function unlockScreen() {
@@ -1091,17 +1091,17 @@
             const sent = jobs.filter(job => job.status === 'sent').map(job => job.type === 'kitchen' ? 'تذكرة المطبخ' : 'الإيصال');
             const skipped = jobs.filter(job => job.status === 'skipped').map(job => job.type === 'kitchen' ? 'تذكرة المطبخ' : 'الإيصال');
             const failed = jobs.filter(job => job.status === 'failed').map(job => job.type === 'kitchen' ? 'تذكرة المطبخ' : 'الإيصال');
-            if (sent.length) return ' — 🖨️ تم إرسال ' + sent.join(' و') + ' تلقائيًا للطابعة';
-            if (failed.length) return ' — ❗ فشل إرسال ' + failed.join(' و') + '، راجع الطابعة';
-            if (skipped.length) return ' — ℹ️ حُفظت العملية، والطباعة التلقائية لـ' + skipped.join(' و') + ' لم تُنفّذ: ' + (jobs.find(job => job.status === 'skipped')?.message || 'راجع إعدادات الطابعة');
+            if (sent.length) return ' —  تم إرسال ' + sent.join(' و') + ' تلقائيًا للطابعة';
+            if (failed.length) return ' —  فشل إرسال ' + failed.join(' و') + '، راجع الطابعة';
+            if (skipped.length) return ' — ℹ حُفظت العملية، والطباعة التلقائية لـ' + skipped.join(' و') + ' لم تُنفّذ: ' + (jobs.find(job => job.status === 'skipped')?.message || 'راجع إعدادات الطابعة');
             return '';
         }
 
         function autoDrawerNotice(drawer) {
             if (!drawer) return '';
-            if (drawer.status === 'sent') return ' — 💵 تم فتح درج النقد تلقائيًا';
-            if (drawer.status === 'failed') return ' — ⚠️ حُفظ الدفع لكن فشل فتح الدرج: ' + (drawer.message || 'راجع الطابعة');
-            if (drawer.status === 'skipped') return ' — ℹ️ لم يُفتح الدرج تلقائيًا: ' + (drawer.message || 'راجع الإعدادات');
+            if (drawer.status === 'sent') return ' —  تم فتح درج النقد تلقائيًا';
+            if (drawer.status === 'failed') return ' —  حُفظ الدفع لكن فشل فتح الدرج: ' + (drawer.message || 'راجع الطابعة');
+            if (drawer.status === 'skipped') return ' — ℹ لم يُفتح الدرج تلقائيًا: ' + (drawer.message || 'راجع الإعدادات');
             return '';
         }
 
@@ -1110,7 +1110,7 @@
             if (!failures.length) return;
             const names = failures.map(job => job.type === 'kitchen' ? 'تذكرة المطبخ' : 'الإيصال');
             document.getElementById('printFailureMessage').textContent = `تعذر إرسال ${names.join(' و')} إلى الطابعة. تم حفظ الطلب، لكن يلزم فحص الطابعة أو الاتصال بها.`;
-            document.getElementById('printFailureJobs').innerHTML = failures.map(job => `<div class="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-2 py-2 text-xs font-bold text-rose-800"><span>✕ ${job.type === 'kitchen' ? 'المطبخ' : 'الإيصال'}: ${job.message || 'تعذر إرسال الأمر'}</span><button data-retry-print="${job.type}" onclick="retryFailedPrint('${String(job.order_id || '').replace(/'/g, '')}', '${job.type}')" class="rounded-md bg-rose-700 px-2 py-1 text-white hover:bg-rose-800">إعادة المحاولة</button></div>`).join('');
+            document.getElementById('printFailureJobs').innerHTML = failures.map(job => `<div class="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-2 py-2 text-xs font-bold text-rose-800"><span>حذف ${job.type === 'kitchen' ? 'المطبخ' : 'الإيصال'}: ${job.message || 'تعذر إرسال الأمر'}</span><button data-retry-print="${job.type}" onclick="retryFailedPrint('${String(job.order_id || '').replace(/'/g, '')}', '${job.type}')" class="rounded-md bg-rose-700 px-2 py-1 text-white hover:bg-rose-800">إعادة المحاولة</button></div>`).join('');
             document.getElementById('printFailureAlert').classList.remove('hidden');
             loadPrintErrorCount();
         }
@@ -1120,7 +1120,7 @@
         }
 
         async function retryFailedPrint(orderId, ticketType) {
-            if (!orderId || !ticketType) return showToast('❌ لا تتوفر بيانات كافية لإعادة المحاولة');
+            if (!orderId || !ticketType) return showToast(' لا تتوفر بيانات كافية لإعادة المحاولة');
             const label = ticketType === 'kitchen' ? 'تذكرة المطبخ' : 'إيصال العميل';
             if (!confirm(`إعادة محاولة طباعة ${label} للطلب ${orderId}؟`)) return;
             const buttons = Array.from(document.querySelectorAll('[data-retry-print]'));
@@ -1129,14 +1129,14 @@
                 const response = await fetch('/api/printer/orders/' + encodeURIComponent(orderId) + '/retry', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({type: ticketType}) });
                 const data = await response.json();
                 if (data.ok) {
-                    showToast('✅ تمت إعادة إرسال ' + label + ' للطابعة');
+                    showToast(' تمت إعادة إرسال ' + label + ' للطابعة');
                     dismissPrintFailureAlert();
                 } else {
-                    showToast('⚠️ لم تنجح إعادة المحاولة: ' + (data.print?.message || data.error || 'راجع الطابعة'));
+                    showToast(' لم تنجح إعادة المحاولة: ' + (data.print?.message || data.error || 'راجع الطابعة'));
                 }
                 await loadPrintErrorCount();
             } catch (error) {
-                showToast('❌ تعذر الاتصال بخدمة الطباعة');
+                showToast(' تعذر الاتصال بخدمة الطباعة');
             } finally {
                 buttons.forEach(button => { button.disabled = false; button.classList.remove('opacity-60', 'cursor-wait'); });
             }
@@ -1163,17 +1163,17 @@
             const button = document.getElementById('cashDrawerButton');
             const reason = window.prompt('أدخل سبب فتح درج النقد (إلزامي وسيُسجل باسمك):', '');
             if (reason === null) return;
-            if (reason.trim().length < 2) return showToast('⚠️ أدخل سببًا واضحًا من حرفين على الأقل لفتح الدرج');
+            if (reason.trim().length < 2) return showToast(' أدخل سببًا واضحًا من حرفين على الأقل لفتح الدرج');
             if (!confirm(`فتح درج النقد الآن بسبب: ${reason.trim()}؟ سيُسجل هذا الإجراء باسم الكاشير الحالي.`)) return;
             const previous = button.innerHTML;
             button.disabled = true; button.classList.add('opacity-60', 'cursor-wait'); button.textContent = 'جارِ الفتح…';
             try {
                 const response = await fetch('/api/cash-drawer/open', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({reason: reason.trim()})});
                 const data = await response.json();
-                if (data.ok) { showToast('✅ تم إرسال أمر فتح درج النقد'); showCashDrawerSuccess(data.drawer); }
-                else showToast('⚠️ لم يُفتح الدرج: ' + (data.drawer?.message || data.error || 'راجع الإعدادات والطابعة'));
+                if (data.ok) { showToast(' تم إرسال أمر فتح درج النقد'); showCashDrawerSuccess(data.drawer); }
+                else showToast(' لم يُفتح الدرج: ' + (data.drawer?.message || data.error || 'راجع الإعدادات والطابعة'));
             } catch (error) {
-                showToast('❌ تعذر الاتصال بخدمة درج النقد');
+                showToast(' تعذر الاتصال بخدمة درج النقد');
             } finally {
                 button.disabled = false; button.classList.remove('opacity-60', 'cursor-wait'); button.innerHTML = previous;
             }

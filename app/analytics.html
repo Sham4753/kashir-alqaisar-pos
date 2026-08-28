@@ -37,21 +37,21 @@
 
         <!-- Header -->
         <div class="flex items-center justify-between mb-6 no-print">
-            <h1 class="text-2xl font-bold text-gray-800">📊 التقارير المالية والربحية</h1>
+            <h1 class="text-2xl font-bold text-gray-800"> التقارير المالية والربحية</h1>
             <div class="flex gap-2">
-                <button onclick="printReport()" class="report-action-button bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm">🖨️ طباعة / PDF</button>
-                <button onclick="prepareDailyReport()" class="report-action-button bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 text-sm">📅 تقرير اليوم</button>
-                <button id="exportExcelTop" onclick="exportSelectedExcel()" class="report-action-button bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm">⬇️ Excel حسب التاريخ</button>
-                <button id="exportPdfTop" onclick="exportSelectedPdf()" class="report-action-button bg-slate-700 text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm">⬇️ PDF حسب التاريخ</button>
-                <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩️ رجوع</a>
+                <button onclick="printReport()" class="report-action-button bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm"> طباعة / PDF</button>
+                <button onclick="prepareDailyReport()" class="report-action-button bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 text-sm"> تقرير اليوم</button>
+                <button id="exportExcelTop" onclick="exportSelectedExcel()" class="report-action-button bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm">⬇ Excel حسب التاريخ</button>
+                <button id="exportPdfTop" onclick="exportSelectedPdf()" class="report-action-button bg-slate-700 text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm">⬇ PDF حسب التاريخ</button>
+                <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩ رجوع</a>
             </div>
         </div>
 
         <!-- ربحية المنتجات (مستقلة عن الفترة الزمنية - وضع حالي) -->
         <div class="bg-white rounded-xl shadow-md p-6 space-y-4 mb-6 no-print">
             <div class="flex justify-between items-center">
-                <h2 class="text-lg font-bold text-gray-700">💹 ربحية المنتجات</h2>
-                <button onclick="loadProfitabilityReport()" class="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700">🔄 عرض</button>
+                <h2 class="text-lg font-bold text-gray-700"> ربحية المنتجات</h2>
+                <button onclick="loadProfitabilityReport()" class="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700"> عرض</button>
             </div>
             <p class="text-xs text-gray-400">يعتمد على متوسط سعر شراء المواد الخام والوصفة المحددة لكل منتج بصفحة "إدارة المنيو"</p>
             <div id="profitabilityList" class="space-y-2 max-h-80 overflow-y-auto"></div>
@@ -59,16 +59,16 @@
 
         <!-- نوع الجرد -->
         <div class="bg-white rounded-xl shadow-md p-6 space-y-5 mb-6 no-print">
-            <h2 class="text-lg font-bold text-gray-700">📅 أساس التقرير والمرشحات</h2>
+            <h2 class="text-lg font-bold text-gray-700"> أساس التقرير والمرشحات</h2>
             <select id="periodSelect" onchange="onPeriodChange()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                <option value="daily">📅 يومي</option>
-                <option value="monthly">📅 شهري</option>
-                <option value="yearly">📅 سنوي</option>
-                <option value="custom">🔍 تفصيلي</option>
-                <option value="all">🗂️ كل الفواتير</option>
+                <option value="daily"> يومي</option>
+                <option value="monthly"> شهري</option>
+                <option value="yearly"> سنوي</option>
+                <option value="custom"> تفصيلي</option>
+                <option value="all"> كل الفواتير</option>
             </select>
             <select id="cashierSelect" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                <option value="">👤 جميع الكاشيرات</option>
+                <option value=""> جميع الكاشيرات</option>
             </select>
 
             <div class="space-y-2">
@@ -85,13 +85,13 @@
             <!-- خيارات تفصيلية -->
             <div id="customOptions" class="space-y-4 hidden">
                 <select id="catSelect" onchange="onCatChange()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="">🗂️ كل الأقسام</option>
+                    <option value=""> كل الأقسام</option>
                 </select>
                 <select id="prodSelect" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="">📝 كل المنتجات</option>
+                    <option value=""> كل المنتجات</option>
                 </select>
             </div>
-            <button onclick="loadReport()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">🔄 عرض التقرير</button>
+            <button onclick="loadReport()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition"> عرض التقرير</button>
         </div>
 
         <!-- النتائج -->
@@ -100,39 +100,39 @@
                 <div id="printRestaurantName" class="text-xl font-bold"></div>
                 <div id="printReportMeta" class="text-sm text-gray-500 mt-1"></div>
             </div>
-            <h2 class="text-lg font-bold text-gray-700">📊 النتائج</h2>
+            <h2 class="text-lg font-bold text-gray-700"> النتائج</h2>
 
             <!-- ملخص مالي -->
             <div class="grid grid-cols-2 gap-3">
                 <div class="bg-green-50 p-3 rounded-lg border border-green-200">
-                    <div class="text-sm text-green-600">💰 المبيعات</div>
+                    <div class="text-sm text-green-600"> المبيعات</div>
                     <div class="text-xl font-bold text-green-800" id="totalSales">-</div>
                 </div>
                 <div class="bg-red-50 p-3 rounded-lg border border-red-200">
-                    <div class="text-sm text-red-600">📦 المصروفات</div>
+                    <div class="text-sm text-red-600"> المصروفات</div>
                     <div class="text-xl font-bold text-red-800" id="totalExpenses">-</div>
                 </div>
                 <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <div class="text-sm text-blue-600">💎 صافي الربح</div>
+                    <div class="text-sm text-blue-600"> صافي الربح</div>
                     <div class="text-xl font-bold text-blue-800" id="netProfit">-</div>
                 </div>
                 <div class="bg-orange-50 p-3 rounded-lg border border-orange-200">
-                    <div class="text-sm text-orange-600">💳 الديون</div>
+                    <div class="text-sm text-orange-600"> الديون</div>
                     <div class="text-xl font-bold text-orange-800" id="totalDebts">-</div>
                 </div>
                 <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
-                    <div class="text-sm text-emerald-600">💵 كاش بالدرج</div>
+                    <div class="text-sm text-emerald-600"> كاش بالدرج</div>
                     <div class="text-xl font-bold text-emerald-800" id="totalCash">-</div>
                 </div>
                 <div class="bg-sky-50 p-3 rounded-lg border border-sky-200">
-                    <div class="text-sm text-sky-600">💳 بطاقة</div>
+                    <div class="text-sm text-sky-600"> بطاقة</div>
                     <div class="text-xl font-bold text-sky-800" id="totalCard">-</div>
                 </div>
             </div>
 
             <!-- مؤشرات مالية مرتبطة بالمخزون والمشتريات -->
             <div class="border-t border-gray-200 pt-4">
-                <h3 class="font-bold text-gray-700 mb-3">📦 الربحية والمخزون والمشتريات</h3>
+                <h3 class="font-bold text-gray-700 mb-3"> الربحية والمخزون والمشتريات</h3>
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <div class="bg-purple-50 p-3 rounded-lg border border-purple-200"><div class="text-xs text-purple-600">تكلفة البضاعة المباعة</div><div id="costOfGoodsSold" class="text-lg font-bold text-purple-800">-</div></div>
                     <div class="bg-teal-50 p-3 rounded-lg border border-teal-200"><div class="text-xs text-teal-600">الربح الإجمالي</div><div id="grossProfit" class="text-lg font-bold text-teal-800">-</div></div>
@@ -146,15 +146,15 @@
 
             <!-- إحصائيات -->
             <div class="bg-gray-50 p-4 rounded-lg">
-                <div class="text-sm text-gray-600 mb-2">🧾 عدد الطلبات: <span id="totalOrders" class="font-bold">-</span></div>
-                <div class="text-sm text-gray-600 mb-2">🛍️ سفري: <span id="typeTakeaway" class="font-bold">-</span></div>
-                <div class="text-sm text-gray-600 mb-2">🪑 صالة: <span id="typeDinein" class="font-bold">-</span></div>
-                <div class="text-sm text-gray-600">🛵 ديليفري: <span id="typeDelivery" class="font-bold">-</span></div>
+                <div class="text-sm text-gray-600 mb-2"> عدد الطلبات: <span id="totalOrders" class="font-bold">-</span></div>
+                <div class="text-sm text-gray-600 mb-2"> سفري: <span id="typeTakeaway" class="font-bold">-</span></div>
+                <div class="text-sm text-gray-600 mb-2"> صالة: <span id="typeDinein" class="font-bold">-</span></div>
+                <div class="text-sm text-gray-600"> ديليفري: <span id="typeDelivery" class="font-bold">-</span></div>
             </div>
 
             <div class="border-t border-gray-200 pt-4">
                 <div class="flex items-center justify-between gap-3 mb-2">
-                    <h3 class="font-bold text-gray-700">👥 أداء المبيعات حسب الكاشير</h3>
+                    <h3 class="font-bold text-gray-700"> أداء المبيعات حسب الكاشير</h3>
                     <span id="cashbookPeriodSummary" class="text-xs text-gray-500"></span>
                 </div>
                 <div class="overflow-x-auto border rounded-lg">
@@ -167,13 +167,13 @@
 
             <!-- المنتجات المباعة -->
             <div>
-                <h3 class="font-bold text-gray-700 mb-2">🥇 المنتجات المباعة</h3>
+                <h3 class="font-bold text-gray-700 mb-2"> المنتجات المباعة</h3>
                 <div id="productSales" class="space-y-2 max-h-64 overflow-y-auto"></div>
             </div>
 
             <!-- تفاصيل الفواتير -->
             <div>
-                <h3 class="font-bold text-gray-700 mb-2">🧾 تفاصيل فواتير المبيعات</h3>
+                <h3 class="font-bold text-gray-700 mb-2"> تفاصيل فواتير المبيعات</h3>
                 <div class="overflow-x-auto border rounded-lg">
                     <table class="w-full text-sm text-right">
                         <thead class="bg-gray-100"><tr><th class="p-2">الفاتورة</th><th class="p-2">التاريخ</th><th class="p-2">الأصناف</th><th class="p-2">الدفع</th><th class="p-2">حالة الطباعة</th><th class="p-2">الخصم</th><th class="p-2">الإجمالي</th></tr></thead>
@@ -184,10 +184,10 @@
 
             <!-- زر طباعة -->
             <div class="no-print flex gap-2">
-                <button onclick="printReport()" class="flex-1 min-h-[56px] bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">🖨️ طباعة / PDF</button>
-                <button id="exportExcelBottom" onclick="openExcelPreview()" class="flex-1 min-h-[56px] bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition">👁️ معاينة ثم تصدير Excel</button>
-                <button onclick="exportSelectedExcel()" class="flex-1 min-h-[56px] bg-emerald-700 text-white font-bold py-3 rounded-lg hover:bg-emerald-800 transition">⬇️ Excel حسب التاريخ</button>
-                <button onclick="exportSelectedPdf()" class="flex-1 min-h-[56px] bg-slate-700 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition">⬇️ PDF حسب التاريخ</button>
+                <button onclick="printReport()" class="flex-1 min-h-[56px] bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition"> طباعة / PDF</button>
+                <button id="exportExcelBottom" onclick="openExcelPreview()" class="flex-1 min-h-[56px] bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition"> معاينة ثم تصدير Excel</button>
+                <button onclick="exportSelectedExcel()" class="flex-1 min-h-[56px] bg-emerald-700 text-white font-bold py-3 rounded-lg hover:bg-emerald-800 transition">⬇ Excel حسب التاريخ</button>
+                <button onclick="exportSelectedPdf()" class="flex-1 min-h-[56px] bg-slate-700 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition">⬇ PDF حسب التاريخ</button>
             </div>
         </div>
 
@@ -195,9 +195,9 @@
         <div id="toast" class="hidden fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg text-center z-50"></div>
         <div id="excelPreviewModal" class="hidden fixed inset-0 z-50 bg-slate-950/50 p-4 items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="excelPreviewTitle">
             <div class="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-2xl bg-white shadow-2xl p-5">
-                <div class="flex items-start justify-between gap-4 border-b border-slate-200 pb-4"><div><h2 id="excelPreviewTitle" class="text-lg font-black text-slate-800">معاينة نتائج Excel</h2><p id="excelPreviewMeta" class="mt-1 text-xs text-slate-500">جارِ تحضير المعاينة…</p></div><button onclick="closeExcelPreview()" class="rounded-lg px-3 py-2 text-slate-500 hover:bg-slate-100" aria-label="إغلاق">✕</button></div>
+                <div class="flex items-start justify-between gap-4 border-b border-slate-200 pb-4"><div><h2 id="excelPreviewTitle" class="text-lg font-black text-slate-800">معاينة نتائج Excel</h2><p id="excelPreviewMeta" class="mt-1 text-xs text-slate-500">جارِ تحضير المعاينة…</p></div><button onclick="closeExcelPreview()" class="rounded-lg px-3 py-2 text-slate-500 hover:bg-slate-100" aria-label="إغلاق">حذف</button></div>
                 <div id="excelPreviewBody" class="py-4"><p class="text-center text-slate-500">جارِ تحميل البيانات…</p></div>
-                <div class="border-t border-slate-200 pt-4"><div class="mb-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]"><input id="printLogPrinterFilter" type="search" class="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-200" placeholder="ابحث باسم الطابعة في سجل الطباعة"><select id="printLogDocumentType" class="rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">كل المستندات</option><option value="receipt">إيصال العميل</option><option value="kitchen">تذكرة المطبخ</option></select><select id="printLogPrinterSort" class="rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="timestamp_desc">الأحدث أولاً</option><option value="printer_asc">الطابعة: أ إلى ي</option><option value="printer_desc">الطابعة: ي إلى أ</option></select></div><div class="flex flex-wrap gap-2"><button onclick="exportExcel()" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700">📊 تصدير هذه النتائج إلى Excel</button><button id="exportPrintLog" onclick="exportPrintLog()" class="rounded-xl bg-slate-800 px-4 py-3 font-bold text-white hover:bg-slate-900">🖨️ تصدير سجل الطباعة</button><button onclick="closeExcelPreview()" class="rounded-xl bg-slate-100 px-4 py-3 font-bold text-slate-700 hover:bg-slate-200">رجوع</button></div></div>
+                <div class="border-t border-slate-200 pt-4"><div class="mb-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]"><input id="printLogPrinterFilter" type="search" class="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-200" placeholder="ابحث باسم الطابعة في سجل الطباعة"><select id="printLogDocumentType" class="rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">كل المستندات</option><option value="receipt">إيصال العميل</option><option value="kitchen">تذكرة المطبخ</option></select><select id="printLogPrinterSort" class="rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="timestamp_desc">الأحدث أولاً</option><option value="printer_asc">الطابعة: أ إلى ي</option><option value="printer_desc">الطابعة: ي إلى أ</option></select></div><div class="flex flex-wrap gap-2"><button onclick="exportExcel()" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700"> تصدير هذه النتائج إلى Excel</button><button id="exportPrintLog" onclick="exportPrintLog()" class="rounded-xl bg-slate-800 px-4 py-3 font-bold text-white hover:bg-slate-900"> تصدير سجل الطباعة</button><button onclick="closeExcelPreview()" class="rounded-xl bg-slate-100 px-4 py-3 font-bold text-slate-700 hover:bg-slate-200">رجوع</button></div></div>
             </div>
         </div>
     </div>
@@ -227,7 +227,7 @@
                 const r = await fetch('/api/analytics/categories');
                 const cats = await r.json();
                 const sel = document.getElementById('catSelect');
-                cats.forEach(c => { sel.innerHTML += `<option value="${c}">📂 ${c}</option>`; });
+                cats.forEach(c => { sel.innerHTML += `<option value="${c}"> ${c}</option>`; });
             } catch(e) {}
             // تاريخ اليوم
             const today = new Date().toISOString().split('T')[0];
@@ -261,7 +261,7 @@
         async function onCatChange() {
             const cat = document.getElementById('catSelect').value;
             const sel = document.getElementById('prodSelect');
-            sel.innerHTML = '<option value="">📝 كل المنتجات</option>';
+            sel.innerHTML = '<option value=""> كل المنتجات</option>';
             if (!cat) return;
             try {
                 const r = await fetch('/api/analytics/products?category=' + encodeURIComponent(cat));
@@ -294,7 +294,7 @@
             const from = document.getElementById('dateFrom').value;
             const to = document.getElementById('dateTo').value;
             if (from && to && from > to) {
-                showToast('⚠️ تاريخ البداية يجب أن يسبق تاريخ النهاية');
+                showToast(' تاريخ البداية يجب أن يسبق تاريخ النهاية');
                 return false;
             }
 
@@ -307,7 +307,7 @@
                 await loadFinancialCashierReport(params);
                 return true;
             } catch(e) {
-                showToast('❌ ' + (e.message || 'خطأ في التحميل'));
+                showToast(' ' + (e.message || 'خطأ في التحميل'));
                 return false;
             }
         }
@@ -366,7 +366,7 @@
             document.getElementById('inventoryValue').textContent = formatPrice(data.inventory_value || 0);
             document.getElementById('supplierDue').textContent = formatPrice(data.supplier_due || 0);
             const uncosted = document.getElementById('uncostedProducts');
-            if (data.uncosted_products && data.uncosted_products.length) { uncosted.textContent = '⚠️ لم تُحسب تكلفة هذه المنتجات لعدم وجود وصفة أو سعر شراء: ' + data.uncosted_products.join('، '); uncosted.classList.remove('hidden'); } else { uncosted.classList.add('hidden'); }
+            if (data.uncosted_products && data.uncosted_products.length) { uncosted.textContent = ' لم تُحسب تكلفة هذه المنتجات لعدم وجود وصفة أو سعر شراء: ' + data.uncosted_products.join('، '); uncosted.classList.remove('hidden'); } else { uncosted.classList.add('hidden'); }
 
             const periodLabels = { daily: 'يومي', monthly: 'شهري', yearly: 'سنوي', custom: 'تفصيلي', all: 'كل الفواتير' };
             const selectedFrom = document.getElementById('dateFrom').value;
@@ -466,12 +466,12 @@
         async function applySelectedDateRange() {
             const from = document.getElementById('dateFrom').value;
             const to = document.getElementById('dateTo').value;
-            if (!from || !to) return showToast('⚠️ اختر تاريخ البداية والنهاية أولًا');
-            if (from > to) return showToast('⚠️ تاريخ البداية يجب أن يسبق تاريخ النهاية');
+            if (!from || !to) return showToast(' اختر تاريخ البداية والنهاية أولًا');
+            if (from > to) return showToast(' تاريخ البداية يجب أن يسبق تاريخ النهاية');
             document.getElementById('periodSelect').value = 'custom';
             onPeriodChange();
             await loadReport();
-            showToast('✅ تم تحميل التقرير للفترة المحددة');
+            showToast(' تم تحميل التقرير للفترة المحددة');
         }
 
         async function clearSelectedDateRange() {
@@ -489,7 +489,7 @@
             document.getElementById('dateTo').value = today;
             onPeriodChange();
             await loadReport();
-            showToast('✅ تم تحميل تقرير مبيعات اليوم');
+            showToast(' تم تحميل تقرير مبيعات اليوم');
         }
 
         async function ensureSelectedReport() {
@@ -512,7 +512,7 @@
                 const response = await fetch('/api/analytics/financial.pdf?' + reportParams().toString());
                 if (!response.ok) {
                     if (response.status === 503) {
-                        showToast('ℹ️ مولّد PDF غير مضمّن؛ افتح الطباعة واحفظ التقرير المحدد كـPDF');
+                        showToast('ℹ مولّد PDF غير مضمّن؛ افتح الطباعة واحفظ التقرير المحدد كـPDF');
                         printReport();
                         return;
                     }
@@ -528,18 +528,18 @@
                 const to = document.getElementById('dateTo').value || today;
                 link.download = `cashier_report_${cashier}_${from}_${to}.pdf`;
                 document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
-                showToast('✅ تم تنزيل تقرير اليوم بصيغة PDF');
+                showToast(' تم تنزيل تقرير اليوم بصيغة PDF');
             } catch (error) {
-                showToast('❌ ' + (error.message || 'تعذر تصدير PDF'));
+                showToast(' ' + (error.message || 'تعذر تصدير PDF'));
             } finally {
-                if (button) { button.disabled = false; button.textContent = previousLabel || '⬇️ PDF يومي'; button.classList.remove('opacity-70', 'cursor-wait'); }
+                if (button) { button.disabled = false; button.textContent = previousLabel || '⬇ PDF يومي'; button.classList.remove('opacity-70', 'cursor-wait'); }
             }
         }
 
         function printReport() {
             const results = document.getElementById('results');
             if (results.classList.contains('hidden')) {
-                showToast('⚠️ اعرض التقرير أولاً');
+                showToast(' اعرض التقرير أولاً');
                 return;
             }
             window.print();
@@ -560,7 +560,7 @@
         }
 
         function exportCSV() {
-            if (!lastReportData) return showToast('⚠️ اعرض التقرير أولاً');
+            if (!lastReportData) return showToast(' اعرض التقرير أولاً');
             const d = lastReportData;
             const rows = [
                 ['تقرير مبيعات - كاشير القيصر'],
@@ -589,11 +589,11 @@
                 o.id, o.date, (o.items || []).map(i => `${i.name} × ${i.quantity}`).join('، '), o.payment, o.discount || 0, o.total || 0
             ]));
             downloadCSV('تقرير_' + (d.period || 'report') + '_' + new Date().toISOString().slice(0,10) + '.csv', rows);
-            showToast('✅ تم تصدير الملف');
+            showToast(' تم تصدير الملف');
         }
 
         async function openExcelPreview() {
-            if (!lastReportData) return showToast('⚠️ اعرض التقرير أولاً');
+            if (!lastReportData) return showToast(' اعرض التقرير أولاً');
             const modal = document.getElementById('excelPreviewModal');
             const body = document.getElementById('excelPreviewBody');
             modal.classList.remove('hidden'); modal.classList.add('flex');
@@ -625,7 +625,7 @@
                 const topItemsHtml = topItems.length ? topItems.map((item, index) => `<li class="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-xs"><span><b class="ml-1 text-emerald-700">${index + 1}.</b>${escapeHtml(item.name)}</span><span>${item.quantity} قطعة · <b>${formatPrice(item.total)}</b></span></li>`).join('') : '<li class="text-xs text-slate-500">لا توجد أصناف ضمن هذه النتائج.</li>';
                 previewOrders = data.orders || [];
                 previewPaymentFilter = 'all'; previewAmountSort = 'desc'; previewDocumentFilter = 'all'; previewPrintStatusFilter = 'all';
-                body.innerHTML = `<div class="grid grid-cols-2 gap-3 md:grid-cols-4"><div class="rounded-xl bg-emerald-50 p-3"><div class="text-xs text-emerald-700">إجمالي الإيرادات</div><div class="mt-1 font-black text-emerald-800">${formatPrice(summary.sales || 0)}</div></div><div class="rounded-xl bg-sky-50 p-3"><div class="text-xs text-sky-700">الفواتير</div><div class="mt-1 font-black text-sky-800">${summary.orders || 0}</div></div><div class="rounded-xl bg-amber-50 p-3"><div class="text-xs text-amber-700">نقد داخل</div><div class="mt-1 font-black text-amber-800">${formatPrice(summary.cash_in || 0)}</div></div><div class="rounded-xl bg-violet-50 p-3"><div class="text-xs text-violet-700">بطاقات</div><div class="mt-1 font-black text-violet-800">${formatPrice(summary.card_in || 0)}</div></div></div><div class="mt-5 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4"><div class="flex items-center justify-between gap-3"><h3 class="font-black text-emerald-900">🥇 أكثر العناصر مبيعًا</h3><span class="text-xs text-emerald-700">ضمن النتائج المحددة</span></div><ol class="mt-3 grid gap-2 md:grid-cols-3">${topItemsHtml}</ol></div><h3 class="mt-5 font-black text-slate-800">أداء الكاشير ضمن التصدير</h3><div class="mt-2 overflow-x-auto rounded-xl border"><table class="w-full text-right text-sm"><thead class="bg-slate-100"><tr><th class="p-2">الكاشير</th><th class="p-2">الفواتير</th><th class="p-2">المبيعات</th><th class="p-2">نقد</th><th class="p-2">بطاقة</th></tr></thead><tbody>${rows}</tbody></table></div><div class="mt-5 flex flex-wrap items-center justify-between gap-3"><h3 class="font-black text-slate-800">ابحث داخل الفواتير</h3><span id="excelPreviewSearchCount" class="text-xs text-slate-500"></span></div><div class="relative mt-2"><input id="excelPreviewSearch" oninput="filterPreviewInvoices(this.value)" type="search" class="w-full rounded-xl border border-slate-300 py-3 pr-10 pl-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" placeholder="رقم الطلب، الكاشير، الصنف، الدفع أو المبلغ"><span class="absolute right-3 top-3 text-slate-400">⌕</span></div><div class="mt-3 flex flex-wrap gap-2"><span class="self-center text-xs font-bold text-slate-600">الدفع:</span><button type="button" data-preview-payment="all" onclick="setPreviewPaymentFilter('all')" class="rounded-lg border px-3 py-2 text-xs font-bold">الكل</button><button type="button" data-preview-payment="cash" onclick="setPreviewPaymentFilter('cash')" class="rounded-lg border px-3 py-2 text-xs font-bold">نقدي فقط</button><button type="button" data-preview-payment="card" onclick="setPreviewPaymentFilter('card')" class="rounded-lg border px-3 py-2 text-xs font-bold">بطاقة فقط</button><button type="button" data-preview-payment="mixed" onclick="setPreviewPaymentFilter('mixed')" class="rounded-lg border px-3 py-2 text-xs font-bold">مختلط فقط</button><span class="mx-1 hidden h-7 border-r border-slate-200 sm:block"></span><span class="self-center text-xs font-bold text-slate-600">المبلغ:</span><button type="button" id="previewSortAsc" onclick="setPreviewAmountSort('asc')" class="rounded-lg border px-3 py-2 text-xs font-bold">الأقل أولًا ↑</button><button type="button" id="previewSortDesc" onclick="setPreviewAmountSort('desc')" class="rounded-lg border px-3 py-2 text-xs font-bold">الأعلى أولًا ↓</button></div><ul id="excelPreviewInvoices" class="mt-2 rounded-xl border border-slate-200 px-3"></ul>`;
+                body.innerHTML = `<div class="grid grid-cols-2 gap-3 md:grid-cols-4"><div class="rounded-xl bg-emerald-50 p-3"><div class="text-xs text-emerald-700">إجمالي الإيرادات</div><div class="mt-1 font-black text-emerald-800">${formatPrice(summary.sales || 0)}</div></div><div class="rounded-xl bg-sky-50 p-3"><div class="text-xs text-sky-700">الفواتير</div><div class="mt-1 font-black text-sky-800">${summary.orders || 0}</div></div><div class="rounded-xl bg-amber-50 p-3"><div class="text-xs text-amber-700">نقد داخل</div><div class="mt-1 font-black text-amber-800">${formatPrice(summary.cash_in || 0)}</div></div><div class="rounded-xl bg-violet-50 p-3"><div class="text-xs text-violet-700">بطاقات</div><div class="mt-1 font-black text-violet-800">${formatPrice(summary.card_in || 0)}</div></div></div><div class="mt-5 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4"><div class="flex items-center justify-between gap-3"><h3 class="font-black text-emerald-900"> أكثر العناصر مبيعًا</h3><span class="text-xs text-emerald-700">ضمن النتائج المحددة</span></div><ol class="mt-3 grid gap-2 md:grid-cols-3">${topItemsHtml}</ol></div><h3 class="mt-5 font-black text-slate-800">أداء الكاشير ضمن التصدير</h3><div class="mt-2 overflow-x-auto rounded-xl border"><table class="w-full text-right text-sm"><thead class="bg-slate-100"><tr><th class="p-2">الكاشير</th><th class="p-2">الفواتير</th><th class="p-2">المبيعات</th><th class="p-2">نقد</th><th class="p-2">بطاقة</th></tr></thead><tbody>${rows}</tbody></table></div><div class="mt-5 flex flex-wrap items-center justify-between gap-3"><h3 class="font-black text-slate-800">ابحث داخل الفواتير</h3><span id="excelPreviewSearchCount" class="text-xs text-slate-500"></span></div><div class="relative mt-2"><input id="excelPreviewSearch" oninput="filterPreviewInvoices(this.value)" type="search" class="w-full rounded-xl border border-slate-300 py-3 pr-10 pl-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" placeholder="رقم الطلب، الكاشير، الصنف، الدفع أو المبلغ"><span class="absolute right-3 top-3 text-slate-400">⌕</span></div><div class="mt-3 flex flex-wrap gap-2"><span class="self-center text-xs font-bold text-slate-600">الدفع:</span><button type="button" data-preview-payment="all" onclick="setPreviewPaymentFilter('all')" class="rounded-lg border px-3 py-2 text-xs font-bold">الكل</button><button type="button" data-preview-payment="cash" onclick="setPreviewPaymentFilter('cash')" class="rounded-lg border px-3 py-2 text-xs font-bold">نقدي فقط</button><button type="button" data-preview-payment="card" onclick="setPreviewPaymentFilter('card')" class="rounded-lg border px-3 py-2 text-xs font-bold">بطاقة فقط</button><button type="button" data-preview-payment="mixed" onclick="setPreviewPaymentFilter('mixed')" class="rounded-lg border px-3 py-2 text-xs font-bold">مختلط فقط</button><span class="mx-1 hidden h-7 border-r border-slate-200 sm:block"></span><span class="self-center text-xs font-bold text-slate-600">المبلغ:</span><button type="button" id="previewSortAsc" onclick="setPreviewAmountSort('asc')" class="rounded-lg border px-3 py-2 text-xs font-bold">الأقل أولًا ↑</button><button type="button" id="previewSortDesc" onclick="setPreviewAmountSort('desc')" class="rounded-lg border px-3 py-2 text-xs font-bold">الأعلى أولًا ↓</button></div><ul id="excelPreviewInvoices" class="mt-2 rounded-xl border border-slate-200 px-3"></ul>`;
                 document.getElementById('excelPreviewInvoices').insertAdjacentHTML('beforebegin', `<div class="mt-3 flex flex-wrap gap-2"><span class="self-center text-xs font-bold text-slate-600">المستند:</span><button type="button" data-preview-document="all" onclick="setPreviewDocumentFilter('all')" class="rounded-lg border px-3 py-2 text-xs font-bold">الكل</button><button type="button" data-preview-document="receipt" onclick="setPreviewDocumentFilter('receipt')" class="rounded-lg border px-3 py-2 text-xs font-bold">إيصال العميل</button><button type="button" data-preview-document="kitchen" onclick="setPreviewDocumentFilter('kitchen')" class="rounded-lg border px-3 py-2 text-xs font-bold">تذكرة المطبخ</button><span class="mx-1 hidden h-7 border-r border-slate-200 sm:block"></span><span class="self-center text-xs font-bold text-slate-600">حالة الطباعة:</span><button type="button" data-preview-status="all" onclick="setPreviewPrintStatusFilter('all')" class="rounded-lg border px-3 py-2 text-xs font-bold">الكل</button><button type="button" data-preview-status="sent" onclick="setPreviewPrintStatusFilter('sent')" class="rounded-lg border px-3 py-2 text-xs font-bold">ناجح</button><button type="button" data-preview-status="failed" onclick="setPreviewPrintStatusFilter('failed')" class="rounded-lg border px-3 py-2 text-xs font-bold">فاشل</button><button type="button" data-preview-status="skipped" onclick="setPreviewPrintStatusFilter('skipped')" class="rounded-lg border px-3 py-2 text-xs font-bold">لم يُنفذ</button><button type="button" data-preview-status="disabled" onclick="setPreviewPrintStatusFilter('disabled')" class="rounded-lg border px-3 py-2 text-xs font-bold">غير مفعّل</button></div>`);
                 updatePreviewControlStyles();
                 filterPreviewInvoices('');
@@ -712,9 +712,9 @@
         }
 
         function previewPrintStatusBadges(order) {
-            const labels = { sent: ['✓', 'تم الإرسال', 'bg-emerald-100 text-emerald-800 border-emerald-200'], failed: ['!', 'فشل الإرسال', 'bg-rose-100 text-rose-800 border-rose-200'], skipped: ['•', 'لم يُنفذ', 'bg-amber-100 text-amber-800 border-amber-200'], disabled: ['–', 'غير مفعّل', 'bg-slate-100 text-slate-600 border-slate-200'] };
+            const labels = { sent: ['', 'تم الإرسال', 'bg-emerald-100 text-emerald-800 border-emerald-200'], failed: ['!', 'فشل الإرسال', 'bg-rose-100 text-rose-800 border-rose-200'], skipped: ['•', 'لم يُنفذ', 'bg-amber-100 text-amber-800 border-amber-200'], disabled: ['–', 'غير مفعّل', 'bg-slate-100 text-slate-600 border-slate-200'] };
             const saved = order.print_status || {};
-            if (typeof saved === 'string') return `<span class="rounded-full border bg-slate-100 border-slate-200 px-2 py-1 text-[11px] text-slate-600">🖨️ ${escapeHtml(saved)}</span>`;
+            if (typeof saved === 'string') return `<span class="rounded-full border bg-slate-100 border-slate-200 px-2 py-1 text-[11px] text-slate-600"> ${escapeHtml(saved)}</span>`;
             return ['receipt', 'kitchen'].map(key => {
                 const meta = labels[saved[key]?.status] || ['?', 'غير مسجل', 'bg-slate-100 text-slate-600 border-slate-200'];
                 const title = key === 'receipt' ? 'الإيصال' : 'المطبخ';
@@ -732,13 +732,13 @@
                 if (!data.ok) throw new Error(data.print?.message || data.error || 'تعذرت إعادة المحاولة');
                 const order = previewOrders.find(row => String(row.id) === String(orderId));
                 if (order) { order.print_status = order.print_status || {}; order.print_status[ticketType] = data.print; }
-                showToast('✅ تمت إعادة إرسال ' + label + ' للطابعة');
+                showToast(' تمت إعادة إرسال ' + label + ' للطابعة');
                 filterPreviewInvoices(document.getElementById('excelPreviewSearch')?.value || '');
-            } catch (error) { showToast('⚠️ ' + (error.message || 'تعذرت إعادة المحاولة')); }
+            } catch (error) { showToast(' ' + (error.message || 'تعذرت إعادة المحاولة')); }
         }
 
         async function exportExcel() {
-            if (!lastReportData) return showToast('⚠️ اعرض التقرير أولاً');
+            if (!lastReportData) return showToast(' اعرض التقرير أولاً');
             const buttons = [document.getElementById('exportExcelTop'), document.getElementById('exportExcelBottom')].filter(Boolean);
             buttons.forEach(button => { button.disabled = true; button.dataset.label = button.textContent; button.textContent = '⏳ جارِ تجهيز Excel…'; button.classList.add('opacity-70', 'cursor-wait'); });
             try {
@@ -756,11 +756,11 @@
                 link.href = url;
                 link.download = `cashier_report_${cashier}_${from}_${to}.xlsx`;
                 document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
-                showToast('✅ تم تصدير نتائج الفترة والكاشير المحددين إلى Excel');
+                showToast(' تم تصدير نتائج الفترة والكاشير المحددين إلى Excel');
             } catch (error) {
-                showToast('❌ ' + (error.message || 'تعذر تصدير Excel'));
+                showToast(' ' + (error.message || 'تعذر تصدير Excel'));
             } finally {
-                buttons.forEach(button => { button.disabled = false; button.textContent = button.dataset.label || '📊 Excel'; button.classList.remove('opacity-70', 'cursor-wait'); });
+                buttons.forEach(button => { button.disabled = false; button.textContent = button.dataset.label || ' Excel'; button.classList.remove('opacity-70', 'cursor-wait'); });
             }
         }
 
@@ -789,9 +789,9 @@
                 const url = URL.createObjectURL(await response.blob());
                 link.href = url; link.download = `print_log_${from || 'start'}_${to || 'today'}.xlsx`;
                 document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
-                showToast('✅ تم تصدير سجل حالات الطباعة');
+                showToast(' تم تصدير سجل حالات الطباعة');
             } catch (error) {
-                showToast('❌ ' + (error.message || 'تعذر تصدير سجل الطباعة'));
+                showToast(' ' + (error.message || 'تعذر تصدير سجل الطباعة'));
             } finally {
                 button.disabled = false; button.textContent = previousLabel; button.classList.remove('opacity-70', 'cursor-wait');
             }

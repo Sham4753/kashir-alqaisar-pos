@@ -25,22 +25,22 @@
 
         <!-- Header -->
         <div class="flex items-center justify-between mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">🧑‍💼 الموظفين</h1>
-            <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩️ رجوع</a>
+            <h1 class="text-2xl font-bold text-gray-800"> الموظفين</h1>
+            <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩ رجوع</a>
         </div>
 
         <!-- إضافة موظف جديد -->
         <div class="bg-white rounded-xl shadow-md p-6 space-y-5 mb-6">
-            <h2 class="text-lg font-bold text-gray-700">➕ إضافة موظف جديد</h2>
+            <h2 class="text-lg font-bold text-gray-700"> إضافة موظف جديد</h2>
             <input type="text" id="newName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="اسم الموظف">
             <input type="number" id="newSalary" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="الراتب الشهري">
             <input type="number" id="newAdvance" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="سلفة (تخصم من الكاشير فوراً)">
-            <button onclick="addEmployee()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition">➕ إضافة (السلفة تخصم فوراً من الكاشير)</button>
+            <button onclick="addEmployee()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition"> إضافة (السلفة تخصم فوراً من الكاشير)</button>
         </div>
 
         <!-- تعديل وحذف موظف -->
         <div class="bg-white rounded-xl shadow-md p-6 space-y-5 mb-6">
-            <h2 class="text-lg font-bold text-gray-700">✏️ تعديل موظف</h2>
+            <h2 class="text-lg font-bold text-gray-700"> تعديل موظف</h2>
             <select id="editSelect" onchange="onEditSelect()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500 outline-none">
                 <option value="">▼ اختر الموظف...</option>
             </select>
@@ -49,17 +49,17 @@
                 <input type="number" id="editSalary" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500 outline-none" placeholder="الراتب الشهري">
                 <input type="number" id="editAdvance" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500 outline-none" placeholder="السلفة">
                 <div class="flex gap-2">
-                    <button onclick="updateEmployee()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">💾 حفظ</button>
-                    <button onclick="deleteEmployee()" class="flex-1 bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition">✕ حذف (ترجع السلفة للكاشير)</button>
+                    <button onclick="updateEmployee()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition"> حفظ</button>
+                    <button onclick="deleteEmployee()" class="flex-1 bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition">حذف حذف (ترجع السلفة للكاشير)</button>
                 </div>
-                <button onclick="paySalary()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition">💰 دفع الراتب الآن (يخصم من الكاشير)</button>
+                <button onclick="paySalary()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition"> دفع الراتب الآن (يخصم من الكاشير)</button>
             </div>
         </div>
 
         <!-- قائمة الموظفين -->
         <div class="bg-white rounded-xl shadow-md p-6 space-y-5">
-            <h2 class="text-lg font-bold text-gray-700">📋 قائمة الموظفين</h2>
-            <input type="text" id="searchBox" oninput="renderEmployees()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="🔍 بحث بالاسم أو الراتب...">
+            <h2 class="text-lg font-bold text-gray-700"> قائمة الموظفين</h2>
+            <input type="text" id="searchBox" oninput="renderEmployees()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder=" بحث بالاسم أو الراتب...">
             <div id="employeesList" class="space-y-2"></div>
             <div class="border-t border-gray-200 pt-3 space-y-1">
                 <div id="totalSalaries" class="text-center font-bold text-gray-700"></div>
@@ -135,9 +135,9 @@
                 }).join('');
             }
             document.getElementById('totalSalaries').textContent =
-                filtered.length > 0 ? `💰 إجمالي الرواتب: ${formatPrice(totalSalary)}` : '';
+                filtered.length > 0 ? ` إجمالي الرواتب: ${formatPrice(totalSalary)}` : '';
             document.getElementById('totalAdvances').textContent =
-                filtered.length > 0 ? `💸 إجمالي السلف: ${formatPrice(totalAdvance)}` : '';
+                filtered.length > 0 ? ` إجمالي السلف: ${formatPrice(totalAdvance)}` : '';
         }
 
         // ===== إضافة =====
@@ -145,7 +145,7 @@
             const name = document.getElementById('newName').value.trim();
             const salary = parseInt(document.getElementById('newSalary').value) || 0;
             const advance = parseInt(document.getElementById('newAdvance').value) || 0;
-            if (!name || !salary) return showToast('⚠️ املأ الاسم والراتب على الأقل');
+            if (!name || !salary) return showToast(' املأ الاسم والراتب على الأقل');
 
             const res = await fetch('/api/employees', {
                 method: 'POST',
@@ -158,9 +158,9 @@
                 document.getElementById('newSalary').value = '';
                 document.getElementById('newAdvance').value = '';
                 await loadEmployees();
-                showToast(advance > 0 ? '✅ تم الإضافة وخصم السلفة من الكاشير' : '✅ تم الإضافة');
+                showToast(advance > 0 ? ' تم الإضافة وخصم السلفة من الكاشير' : ' تم الإضافة');
             } else {
-                showToast('❌ فشل الإضافة');
+                showToast(' فشل الإضافة');
             }
         }
 
@@ -186,7 +186,7 @@
             const name = document.getElementById('editName').value.trim();
             const salary = parseInt(document.getElementById('editSalary').value) || 0;
             const advance = parseInt(document.getElementById('editAdvance').value) || 0;
-            if (!name || !salary) return showToast('⚠️ املأ الاسم والراتب');
+            if (!name || !salary) return showToast(' املأ الاسم والراتب');
 
             const res = await fetch('/api/employees/' + currentEditId, {
                 method: 'PUT',
@@ -199,9 +199,9 @@
                 document.getElementById('editSelect').value = '';
                 document.getElementById('editFields').classList.add('hidden');
                 currentEditId = null;
-                showToast('✅ تم التحديث');
+                showToast(' تم التحديث');
             } else {
-                showToast('❌ فشل التحديث');
+                showToast(' فشل التحديث');
             }
         }
 
@@ -216,9 +216,9 @@
                 document.getElementById('editSelect').value = '';
                 document.getElementById('editFields').classList.add('hidden');
                 currentEditId = null;
-                showToast('✅ تم الحذف ورجعت السلفة للكاشير');
+                showToast(' تم الحذف ورجعت السلفة للكاشير');
             } else {
-                showToast('❌ فشل الحذف');
+                showToast(' فشل الحذف');
             }
         }
 
@@ -235,9 +235,9 @@
             });
             const data = await res.json();
             if (data.ok) {
-                showToast('✅ تم تسجيل دفع الراتب وخصمه من الكاشير');
+                showToast(' تم تسجيل دفع الراتب وخصمه من الكاشير');
             } else {
-                showToast('❌ فشل تسجيل دفع الراتب');
+                showToast(' فشل تسجيل دفع الراتب');
             }
         }
 

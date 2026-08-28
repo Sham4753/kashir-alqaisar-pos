@@ -25,22 +25,22 @@
 
         <!-- Header -->
         <div class="flex items-center justify-between mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">💳 الديون</h1>
-            <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩️ رجوع</a>
+            <h1 class="text-2xl font-bold text-gray-800"> الديون</h1>
+            <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩ رجوع</a>
         </div>
 
         <!-- إضافة دين جديد -->
         <div class="bg-white rounded-xl shadow-md p-6 space-y-5 mb-6">
-            <h2 class="text-lg font-bold text-gray-700">➕ إضافة دين جديد</h2>
+            <h2 class="text-lg font-bold text-gray-700"> إضافة دين جديد</h2>
             <input type="text" id="newName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="اسم المدين">
             <input type="number" id="newAmount" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="المبلغ">
             <input type="text" id="newNote" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="ملاحظات (اختياري)">
-            <button onclick="addDebt()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition">➕ إضافة</button>
+            <button onclick="addDebt()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition"> إضافة</button>
         </div>
 
         <!-- تعديل ودفع دين -->
         <div class="bg-white rounded-xl shadow-md p-6 space-y-5 mb-6">
-            <h2 class="text-lg font-bold text-gray-700">✏️ تعديل / دفع دين</h2>
+            <h2 class="text-lg font-bold text-gray-700"> تعديل / دفع دين</h2>
             <select id="editSelect" onchange="onEditSelect()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500 outline-none">
                 <option value="">▼ اختر الدين...</option>
             </select>
@@ -52,15 +52,15 @@
                     <div class="text-sm text-gray-600">المدفوع: <span id="paidAmount" class="font-bold text-green-600">-</span></div>
                     <div class="text-sm text-gray-600">المتبقي: <span id="remainingAmount" class="font-bold text-red-600">-</span></div>
                 </div>
-                <input type="number" id="payAmount" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="💰 مبلغ الدفع">
+                <input type="number" id="payAmount" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder=" مبلغ الدفع">
                 <select id="payMethod" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="نقدي">💵 نقدي</option>
-                    <option value="بطاقة">💳 بطاقة</option>
+                    <option value="نقدي"> نقدي</option>
+                    <option value="بطاقة"> بطاقة</option>
                 </select>
                 <div class="flex gap-2">
-                    <button onclick="payDebt()" class="flex-1 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition">💰 دفع</button>
-                    <button onclick="updateDebt()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">💾 حفظ</button>
-                    <button onclick="deleteDebt()" class="flex-1 bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition">✕ حذف</button>
+                    <button onclick="payDebt()" class="flex-1 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition"> دفع</button>
+                    <button onclick="updateDebt()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition"> حفظ</button>
+                    <button onclick="deleteDebt()" class="flex-1 bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition">حذف حذف</button>
                 </div>
             </div>
         </div>
@@ -68,7 +68,7 @@
         <!-- قائمة الديون -->
         <div class="bg-white rounded-xl shadow-md p-6 space-y-5">
             <div class="flex gap-2">
-                <input type="text" id="searchBox" oninput="renderDebts()" class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="🔍 بحث...">
+                <input type="text" id="searchBox" oninput="renderDebts()" class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder=" بحث...">
                 <select id="statusFilter" onchange="renderDebts()" class="border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
                     <option value="all">الكل</option>
                     <option value="active">نشط</option>
@@ -120,7 +120,7 @@
             sel.innerHTML = '<option value="">▼ اختر الدين...</option>';
             debts.forEach(d => {
                 const remaining = d.amount - (d.paid || 0);
-                const status = remaining <= 0 ? '✅' : '⬅️';
+                const status = remaining <= 0 ? '' : '⬅';
                 sel.innerHTML += `<option value="${d.id}">${status} ${d.name} - ${d.amount} (متبقي ${remaining})</option>`;
             });
             if (val) sel.value = val;
@@ -153,24 +153,24 @@
                     return `
                     <div class="bg-gray-50 rounded-lg border p-3 ${isPaid ? 'border-green-200 bg-green-50' : 'border-gray-200'}">
                         <div class="flex justify-between items-center">
-                            <span class="font-bold">${d.name} ${isPaid ? '✅' : ''}</span>
+                            <span class="font-bold">${d.name} ${isPaid ? '' : ''}</span>
                             <span class="text-red-500 font-bold">${formatPrice(d.amount)}</span>
                         </div>
                         <div class="flex justify-between text-sm mt-1">
                             <span class="text-green-600">مدفوع: ${formatPrice(d.paid||0)}</span>
                             <span class="${isPaid ? 'text-green-600' : 'text-orange-500'}">متبقي: ${formatPrice(remaining)}</span>
                         </div>
-                        ${d.note ? `<div class="text-xs text-gray-400 mt-1">📝 ${d.note}</div>` : ''}
+                        ${d.note ? `<div class="text-xs text-gray-400 mt-1"> ${d.note}</div>` : ''}
                     </div>`;
                 }).join('');
             }
 
             document.getElementById('totalDebts').textContent =
-                filtered.length > 0 ? `💰 إجمالي الديون: ${formatPrice(totalDebts)}` : '';
+                filtered.length > 0 ? ` إجمالي الديون: ${formatPrice(totalDebts)}` : '';
             document.getElementById('totalPaid').textContent =
-                filtered.length > 0 ? `✅ المسدد: ${formatPrice(totalPaid)}` : '';
+                filtered.length > 0 ? ` المسدد: ${formatPrice(totalPaid)}` : '';
             document.getElementById('totalRemaining').textContent =
-                filtered.length > 0 ? `⬅️ المتبقي: ${formatPrice(totalRemaining)}` : '';
+                filtered.length > 0 ? `⬅ المتبقي: ${formatPrice(totalRemaining)}` : '';
         }
 
         // ===== إضافة =====
@@ -178,7 +178,7 @@
             const name = document.getElementById('newName').value.trim();
             const amount = parseInt(document.getElementById('newAmount').value) || 0;
             const note = document.getElementById('newNote').value.trim();
-            if (!name || !amount) return showToast('⚠️ املأ الاسم والمبلغ');
+            if (!name || !amount) return showToast(' املأ الاسم والمبلغ');
             await fetch('/api/debts', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({name, amount, note})
@@ -187,7 +187,7 @@
             document.getElementById('newAmount').value = '';
             document.getElementById('newNote').value = '';
             await loadDebts();
-            showToast('✅ تم الإضافة');
+            showToast(' تم الإضافة');
         }
 
         // ===== تعديل =====
@@ -215,7 +215,7 @@
             const name = document.getElementById('editName').value.trim();
             const amount = parseInt(document.getElementById('editAmount').value) || 0;
             const note = document.getElementById('editNote').value.trim();
-            if (!name || !amount) return showToast('⚠️ املأ الاسم والمبلغ');
+            if (!name || !amount) return showToast(' املأ الاسم والمبلغ');
             await fetch('/api/debts/' + currentEditId, {
                 method: 'PUT', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({name, amount, note})
@@ -224,16 +224,16 @@
             document.getElementById('editSelect').value = '';
             document.getElementById('editFields').classList.add('hidden');
             currentEditId = null;
-            showToast('✅ تم التحديث');
+            showToast(' تم التحديث');
         }
 
         async function payDebt() {
             if (!currentEditId) return;
             const amount = parseInt(document.getElementById('payAmount').value) || 0;
-            if (!amount) return showToast('⚠️ أدخل مبلغ الدفع');
+            if (!amount) return showToast(' أدخل مبلغ الدفع');
             const d = debts.find(x => x.id === currentEditId);
             const remaining = d.amount - (d.paid || 0);
-            if (amount > remaining) return showToast('⚠️ المبلغ أكبر من المتبقي');
+            if (amount > remaining) return showToast(' المبلغ أكبر من المتبقي');
 
             const res = await fetch('/api/debts/' + currentEditId + '/pay', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -243,7 +243,7 @@
             if (data.ok) {
                 await loadDebts();
                 onEditSelect();
-                showToast('✅ تم الدفع وأضيف للكاشير');
+                showToast(' تم الدفع وأضيف للكاشير');
             }
         }
 
@@ -255,7 +255,7 @@
             document.getElementById('editSelect').value = '';
             document.getElementById('editFields').classList.add('hidden');
             currentEditId = null;
-            showToast('✅ تم الحذف');
+            showToast(' تم الحذف');
         }
 
         function showToast(msg) {
