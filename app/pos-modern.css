@@ -309,3 +309,53 @@ body.qaisar-page-index .cart-footer::-webkit-scrollbar-thumb { background: #94a3
   body.qaisar-page-index .cart-panel { height: 68vh !important; max-height: 68vh !important; }
   body.qaisar-page-index .cart-footer { max-height: 45% !important; }
 }
+
+/* تخطيط السلة النهائي: عمود جانبي كبير ومستقل عن المنتجات */
+@media (min-width: 861px) {
+  body.qaisar-page-index #mainLayout {
+    grid-template-columns: minmax(500px, 39vw) minmax(0, 1fr) 220px !important;
+    grid-template-areas: 'cart products categories' !important;
+    align-items: stretch !important;
+    min-height: 0 !important;
+    height: calc(100vh - 108px) !important;
+    overflow: hidden !important;
+  }
+  body.qaisar-page-index .cart-panel {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: auto !important;
+    min-width: 500px !important;
+    z-index: 10 !important;
+    position: relative !important;
+    isolation: isolate;
+  }
+  body.qaisar-page-index #productsPanel {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    min-width: 0 !important;
+    z-index: 1 !important;
+  }
+  body.qaisar-page-index #categoryPanel {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+    z-index: 1 !important;
+  }
+}
+body.qaisar-page-index .cart-head,
+body.qaisar-page-index .cart-footer { position: relative !important; z-index: 2 !important; }
+body.qaisar-page-index #cartItems {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+body.qaisar-page-index #cartItems > * { visibility: visible !important; opacity: 1 !important; }
+body.qaisar-page-index .cart-item { width: 100% !important; min-height: 78px !important; }
+body.qaisar-page-index .cart-item-name { font-size: 16px !important; }
+body.qaisar-page-index .cart-item-total { font-size: 15px !important; }
+@media (max-width: 1180px) and (min-width: 861px) {
+  body.qaisar-page-index #mainLayout { grid-template-columns: minmax(430px, 42vw) minmax(0, 1fr) 185px !important; }
+  body.qaisar-page-index .cart-panel { min-width: 430px !important; }
+}
