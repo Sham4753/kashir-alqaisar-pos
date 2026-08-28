@@ -274,3 +274,38 @@ body.qaisar-page-index .cart-footer { flex: 0 0 auto !important; }
 @media (max-width: 860px) {
   body.qaisar-page-index #cartItems { max-height: none !important; }
 }
+
+/* إصلاح الحجب: السلة عمود مستقل، ومحتوياتها تتمرر قبل منطقة الأزرار */
+body.qaisar-page-index .cart-panel {
+  height: calc(100vh - 108px) !important;
+  max-height: calc(100vh - 108px) !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+body.qaisar-page-index .cart-head {
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+}
+body.qaisar-page-index #cartItems {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  padding-bottom: 18px !important;
+}
+body.qaisar-page-index .cart-footer {
+  position: static !important;
+  flex: 0 0 auto !important;
+  max-height: 40% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-bottom: 12px !important;
+}
+body.qaisar-page-index .cart-footer::-webkit-scrollbar { width: 10px; }
+body.qaisar-page-index .cart-footer::-webkit-scrollbar-thumb { background: #94a3b8; border: 2px solid #f1f5f9; border-radius: 8px; }
+@media (max-width: 860px) {
+  body.qaisar-page-index .cart-panel { height: 66vh !important; max-height: 66vh !important; }
+}
+@media (max-width: 620px) {
+  body.qaisar-page-index .cart-panel { height: 68vh !important; max-height: 68vh !important; }
+  body.qaisar-page-index .cart-footer { max-height: 45% !important; }
+}
