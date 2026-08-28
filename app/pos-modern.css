@@ -359,3 +359,16 @@ body.qaisar-page-index .cart-item-total { font-size: 15px !important; }
   body.qaisar-page-index #mainLayout { grid-template-columns: minmax(430px, 42vw) minmax(0, 1fr) 185px !important; }
   body.qaisar-page-index .cart-panel { min-width: 430px !important; }
 }
+
+/* تباين أزرار الكاشير: النص واضح على كل الخلفيات والحالات */
+body.qaisar-page-index button.primary-checkout,
+body.qaisar-page-index button.primary-checkout * { background: #2563eb !important; color: #ffffff !important; border-color: #1d4ed8 !important; text-shadow: none !important; }
+body.qaisar-page-index button.secondary-action,
+body.qaisar-page-index button.secondary-action * { background: #f1f5f9 !important; color: #1e293b !important; border: 1px solid #94a3b8 !important; text-shadow: none !important; }
+body.qaisar-page-index button.secondary-action:hover { background: #e2e8f0 !important; color: #0f172a !important; }
+body.qaisar-page-index button.remove-cart-item,
+body.qaisar-page-index button.remove-cart-item * { background: #dc2626 !important; color: #ffffff !important; border-color: #b91c1c !important; font-weight: 900 !important; text-shadow: none !important; }
+body.qaisar-page-index button.quick-pay-btn { background: #eff6ff !important; color: #1e3a8a !important; border-color: #93c5fd !important; }
+body.qaisar-page-index button.quick-pay-btn:hover { background: #dbeafe !important; color: #172554 !important; }
+body.qaisar-page-index button.quick-pay-btn * { color: #1e3a8a !important; }
+body.qaisar-page-index button:disabled { color: #64748b !important; background: #e2e8f0 !important; border-color: #cbd5e1 !important; opacity: 1 !important; }
