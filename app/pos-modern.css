@@ -555,3 +555,35 @@ body.qaisar-page-index .kitchen-release-compact input { margin: 0 !important; }
   body.qaisar-page-index .kitchen-release-compact { min-width: 106px !important; gap: 2px !important; padding-inline: 3px !important; }
   body.qaisar-page-index .kitchen-release-compact label { padding-inline: 2px !important; }
 }
+
+
+/* قائمة الطلب الحالية في الشريط العلوي */
+body.qaisar-page-index .top-order-menu { position: relative; display: inline-block; z-index: 30; }
+body.qaisar-page-index .top-order-menu > summary { list-style: none; cursor: pointer; display: inline-flex !important; align-items: center; justify-content: center; gap: 5px; }
+body.qaisar-page-index .top-order-menu > summary::-webkit-details-marker { display: none; }
+body.qaisar-page-index .top-order-menu[open] > summary { background: #2563eb !important; border-color: #93c5fd !important; color: #fff !important; }
+body.qaisar-page-index .top-order-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  inset-inline-end: 0;
+  width: 330px;
+  padding: 10px;
+  border: 1px solid #94a3b8;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 18px 38px rgba(15,23,42,.25);
+  direction: rtl;
+}
+body.qaisar-page-index .top-order-section { padding: 8px; border: 1px solid #dbe5f0; border-radius: 8px; background: #f8fbff; }
+body.qaisar-page-index .top-order-section + .top-order-section { margin-top: 8px; }
+body.qaisar-page-index .top-order-section > b { display: block; margin-bottom: 6px; color: #0f172a; font-size: 11px; font-weight: 900; }
+body.qaisar-page-index .top-order-types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+body.qaisar-page-index .top-order-types .order-type-btn { min-height: 34px !important; height: 34px !important; padding: 0 5px !important; border: 1px solid #94a3b8 !important; border-radius: 8px !important; background: #fff !important; color: #1e293b !important; font-size: 11px !important; font-weight: 900 !important; }
+body.qaisar-page-index .top-order-types .order-type-btn.type-selected { background: #2563eb !important; color: #fff !important; border-color: #1d4ed8 !important; }
+body.qaisar-page-index .top-order-types .order-type-btn .q-line-icon { width: 14px !important; height: 14px !important; }
+body.qaisar-page-index .top-kitchen-release { display: flex; align-items: center; gap: 6px; }
+body.qaisar-page-index .top-kitchen-release label { display: inline-flex; align-items: center; gap: 3px; padding: 5px 8px; border: 1px solid #c7d2fe; border-radius: 6px; background: #fff; color: #312e81; font-size: 11px; font-weight: 900; }
+body.qaisar-page-index .top-kitchen-release input { margin: 0; }
+@media (max-width: 620px) {
+  body.qaisar-page-index .top-order-dropdown { position: fixed; top: 54px; inset-inline: 10px; width: auto; }
+}

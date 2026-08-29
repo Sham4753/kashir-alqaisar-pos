@@ -118,6 +118,17 @@
             <select id="currency" data-system-currency-control onchange="changeCurrency()" class="top-field px-2 text-sm font-black outline-none" title="عملة العرض"><option value="SYP">ل.س</option><option value="USD">$</option><option value="EUR">€</option></select>
             <button type="button" id="lockNowButton" onclick="showLockScreen(true)" class="nav-link" title="قفل النظام برمز الكاشير الحالي"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"></path></svg><span>قفل</span></button>
             <button type="button" id="cashDrawerButton" onclick="openCashDrawer()" class="nav-link hidden" title="فتح درج النقد يدويًا — للمدير فقط"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M3 10h18M8 14h.01M12 14h5"></path></svg><span>فتح الدرج</span></button>
+            <details id="orderQuickMenu" class="top-order-menu">
+                <summary class="nav-link" title="خيارات الطلب الحالي وإطلاق المطبخ"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM7 9h10M7 13h6"></path></svg><span>الطلب الحالي</span></summary>
+                <div class="top-order-dropdown">
+                    <div class="top-order-section"><b>نوع الطلب</b><div class="top-order-types">
+                        <button onclick="setOrderType('سفري')" id="btnTakeaway" class="order-type-btn type-btn" type="button"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6M9 16h4"></path></svg><span>سفري</span></button>
+                        <button onclick="setOrderType('صالة')" id="btnDinein" class="order-type-btn type-btn" type="button"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16v5H4zM7 15v6M17 15v6M8 10V6h8v4"></path></svg><span>صالة</span></button>
+                        <button onclick="setOrderType('ديليفري')" id="btnDelivery" class="order-type-btn type-btn" type="button"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3-2-3-2-3 2V3zM9 8h6M9 12h6M9 16h4"></path></svg><span>دليفري</span></button>
+                    </div></div>
+                    <div class="top-order-section"><b>إطلاق الطلب للمطبخ</b><div class="top-kitchen-release"><label><input name="kitchenRelease" type="radio" value="now" checked class="accent-indigo-600"> الآن</label><label><input name="kitchenRelease" type="radio" value="later" class="accent-indigo-600"> لاحقًا</label></div></div>
+                </div>
+            </details>
             <a href="kitchen.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v4M16 3v4M5 9h14v12H5z"></path><path d="M9 13h6M9 17h4"></path></svg><span>المطبخ</span></a>
             <a href="tables.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h16v8H4zM6 11V6h12v5M7 19v2M17 19v2"></path></svg><span>الطاولات</span></a>
         </div>
@@ -155,14 +166,6 @@
         <div class="cart-panel flex flex-col shadow-lg">
             <div class="cart-head p-4">
                 <div class="flex justify-between items-center mb-3"><div><h3 class="font-black text-slate-800">الطلب الحالي</h3><p class="text-xs text-slate-500 mt-1">راجع الطلب ثم اختر طريقة الدفع</p></div><span id="itemCount" class="bg-orange-100 text-orange-700 text-xs px-2.5 py-1 rounded-full font-black">0 قطع</span></div>
-                <div class="cart-top-row">
-                    <div class="order-type-group" aria-label="نوع الطلب">
-                        <button onclick="setOrderType('سفري')" id="btnTakeaway" class="order-type-btn type-btn border border-slate-300 text-xs"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6M9 16h4"></path></svg><span>سفري</span></button>
-                        <button onclick="setOrderType('صالة')" id="btnDinein" class="order-type-btn type-btn border border-slate-300 text-xs"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16v5H4zM7 15v6M17 15v6M8 10V6h8v4"></path></svg><span>صالة</span></button>
-                        <button onclick="setOrderType('ديليفري')" id="btnDelivery" class="order-type-btn type-btn border border-slate-300 text-xs"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6M9 16h4"></path></svg><span>دليفري</span></button>
-                    </div>
-                    <div class="kitchen-release-compact" aria-label="إطلاق الطلب للمطبخ"><b>المطبخ</b><label><input name="kitchenRelease" type="radio" value="now" checked class="accent-indigo-600"> الآن</label><label><input name="kitchenRelease" type="radio" value="later" class="accent-indigo-600"> لاحقًا</label></div>
-                </div>
                 <details class="group"><summary class="cursor-pointer text-xs font-bold text-slate-600 select-none">بيانات إضافية للطلب <span class="text-slate-400 font-normal">(الزبون والطاولة والملاحظات)</span></summary><div class="mt-2 space-y-2"><input type="text" id="customerName" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="اسم الزبون (اختياري)"><select id="tableNumber" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm hidden"><option value="">اختر طاولة للصالة</option></select><input type="text" id="orderNote" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="ملاحظة للمطبخ أو الطلب"></div></details>
             </div>
 
