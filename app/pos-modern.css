@@ -431,3 +431,61 @@ body.qaisar-page-index .cart-footer #printLastOrderButton { min-height: 56px !im
   body.qaisar-page-index #cartItems { min-height: 260px !important; }
   body.qaisar-page-index .cart-footer { max-height: 48% !important; }
 }
+
+
+/* تخطيط مضغوط لرأس السلة والشريط العلوي مع الحفاظ على مساحة العناصر والطباعة */
+body.qaisar-page-index > header {
+  min-height: 58px !important;
+  padding: 7px 12px !important;
+}
+body.qaisar-page-index > header .brand-mark { width: 34px !important; height: 34px !important; }
+body.qaisar-page-index > header .brand-mark::after { font-size: 22px !important; }
+body.qaisar-page-index > header .brand-copy h1 { font-size: 14px !important; }
+body.qaisar-page-index > header .brand-copy small { font-size: 10px !important; }
+body.qaisar-page-index > header .header-tools { gap: 5px !important; }
+body.qaisar-page-index > header .top-field,
+body.qaisar-page-index > header .nav-link { min-height: 34px !important; height: 34px !important; font-size: 11px !important; }
+body.qaisar-page-index > header .cashier-search { width: 150px !important; }
+body.qaisar-page-index > header .nav-link { padding: 0 8px !important; }
+body.qaisar-page-index > header .nav-link svg { width: 16px !important; height: 16px !important; }
+body.qaisar-page-index #connectionStatus { padding: 4px 7px !important; font-size: 10px !important; }
+
+body.qaisar-page-index .cart-head { padding: 11px 14px !important; }
+body.qaisar-page-index .cart-head h3 { font-size: 17px !important; }
+body.qaisar-page-index .cart-head > div:first-child { margin-bottom: 8px !important; }
+body.qaisar-page-index .cart-head .order-type-btn {
+  min-height: 31px !important;
+  height: 31px !important;
+  padding: 0 7px !important;
+  gap: 4px !important;
+  border-radius: 8px !important;
+  font-size: 11px !important;
+  line-height: 1 !important;
+}
+body.qaisar-page-index .cart-head .order-type-btn .q-line-icon {
+  width: 14px !important;
+  height: 14px !important;
+}
+body.qaisar-page-index .cart-head > .flex.gap-1\.5 { margin-bottom: 8px !important; }
+body.qaisar-page-index .cart-head details summary { font-size: 11px !important; }
+body.qaisar-page-index .cart-head details input,
+body.qaisar-page-index .cart-head details select { min-height: 31px !important; padding: 5px 8px !important; font-size: 11px !important; }
+body.qaisar-page-index .cart-head .mt-3.rounded-xl { margin-top: 8px !important; padding: 8px !important; }
+body.qaisar-page-index .cart-head .mt-3.rounded-xl b { font-size: 11px !important; }
+body.qaisar-page-index .cart-head .mt-3.rounded-xl span,
+body.qaisar-page-index .cart-head .mt-3.rounded-xl label { font-size: 10px !important; }
+body.qaisar-page-index .cart-head .mt-3.rounded-xl label { padding: 6px 5px !important; }
+
+/* أولوية عملية: لا تختفي مساحة العناصر عند تصغير رأس السلة */
+body.qaisar-page-index #cartItems { min-height: 300px !important; }
+body.qaisar-page-index .cart-footer { max-height: 43% !important; }
+@media (max-width: 860px) {
+  body.qaisar-page-index > header .cashier-search { width: 130px !important; }
+  body.qaisar-page-index #cartItems { min-height: 280px !important; }
+  body.qaisar-page-index .cart-footer { max-height: 46% !important; }
+}
+@media (max-width: 620px) {
+  body.qaisar-page-index > header .cashier-search { width: 120px !important; }
+  body.qaisar-page-index #cartItems { min-height: 240px !important; }
+  body.qaisar-page-index .cart-footer { max-height: 48% !important; }
+}
