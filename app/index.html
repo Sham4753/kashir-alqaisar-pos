@@ -174,6 +174,8 @@
                 <div class="cart-summary"><div class="flex justify-between items-center"><span class="text-xs text-slate-300">الإجمالي المستحق</span><span class="text-xs bg-white/10 px-2 py-1 rounded">يشمل الخصم</span></div><div id="totalDisplay" class="font-black mt-1">0</div></div>
                 <button onclick="openPaymentModal()" id="checkoutButton" class="primary-checkout w-full text-white">إتمام الدفع وحفظ الفاتورة <span class="opacity-75 text-xs">F4</span></button>
                 <button onclick="saveDineInSession()" id="saveDineInButton" class="hidden w-full min-h-[46px] bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm">حفظ طلب الطاولة وإرساله للمطبخ</button>
+                <button onclick="printLastCompletedOrder()" id="printLastOrderButton" class="hidden w-full min-h-[50px] rounded-lg border-2 border-blue-700 bg-blue-600 px-4 text-base font-black text-white hover:bg-blue-700" type="button">طباعة آخر فاتورة</button>
+                <div id="lastPrintStatus" class="hidden rounded-lg border px-3 py-2 text-center text-sm font-bold" role="status" aria-live="polite"></div>
                 <div class="grid grid-cols-3 gap-2"><button onclick="holdOrder()" class="secondary-action bg-slate-100 text-slate-700 border border-slate-200 text-xs">تعليق</button><button onclick="undoLastItem()" class="secondary-action bg-slate-100 text-slate-700 text-xs">تراجع</button><button onclick="clearCart()" class="secondary-action bg-red-600 text-white border border-red-700 text-xs">مسح</button></div>
                 <div id="heldOrders" class="space-y-1"></div>
             </div>
@@ -280,7 +282,7 @@
     </div>
 
     <script>
-        let menu = {}, cart = [], currentCategory = '', currentCurrency = 'SYP', orderType = 'سفري';
+        let menu = {}, cart = [], lastCompletedOrderId = null, currentCategory = '', currentCurrency = 'SYP', orderType = 'سفري';
         let usdRate = 0, eurRate = 0;
         let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
         let heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
@@ -872,6 +874,12 @@
                 if (activeDineInSession) resData = await res.json();
                 if (!res.ok || !resData.ok) throw new Error(resData.error || 'تعذر حفظ الفاتورة');
                 const paidMethod = paymentMethod;
+                lastCompletedOrderId = String(resData.id);
+                const lastPrintButton = document.getElementById('printLastOrderButton');
+                lastPrintButton.classList.remove('hidden');
+                const lastPrintStatus = document.getElementById('lastPrintStatus');
+                lastPrintStatus.className = 'hidden rounded-lg border px-3 py-2 text-center text-sm font-bold';
+                lastPrintStatus.textContent = '';
                 document.getElementById('printReceipt').innerHTML = buildReceiptHTML(resData.id);
                 applyPrintPageSize(document.getElementById('printReceipt').scrollHeight);
                 const directPrint = !printerSettings.auto_print_receipt ? await printSavedReceipt(resData.id) : null;
@@ -965,6 +973,33 @@
             }
         }
 
+        async function printLastCompletedOrder() {
+            const button = document.getElementById('printLastOrderButton');
+            const status = document.getElementById('lastPrintStatus');
+            if (!lastCompletedOrderId) {
+                status.className = 'rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-center text-sm font-bold text-amber-900';
+                status.textContent = 'أتمم حفظ الفاتورة أولًا قبل الطباعة';
+                return;
+            }
+            button.disabled = true;
+            button.textContent = 'جارِ إرسال الفاتورة للطابعة…';
+            status.className = 'rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-center text-sm font-bold text-blue-900';
+            status.textContent = 'جارِ إرسال الفاتورة الحرارية…';
+            try {
+                const result = await printSavedReceipt(lastCompletedOrderId);
+                if (!result.ok) throw new Error(result.message || 'تعذر إرسال الفاتورة للطابعة');
+                status.className = 'rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-center text-sm font-bold text-emerald-900';
+                status.textContent = 'تم إرسال الفاتورة للطابعة بنجاح';
+                showToast('تمت طباعة الفاتورة رقم ' + lastCompletedOrderId);
+            } catch (error) {
+                status.className = 'rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-center text-sm font-bold text-rose-900';
+                status.textContent = error.message || 'تعذرت الطباعة؛ راجع إعدادات الطابعة';
+                showToast('تعذرت طباعة الفاتورة');
+            } finally {
+                button.disabled = false;
+                button.textContent = 'طباعة آخر فاتورة';
+            }
+        }
         async function changeCurrency() {
             const control = document.getElementById('currency');
             const requestedCurrency = control.value;
