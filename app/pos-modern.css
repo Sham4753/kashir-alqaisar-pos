@@ -489,3 +489,69 @@ body.qaisar-page-index .cart-footer { max-height: 43% !important; }
   body.qaisar-page-index #cartItems { min-height: 240px !important; }
   body.qaisar-page-index .cart-footer { max-height: 48% !important; }
 }
+
+
+/* صف علوي موحّد: نوع الطلب بجانب إطلاق المطبخ */
+body.qaisar-page-index .cart-top-row {
+  display: flex !important;
+  align-items: stretch !important;
+  gap: 8px !important;
+  width: 100% !important;
+  margin-bottom: 8px !important;
+}
+body.qaisar-page-index .order-type-group {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+body.qaisar-page-index .cart-top-row .order-type-btn {
+  min-width: 0 !important;
+  min-height: 30px !important;
+  height: 30px !important;
+  padding: 0 5px !important;
+  gap: 3px !important;
+  white-space: nowrap !important;
+  font-size: 10px !important;
+}
+body.qaisar-page-index .cart-top-row .order-type-btn .q-line-icon {
+  width: 13px !important;
+  height: 13px !important;
+  flex: 0 0 auto !important;
+}
+body.qaisar-page-index .kitchen-release-compact {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  flex: 0 0 auto !important;
+  min-width: 118px !important;
+  padding: 3px 6px !important;
+  border: 1px solid #c7d2fe !important;
+  border-radius: 8px !important;
+  background: #eef2ff !important;
+  color: #1e1b4b !important;
+  font-size: 10px !important;
+  white-space: nowrap !important;
+}
+body.qaisar-page-index .kitchen-release-compact b { font-size: 10px !important; }
+body.qaisar-page-index .kitchen-release-compact label {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  padding: 3px 4px !important;
+  border: 1px solid #c7d2fe !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+  color: #312e81 !important;
+  font-weight: 900 !important;
+}
+body.qaisar-page-index .kitchen-release-compact input { margin: 0 !important; }
+@media (max-width: 430px) {
+  body.qaisar-page-index .cart-top-row { gap: 4px !important; }
+  body.qaisar-page-index .cart-top-row .order-type-btn { font-size: 9px !important; padding: 0 2px !important; }
+  body.qaisar-page-index .cart-top-row .order-type-btn .q-line-icon { display: none !important; }
+  body.qaisar-page-index .kitchen-release-compact { min-width: 106px !important; gap: 2px !important; padding-inline: 3px !important; }
+  body.qaisar-page-index .kitchen-release-compact label { padding-inline: 2px !important; }
+}
