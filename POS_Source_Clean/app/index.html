@@ -96,18 +96,40 @@
         @media (max-width:1040px) { #categoryPanel{width:190px} .cart-panel{width:330px;min-width:330px} .nav-link span{display:none} }
         @media (max-width:760px) { body{overflow:auto !important} header{min-height:auto; flex-wrap:wrap; gap:10px} .header-tools{width:100%;order:3;overflow-x:auto;padding-bottom:2px} #mainLayout{padding:8px;overflow:visible;display:flex;flex-direction:column} #catalogPanel{display:flex;flex-direction:column;min-height:0} #categoryPanel{order:1;width:100%;max-height:145px} #productsPanel{order:2;width:100%} .cart-panel{order:3;width:100%;min-width:0} .product-toolbar{position:sticky;top:0;z-index:5} }
         /* تخطيط سطح المكتب: عمود البيع يمينًا ولوحة السلة والدفع يسارًا */
-        #mainLayout { display:grid; grid-template-columns:minmax(360px,420px) minmax(0,1fr); grid-template-areas:"cart catalog"; direction:ltr; gap:14px; align-items:stretch; }
+        #mainLayout { display:grid; grid-template-columns:clamp(340px,30vw,420px) minmax(0,1fr); grid-template-areas:"cart catalog"; direction:ltr; gap:14px; align-items:stretch; }
         #catalogPanel { grid-area:catalog; direction:rtl; min-width:0; min-height:0; display:flex; gap:12px; overflow:hidden; }
         #categoryPanel { order:initial; flex:0 0 210px; width:210px; min-width:210px; direction:rtl; }
         #productsPanel { order:initial; flex:1 1 auto; min-width:0; direction:rtl; }
-        .cart-panel { grid-area:cart; order:initial; direction:rtl; min-width:0; width:auto; }
+        .cart-panel { grid-area:cart; order:initial; direction:rtl; min-width:0; width:100%; max-width:420px; }
         #cartItems { min-height:100px; overscroll-behavior:contain; }
         .cart-footer { flex-shrink:0; }
         .product-card { min-height:168px; }
         .product-card:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline:3px solid #2563eb; outline-offset:2px; }
         .primary-checkout { font-size:16px; }
-        @media (max-width:1100px) and (min-width:761px) { #mainLayout { grid-template-columns:350px minmax(0,1fr); } #catalogPanel{gap:8px} #categoryPanel{flex-basis:180px;min-width:180px} }
+        @media (max-width:1100px) and (min-width:761px) { #mainLayout { grid-template-columns:clamp(340px,30vw,380px) minmax(0,1fr); } #catalogPanel{gap:8px} #categoryPanel{flex-basis:180px;min-width:180px} }
         @media (max-width:760px) { #mainLayout { display:flex; } #catalogPanel { display:flex; } #categoryPanel { flex-basis:auto; min-width:0; } }
+        /* توزيع علوي مرن: البحث والباركود يأخذان المساحة المتاحة قبل أدوات التشغيل */
+        header { gap:16px; }
+        .header-tools { flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:8px; }
+        .header-tools .header-input { display:flex; align-items:center; flex:1 1 0; min-width:0; }
+        .header-tools .header-input:first-child { flex-grow:1.35; }
+        .header-tools .header-input:nth-child(2) { flex-grow:1; }
+        .header-tools .top-field { width:100% !important; min-width:0; }
+        .header-tools #currency { flex:0 0 74px; width:74px !important; }
+        .header-tools .nav-link { flex:0 0 auto; white-space:nowrap; }
+        .cart-panel { align-self:stretch; }
+        @media (max-width:1100px) and (min-width:761px) {
+            .header-tools .header-input:first-child { flex-grow:1.1; }
+            .header-tools .header-input:nth-child(2) { flex-grow:.9; }
+        }
+        @media (max-width:760px) {
+            header { gap:10px; }
+            .header-tools { display:flex; width:100%; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; }
+            .header-tools .header-input { flex:1 0 42vw; min-width:170px; }
+            .header-tools #currency { flex:0 0 74px; }
+            #mainLayout { grid-template-columns:1fr; }
+            .cart-panel { max-width:none; }
+        }
     </style>
     <link rel="stylesheet" href="design-system.css">
     <link rel="stylesheet" href="pos-modern.css">
@@ -185,7 +207,7 @@
 
             <!-- Cart Footer -->
             <div class="cart-footer border-t border-gray-100 p-3 space-y-3">
-                <div><label class="text-xs text-slate-500 font-bold">الخصم</label><div class="flex gap-2 mt-1"><input type="number" id="discountPct" min="0" max="100" step="0.01" oninput="updateTotal()" onchange="updateTotal()" onfocus="openNumpadForInput(this, 'نسبة الخصم')" inputmode="none" class="numpad-input w-1/2 border border-slate-200 rounded-lg px-3 py-2 text-sm text-center" placeholder="نسبة %" value="0"><input type="number" id="discountAmount" min="0" step="0.01" oninput="updateTotal()" onchange="updateTotal()" onfocus="openNumpadForInput(this, 'قيمة الخصم')" inputmode="none" class="numpad-input w-1/2 border border-slate-200 rounded-lg px-3 py-2 text-sm text-center" placeholder="قيمة الخصم" value="0"></div></div>
+                <div><label class="text-xs text-slate-500 font-bold">الخصم</label><div class="flex gap-2 mt-1"><input type="number" id="discountPct" min="0" max="100" step="0.01" oninput="updateTotal()" onchange="updateTotal()" onfocus="openNumpadForInput(this, 'نسبة الخصم')" inputmode="none" class="numpad-input w-1/2 border border-slate-200 rounded-lg px-3 py-2 text-sm text-center" placeholder="نسبة الخصم (%)" aria-label="نسبة الخصم بالمئة" value="0"><input type="number" id="discountAmount" min="0" step="0.01" oninput="updateTotal()" onchange="updateTotal()" onfocus="openNumpadForInput(this, 'قيمة الخصم')" inputmode="none" class="numpad-input w-1/2 border border-slate-200 rounded-lg px-3 py-2 text-sm text-center" placeholder="مبلغ الخصم" aria-label="مبلغ الخصم" value="0"></div></div>
                 <div class="cart-summary"><div class="flex justify-between items-center"><span class="text-xs text-slate-300">الإجمالي المستحق</span><span class="text-xs bg-white/10 px-2 py-1 rounded">يشمل الخصم</span></div><div id="totalDisplay" class="font-black mt-1">0</div></div>
                 <button onclick="openPaymentModal()" id="checkoutButton" class="primary-checkout w-full text-white">دفع وحفظ الفاتورة <span class="opacity-75 text-xs">F4</span></button>
                 <button onclick="saveDineInSession()" id="saveDineInButton" class="hidden w-full min-h-[46px] bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm">حفظ طلب الصالة وإرساله للمطبخ</button>
