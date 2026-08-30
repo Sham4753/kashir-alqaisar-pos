@@ -8,11 +8,12 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $appPath = [System.IO.Path]::GetFullPath($AppDir)
-$target = Join-Path -Path $appPath -ChildPath 'QaisarDesktop.exe'
+$posRoot = [System.IO.Path]::GetFullPath((Join-Path -Path $appPath -ChildPath '..'))
+$target = Join-Path -Path $posRoot -ChildPath 'Start.bat'
 $icon = Join-Path -Path $appPath -ChildPath 'qaisar_icon.ico'
 
 if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
-    throw "Application launcher not found: $target"
+    throw "Current POS launcher not found: $target"
 }
 
 $desktopCandidates = @(
