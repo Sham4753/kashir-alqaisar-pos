@@ -96,7 +96,7 @@
         @media (max-width:1040px) { #categoryPanel{width:190px} .cart-panel{width:330px;min-width:330px} .nav-link span{display:none} }
         @media (max-width:760px) { body{overflow:auto !important} header{min-height:auto; flex-wrap:wrap; gap:10px} .header-tools{width:100%;order:3;overflow-x:auto;padding-bottom:2px} #mainLayout{padding:8px;overflow:visible;display:flex;flex-direction:column} #catalogPanel{display:flex;flex-direction:column;min-height:0} #categoryPanel{order:1;width:100%;max-height:145px} #productsPanel{order:2;width:100%} .cart-panel{order:3;width:100%;min-width:0} .product-toolbar{position:sticky;top:0;z-index:5} }
         /* تخطيط سطح المكتب: عمود البيع يمينًا ولوحة السلة والدفع يسارًا */
-        #mainLayout { display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,420px); grid-template-areas:"catalog cart"; direction:ltr; gap:14px; align-items:stretch; }
+        #mainLayout { display:grid; grid-template-columns:minmax(360px,420px) minmax(0,1fr); grid-template-areas:"cart catalog"; direction:ltr; gap:14px; align-items:stretch; }
         #catalogPanel { grid-area:catalog; direction:rtl; min-width:0; min-height:0; display:flex; gap:12px; overflow:hidden; }
         #categoryPanel { order:initial; flex:0 0 210px; width:210px; min-width:210px; direction:rtl; }
         #productsPanel { order:initial; flex:1 1 auto; min-width:0; direction:rtl; }
@@ -106,7 +106,7 @@
         .product-card { min-height:168px; }
         .product-card:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline:3px solid #2563eb; outline-offset:2px; }
         .primary-checkout { font-size:16px; }
-        @media (max-width:1100px) and (min-width:761px) { #mainLayout { grid-template-columns:minmax(0,1fr) 350px; } #catalogPanel{gap:8px} #categoryPanel{flex-basis:180px;min-width:180px} }
+        @media (max-width:1100px) and (min-width:761px) { #mainLayout { grid-template-columns:350px minmax(0,1fr); } #catalogPanel{gap:8px} #categoryPanel{flex-basis:180px;min-width:180px} }
         @media (max-width:760px) { #mainLayout { display:flex; } #catalogPanel { display:flex; } #categoryPanel { flex-basis:auto; min-width:0; } }
     </style>
     <link rel="stylesheet" href="design-system.css">
@@ -335,9 +335,19 @@
             try {
                 const r = await fetch('/api/menu');
                 const data = await r.json();
-                menu = data && typeof data === 'object' ? data : {};
+                if (!r.ok || !data || data.ok === false || typeof data !== 'object') {
+                    menu = {};
+                    productById = new Map();
+                    showToast(' ' + (data?.error || 'تعذر تحميل المنيو'));
+                    return;
+                }
+                menu = data;
                 productById = new Map(Object.values(menu).flatMap(items => Array.isArray(items) ? items : []).map(product => [Number(product.id), product]));
-            } catch(e) { menu = {}; productById = new Map(); showToast(' خطأ في تحميل المنيو'); }
+            } catch(e) {
+                menu = {};
+                productById = new Map();
+                showToast(' خطأ في تحميل المنيو');
+            }
         }
         async function loadCurrency() {
             try {
@@ -428,10 +438,11 @@
         function readDiscounts() {
             const pctInput = Number.parseFloat(document.getElementById('discountPct')?.value);
             const amountInput = Number.parseFloat(document.getElementById('discountAmount')?.value);
-            return {
-                pct: Number.isFinite(pctInput) ? Math.min(100, Math.max(0, pctInput)) : 0,
-                amount: Number.isFinite(amountInput) ? Math.max(0, amountInput) : 0
-            };
+            const pct = Number.isFinite(pctInput) ? Math.min(100, Math.max(0, pctInput)) : 0;
+            const subtotal = cart.reduce((sum, item) => sum + Math.max(0, Number(item.price) || 0) * Math.max(0, Number(item.qty) || 0), 0);
+            const afterPercent = Math.max(0, subtotal - (subtotal * pct / 100));
+            const amount = Number.isFinite(amountInput) ? Math.min(afterPercent, Math.max(0, amountInput)) : 0;
+            return { pct, amount };
         }
         function productCardMarkup(p) {
             const id = Number(p.id);
@@ -490,8 +501,11 @@
 
         function renderProducts(cat) {
             const items = Array.isArray(menu[cat]) ? menu[cat] : [];
+            const grid = document.getElementById('productsGrid');
+            grid.setAttribute('aria-busy', 'true');
             document.getElementById('productCountHint').textContent = items.length + ' صنف';
-            document.getElementById('productsGrid').innerHTML = items.map(productCardMarkup).join('');
+            grid.innerHTML = items.length ? items.map(productCardMarkup).join('') : '<p class="text-slate-400 col-span-full text-center py-8">لا توجد أصناف في هذا القسم</p>';
+            grid.removeAttribute('aria-busy');
         }
 
         async function scanBarcode() {
