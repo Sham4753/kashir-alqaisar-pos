@@ -587,3 +587,85 @@ body.qaisar-page-index .top-kitchen-release input { margin: 0; }
 @media (max-width: 620px) {
   body.qaisar-page-index .top-order-dropdown { position: fixed; top: 54px; inset-inline: 10px; width: auto; }
 }
+
+
+/* توحيد نهائي للسلة والشريط والقائمة المنسدلة */
+body.qaisar-page-index #categoryPanel,
+body.qaisar-page-index .cart-panel {
+  border-radius: 8px !important;
+}
+body.qaisar-page-index .cart-head,
+body.qaisar-page-index #categoryPanel > div {
+  padding: 14px !important;
+}
+body.qaisar-page-index .cart-head h3 { font-size: 15px !important; }
+body.qaisar-page-index .cart-head p,
+body.qaisar-page-index #categoryPanel h3,
+body.qaisar-page-index .cart-item-name,
+body.qaisar-page-index .cart-item-total { line-height: 1.45 !important; }
+body.qaisar-page-index .cart-head .text-xs,
+body.qaisar-page-index #categoryPanel h3 { font-size: 12px !important; }
+body.qaisar-page-index .cart-item { padding: 12px !important; gap: 10px !important; min-height: 72px !important; }
+body.qaisar-page-index .cart-item-name { font-size: 14px !important; }
+body.qaisar-page-index .cart-item-total { font-size: 14px !important; }
+
+/* لون موحّد لكل أزرار الشريط العلوي */
+body.qaisar-page-index > header .nav-link,
+body.qaisar-page-index > header .top-order-menu > summary {
+  color: #ffffff !important;
+  background: #1d4ed8 !important;
+  border: 1px solid #60a5fa !important;
+  border-radius: 8px !important;
+}
+body.qaisar-page-index > header .nav-link:hover,
+body.qaisar-page-index > header .top-order-menu > summary:hover,
+body.qaisar-page-index > header .top-order-menu[open] > summary {
+  color: #ffffff !important;
+  background: #2563eb !important;
+  border-color: #bfdbfe !important;
+}
+body.qaisar-page-index > header .nav-link svg,
+body.qaisar-page-index > header .top-order-menu > summary svg { color: #ffffff !important; }
+
+/* تظهر القائمة فوق كامل المحتوى عند الضغط، ولا تختبئ خلف السلة */
+body.qaisar-page-index .top-order-menu { position: static !important; }
+body.qaisar-page-index .top-order-dropdown {
+  position: fixed !important;
+  top: 66px !important;
+  inset-inline-end: 18px !important;
+  width: 330px !important;
+  max-width: calc(100vw - 36px) !important;
+  z-index: 1000 !important;
+  display: block;
+}
+body.qaisar-page-index .top-order-menu:not([open]) .top-order-dropdown { display: none !important; }
+body.qaisar-page-index .top-order-menu[open] .top-order-dropdown { display: block !important; }
+@media (max-width: 620px) {
+  body.qaisar-page-index .top-order-dropdown {
+    top: 60px !important;
+    inset-inline: 10px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
+
+
+/* موازنة الأعمدة: السلة ومنطقة المنتجات بحجمين متقاربين */
+@media (min-width: 1181px) {
+  body.qaisar-page-index #mainLayout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 205px !important;
+    gap: 18px !important;
+  }
+  body.qaisar-page-index .cart-panel { min-width: 0 !important; }
+}
+@media (min-width: 861px) and (max-width: 1180px) {
+  body.qaisar-page-index #mainLayout {
+    grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr) 170px !important;
+    gap: 12px !important;
+  }
+  body.qaisar-page-index .cart-panel { min-width: 0 !important; }
+  body.qaisar-page-index #productsGrid { grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)) !important; }
+}
+@media (max-width: 860px) {
+  body.qaisar-page-index #mainLayout { grid-template-columns: minmax(0, 1fr) 180px !important; }
+}
