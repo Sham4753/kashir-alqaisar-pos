@@ -94,7 +94,20 @@
         #menuPanel { width:290px !important; background:#111827 !important; }
         #menuPanel a, #menuPanel button { padding:11px 12px !important; border-radius:10px; }
         @media (max-width:1040px) { #categoryPanel{width:190px} .cart-panel{width:330px;min-width:330px} .nav-link span{display:none} }
-        @media (max-width:760px) { body{overflow:auto !important} header{min-height:auto; flex-wrap:wrap; gap:10px} .header-tools{width:100%;order:3;overflow-x:auto;padding-bottom:2px} #mainLayout{padding:8px;overflow:visible;flex-direction:column} #categoryPanel{order:1;width:100%;max-height:145px} #productsPanel{order:2;width:100%} .cart-panel{order:3;width:100%;min-width:0} .product-toolbar{position:sticky;top:0;z-index:5} }
+        @media (max-width:760px) { body{overflow:auto !important} header{min-height:auto; flex-wrap:wrap; gap:10px} .header-tools{width:100%;order:3;overflow-x:auto;padding-bottom:2px} #mainLayout{padding:8px;overflow:visible;display:flex;flex-direction:column} #catalogPanel{display:flex;flex-direction:column;min-height:0} #categoryPanel{order:1;width:100%;max-height:145px} #productsPanel{order:2;width:100%} .cart-panel{order:3;width:100%;min-width:0} .product-toolbar{position:sticky;top:0;z-index:5} }
+        /* تخطيط سطح المكتب: عمود البيع يمينًا ولوحة السلة والدفع يسارًا */
+        #mainLayout { display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,420px); grid-template-areas:"catalog cart"; direction:ltr; gap:14px; align-items:stretch; }
+        #catalogPanel { grid-area:catalog; direction:rtl; min-width:0; min-height:0; display:flex; gap:12px; overflow:hidden; }
+        #categoryPanel { order:initial; flex:0 0 210px; width:210px; min-width:210px; direction:rtl; }
+        #productsPanel { order:initial; flex:1 1 auto; min-width:0; direction:rtl; }
+        .cart-panel { grid-area:cart; order:initial; direction:rtl; min-width:0; width:auto; }
+        #cartItems { min-height:100px; overscroll-behavior:contain; }
+        .cart-footer { flex-shrink:0; }
+        .product-card { min-height:168px; }
+        .product-card:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline:3px solid #2563eb; outline-offset:2px; }
+        .primary-checkout { font-size:16px; }
+        @media (max-width:1100px) and (min-width:761px) { #mainLayout { grid-template-columns:minmax(0,1fr) 350px; } #catalogPanel{gap:8px} #categoryPanel{flex-basis:180px;min-width:180px} }
+        @media (max-width:760px) { #mainLayout { display:flex; } #catalogPanel { display:flex; } #categoryPanel { flex-basis:auto; min-width:0; } }
     </style>
     <link rel="stylesheet" href="design-system.css">
     <link rel="stylesheet" href="pos-modern.css">
@@ -118,19 +131,8 @@
             <select id="currency" data-system-currency-control onchange="changeCurrency()" class="top-field px-2 text-sm font-black outline-none" title="عملة العرض"><option value="SYP">ل.س</option><option value="USD">$</option><option value="EUR">€</option></select>
             <button type="button" id="lockNowButton" onclick="showLockScreen(true)" class="nav-link" title="قفل النظام برمز الكاشير الحالي"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"></path></svg><span>قفل</span></button>
             <button type="button" id="cashDrawerButton" onclick="openCashDrawer()" class="nav-link hidden" title="فتح درج النقد يدويًا — للمدير فقط"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M3 10h18M8 14h.01M12 14h5"></path></svg><span>فتح الدرج</span></button>
-            <details id="orderQuickMenu" class="top-order-menu">
-                <summary class="nav-link" title="خيارات الطلب الحالي وإطلاق المطبخ"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM7 9h10M7 13h6"></path></svg><span>الطلب الحالي</span></summary>
-                <div class="top-order-dropdown">
-                    <div class="top-order-section"><b>نوع الطلب</b><div class="top-order-types">
-                        <button onclick="setOrderType('سفري')" id="btnTakeaway" class="order-type-btn type-btn" type="button"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6M9 16h4"></path></svg><span>سفري</span></button>
-                        <button onclick="setOrderType('صالة')" id="btnDinein" class="order-type-btn type-btn" type="button"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16v5H4zM7 15v6M17 15v6M8 10V6h8v4"></path></svg><span>صالة</span></button>
-                        <button onclick="setOrderType('ديليفري')" id="btnDelivery" class="order-type-btn type-btn" type="button"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3-2-3-2-3 2V3zM9 8h6M9 12h6M9 16h4"></path></svg><span>دليفري</span></button>
-                    </div></div>
-                    <div class="top-order-section"><b>إطلاق الطلب للمطبخ</b><div class="top-kitchen-release"><label><input name="kitchenRelease" type="radio" value="now" checked class="accent-indigo-600"> الآن</label><label><input name="kitchenRelease" type="radio" value="later" class="accent-indigo-600"> لاحقًا</label></div></div>
-                </div>
-            </details>
-            <a href="kitchen.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v4M16 3v4M5 9h14v12H5z"></path><path d="M9 13h6M9 17h4"></path></svg><span>المطبخ</span></a>
-            <a href="tables.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h16v8H4zM6 11V6h12v5M7 19v2M17 19v2"></path></svg><span>الطاولات</span></a>
+            <a href="kitchen.html" class="nav-link" title="فتح شاشة المطبخ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v4M16 3v4M5 9h14v12H5z"></path><path d="M9 13h6M9 17h4"></path></svg><span>المطبخ</span></a>
+            <a href="tables.html" class="nav-link" title="إدارة الطاولات"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h16v8H4zM6 11V6h12v5M7 19v2M17 19v2"></path></svg><span>الطاولات</span></a>
         </div>
     </header>
 
@@ -144,7 +146,8 @@
     <!-- Main Content -->
     <div id="mainLayout" class="flex flex-1 overflow-hidden">
 
-        <!-- Left: Categories -->
+        <!-- منطقة البيع: الأقسام والمنتجات في عمود واحد -->
+        <div id="catalogPanel">
         <div id="categoryPanel" class="w-56 bg-white border-l border-gray-200 flex flex-col overflow-hidden">
             <div class="p-3 border-b border-gray-100">
                 <h3 class="text-sm font-bold text-gray-500 uppercase mb-2">الأقسام</h3>
@@ -161,12 +164,19 @@
             <div class="product-toolbar"><div><div id="sectionTitle" class="text-sm font-bold">اختر قسمًا للبدء</div></div><span id="productCountHint" class="text-xs bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full">بيع سريع</span></div>
             <div id="productsGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
         </div>
+        </div>
 
         <!-- ملخص الطلب -->
         <div class="cart-panel flex flex-col shadow-lg">
             <div class="cart-head p-4">
                 <div class="flex justify-between items-center mb-3"><div><h3 class="font-black text-slate-800">الطلب الحالي</h3><p class="text-xs text-slate-500 mt-1">راجع الطلب ثم اختر طريقة الدفع</p></div><span id="itemCount" class="bg-orange-100 text-orange-700 text-xs px-2.5 py-1 rounded-full font-black">0 قطع</span></div>
+                <div class="flex gap-1.5 mb-3">
+                    <button onclick="setOrderType('سفري')" id="btnTakeaway" class="order-type-btn type-btn flex-1 border border-slate-300 text-xs"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6M9 16h4"></path></svg>سفري</button>
+                    <button onclick="setOrderType('صالة')" id="btnDinein" class="order-type-btn type-btn flex-1 border border-slate-300 text-xs"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16v5H4zM7 15v6M17 15v6M8 10V6h8v4"></path></svg>داخل المطعم</button>
+                    <button onclick="setOrderType('ديليفري')" id="btnDelivery" class="order-type-btn type-btn flex-1 border border-slate-300 text-xs"><svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6M9 16h4"></path></svg>توصيل</button>
+                </div>
                 <details class="group"><summary class="cursor-pointer text-xs font-bold text-slate-600 select-none">بيانات إضافية للطلب <span class="text-slate-400 font-normal">(الزبون والطاولة والملاحظات)</span></summary><div class="mt-2 space-y-2"><input type="text" id="customerName" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="اسم الزبون (اختياري)"><select id="tableNumber" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm hidden"><option value="">اختر طاولة للصالة</option></select><input type="text" id="orderNote" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="ملاحظة للمطبخ أو الطلب"></div></details>
+                <div class="mt-3 rounded-xl border border-indigo-100 bg-indigo-50 p-3"><div class="flex items-center justify-between gap-2"><b class="text-xs text-indigo-950">إطلاق الطلب للمطبخ</b><span class="text-[10px] text-indigo-700">يمكن إطلاقه لاحقًا من شاشة المطبخ</span></div><div class="mt-2 grid grid-cols-2 gap-2"><label class="cursor-pointer rounded-lg border border-indigo-200 bg-white px-2 py-2 text-center text-xs font-bold text-indigo-900"><input name="kitchenRelease" type="radio" value="now" checked class="ml-1 accent-indigo-600">ابدأ الآن</label><label class="cursor-pointer rounded-lg border border-indigo-200 bg-white px-2 py-2 text-center text-xs font-bold text-indigo-900"><input name="kitchenRelease" type="radio" value="later" class="ml-1 accent-indigo-600">أطلق لاحقًا</label></div></div>
             </div>
 
             <div id="dineInSessionBanner" class="hidden mx-3 mt-3 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-800"></div>
@@ -175,13 +185,13 @@
 
             <!-- Cart Footer -->
             <div class="cart-footer border-t border-gray-100 p-3 space-y-3">
-                <div><label class="text-xs text-slate-500 font-bold">الخصم</label><div class="flex gap-2 mt-1"><input type="number" id="discountPct" onchange="updateTotal()" onfocus="openNumpadForInput(this, 'نسبة الخصم')" inputmode="none" class="numpad-input w-1/2 border border-slate-200 rounded-lg px-3 py-2 text-sm text-center" placeholder="نسبة %" value="0"><input type="number" id="discountAmount" onchange="updateTotal()" onfocus="openNumpadForInput(this, 'قيمة الخصم')" inputmode="none" class="numpad-input w-1/2 border border-slate-200 rounded-lg px-3 py-2 text-sm text-center" placeholder="قيمة الخصم" value="0"></div></div>
+                <div><label class="text-xs text-slate-500 font-bold">الخصم</label><div class="flex gap-2 mt-1"><input type="number" id="discountPct" min="0" max="100" step="0.01" oninput="updateTotal()" onchange="updateTotal()" onfocus="openNumpadForInput(this, 'نسبة الخصم')" inputmode="none" class="numpad-input w-1/2 border border-slate-200 rounded-lg px-3 py-2 text-sm text-center" placeholder="نسبة %" value="0"><input type="number" id="discountAmount" min="0" step="0.01" oninput="updateTotal()" onchange="updateTotal()" onfocus="openNumpadForInput(this, 'قيمة الخصم')" inputmode="none" class="numpad-input w-1/2 border border-slate-200 rounded-lg px-3 py-2 text-sm text-center" placeholder="قيمة الخصم" value="0"></div></div>
                 <div class="cart-summary"><div class="flex justify-between items-center"><span class="text-xs text-slate-300">الإجمالي المستحق</span><span class="text-xs bg-white/10 px-2 py-1 rounded">يشمل الخصم</span></div><div id="totalDisplay" class="font-black mt-1">0</div></div>
-                <button onclick="openPaymentModal()" id="checkoutButton" class="primary-checkout w-full text-white">إتمام الدفع وحفظ الفاتورة <span class="opacity-75 text-xs">F4</span></button>
-                <button onclick="saveDineInSession()" id="saveDineInButton" class="hidden w-full min-h-[46px] bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm">حفظ طلب الطاولة وإرساله للمطبخ</button>
-                <button onclick="printLastCompletedOrder()" id="printLastOrderButton" class="hidden w-full min-h-[50px] rounded-lg border-2 border-blue-700 bg-blue-600 px-4 text-base font-black text-white hover:bg-blue-700" type="button">طباعة آخر فاتورة</button>
+                <button onclick="openPaymentModal()" id="checkoutButton" class="primary-checkout w-full text-white">دفع وحفظ الفاتورة <span class="opacity-75 text-xs">F4</span></button>
+                <button onclick="saveDineInSession()" id="saveDineInButton" class="hidden w-full min-h-[46px] bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm">حفظ طلب الصالة وإرساله للمطبخ</button>
+                <button onclick="printLastCompletedOrder()" id="printLastOrderButton" class="hidden w-full min-h-[50px] rounded-lg border-2 border-blue-700 bg-blue-600 px-4 text-base font-black text-white hover:bg-blue-700" type="button">إعادة طباعة الفاتورة الأخيرة</button>
                 <div id="lastPrintStatus" class="hidden rounded-lg border px-3 py-2 text-center text-sm font-bold" role="status" aria-live="polite"></div>
-                <div class="grid grid-cols-3 gap-2"><button onclick="holdOrder()" class="secondary-action bg-slate-100 text-slate-700 border border-slate-200 text-xs">تعليق</button><button onclick="undoLastItem()" class="secondary-action bg-slate-100 text-slate-700 text-xs">تراجع</button><button onclick="clearCart()" class="secondary-action bg-red-600 text-white border border-red-700 text-xs">مسح</button></div>
+                <div class="grid grid-cols-3 gap-2"><button onclick="holdOrder()" class="secondary-action bg-slate-100 text-slate-700 border border-slate-200 text-xs">تعليق</button><button onclick="undoLastItem()" class="secondary-action bg-slate-100 text-slate-700 text-xs">تراجع</button><button onclick="clearCart()" class="secondary-action bg-red-600 text-white border border-red-700 text-xs">مسح السلة</button></div>
                 <div id="heldOrders" class="space-y-1"></div>
             </div>
         </div>
@@ -287,12 +297,13 @@
     </div>
 
     <script>
-        let menu = {}, cart = [], lastCompletedOrderId = null, currentCategory = '', currentCurrency = 'SYP', orderType = 'سفري';
+        let menu = {}, productById = new Map(), cart = [], lastCompletedOrderId = null, currentCategory = '', currentCurrency = 'SYP', orderType = 'سفري';
         let usdRate = 0, eurRate = 0;
         let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
         let heldOrders = JSON.parse(localStorage.getItem('heldOrders') || '[]');
         let paymentMethod = '';
         let cashAmount = 0, cardAmount = 0, mixedTotalValue = 0;
+        let saleBusy = false;
         let dineInTables = [], activeDineInSession = null;
 
         async function init() {
@@ -320,7 +331,14 @@
             }
         });
 
-        async function loadMenu() { try { const r = await fetch('/api/menu'); menu = await r.json(); } catch(e) { showToast(' خطأ في تحميل المنيو'); } }
+        async function loadMenu() {
+            try {
+                const r = await fetch('/api/menu');
+                const data = await r.json();
+                menu = data && typeof data === 'object' ? data : {};
+                productById = new Map(Object.values(menu).flatMap(items => Array.isArray(items) ? items : []).map(product => [Number(product.id), product]));
+            } catch(e) { menu = {}; productById = new Map(); showToast(' خطأ في تحميل المنيو'); }
+        }
         async function loadCurrency() {
             try {
                 const r = await fetch('/api/settings/currency');
@@ -393,9 +411,37 @@
         }
 
         function formatPrice(p) {
-            if(currentCurrency==='USD') return usdRate ? '$'+(p/usdRate).toFixed(2) : (p.toLocaleString()+' ل.س');
-            if(currentCurrency==='EUR') return eurRate ? '€'+(p/eurRate).toFixed(2) : (p.toLocaleString()+' ل.س');
-            return p.toLocaleString()+' ل.س';
+            const amount = Number.isFinite(Number(p)) ? Number(p) : 0;
+            if(currentCurrency==='USD') return usdRate ? '$'+(amount/usdRate).toFixed(2) : (amount.toLocaleString()+' ل.س');
+            if(currentCurrency==='EUR') return eurRate ? '€'+(amount/eurRate).toFixed(2) : (amount.toLocaleString()+' ل.س');
+            return amount.toLocaleString()+' ل.س';
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>\"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[ch]));
+        }
+        function safeImageUrl(value) {
+            const src = String(value ?? '').trim();
+            if (!src) return '';
+            return /^(https?:|data:image\/(png|jpeg|jpg|gif|webp);|\.\.?\/|\/)/i.test(src) ? src : '';
+        }
+        function readDiscounts() {
+            const pctInput = Number.parseFloat(document.getElementById('discountPct')?.value);
+            const amountInput = Number.parseFloat(document.getElementById('discountAmount')?.value);
+            return {
+                pct: Number.isFinite(pctInput) ? Math.min(100, Math.max(0, pctInput)) : 0,
+                amount: Number.isFinite(amountInput) ? Math.max(0, amountInput) : 0
+            };
+        }
+        function productCardMarkup(p) {
+            const id = Number(p.id);
+            const name = escapeHtml(p.name);
+            const image = safeImageUrl(p.image);
+            return `<div class="product-card bg-white border border-gray-200 rounded-xl p-3 text-center" role="button" tabindex="0" onclick="addProductFromCard(event,${Number.isFinite(id) ? id : 0})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();addProductFromCard(event,${Number.isFinite(id) ? id : 0})}" aria-label="إضافة ${name} إلى السلة">
+                    ${image ? `<img src="${escapeHtml(image)}" alt="${name}" class="product-image" loading="lazy" decoding="async">` : `<div class="product-image product-image-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 15l3-3 2 2 2-2 3 3M8 9h.01"></path></svg></div>`}
+                    <div class="product-name">${name}</div>
+                    <div class="q-product-price">${formatPrice(p.price)}</div>
+                </div>`;
         }
 
         function renderAll() {
@@ -408,44 +454,44 @@
 
         function renderCategories() {
             const cats = Object.keys(menu);
-            document.getElementById('categoriesList').innerHTML = cats.map(c => {
-                const count = (menu[c]||[]).length;
-                return `<div onclick="selectCategory('${c}')" id="cat_${c}" class="category-item px-3 py-2 rounded-lg text-sm flex justify-between">
-                    <span>${c}</span><span class="text-xs opacity-60">${count}</span>
-                </div>`;
+            const list = document.getElementById('categoriesList');
+            list.innerHTML = cats.map((c, index) => {
+                const count = Array.isArray(menu[c]) ? menu[c].length : 0;
+                return `<button type="button" data-category-index="${index}" id="cat_${index}" class="category-item w-full px-3 py-2 rounded-lg text-sm flex justify-between text-right">
+                    <span>${escapeHtml(c)}</span><span class="text-xs opacity-60">${count}</span>
+                </button>`;
             }).join('');
+            list.querySelectorAll('[data-category-index]').forEach(button => {
+                button.addEventListener('click', () => selectCategory(cats[Number(button.dataset.categoryIndex)]));
+            });
         }
 
         function renderFavorites() {
+            const allProducts = Array.from(productById.values());
             const products = favorites.map(f => {
                 const id = typeof f === 'object' ? f.id : f;
-                return Object.values(menu).flat().find(p => Number(p.id) === Number(id));
+                return allProducts.find(p => Number(p.id) === Number(id));
             }).filter(Boolean);
             favorites = products.map(p => p.id);
             localStorage.setItem('favorites', JSON.stringify(favorites));
             document.getElementById('favoritesList').innerHTML = products.length > 0 ?
-                products.map(p => `<div onclick="addToCartById(${Number(p.id)},1)" class="text-xs px-3 py-1.5 rounded bg-blue-50 hover:bg-blue-100 cursor-pointer">${p.name}</div>`).join('') :
+                products.map(p => `<button type="button" data-favorite-id="${Number(p.id)}" class="w-full text-xs px-3 py-2 rounded bg-blue-50 hover:bg-blue-100 cursor-pointer text-right">${escapeHtml(p.name)}</button>`).join('') :
                 '<p class="text-xs text-gray-400 px-3">لا توجد أصناف مفضلة</p>';
+            document.querySelectorAll('[data-favorite-id]').forEach(button => button.addEventListener('click', () => addToCartById(Number(button.dataset.favoriteId), 1)));
         }
 
         function selectCategory(cat) {
             currentCategory = cat;
-            document.querySelectorAll('.category-item').forEach(el => el.classList.remove('category-active'));
-            document.getElementById('cat_'+cat)?.classList.add('category-active');
+            const categoryIndex = Object.keys(menu).indexOf(String(cat));
+            document.querySelectorAll('.category-item').forEach(el => el.classList.toggle('category-active', Number(el.dataset.categoryIndex) === categoryIndex));
             document.getElementById('sectionTitle').textContent = cat;
             renderProducts(cat);
         }
 
         function renderProducts(cat) {
-            const items = menu[cat] || [];
+            const items = Array.isArray(menu[cat]) ? menu[cat] : [];
             document.getElementById('productCountHint').textContent = items.length + ' صنف';
-            document.getElementById('productsGrid').innerHTML = items.map(p => `
-                <div class="product-card bg-white border border-gray-200 rounded-xl p-3 text-center" role="button" tabindex="0" onclick="addProductFromCard(event,${Number(p.id)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();addProductFromCard(event,${Number(p.id)})}" aria-label="إضافة ${p.name} إلى السلة">
-                    ${p.image ? `<img src="${p.image}" alt="${p.name}" class="product-image">` : `<div class="product-image product-image-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 15l3-3 2 2 2-2 3 3M8 9h.01"></path></svg></div>`}
-                    <div class="product-name">${p.name}</div>
-                    <div class="q-product-price">${formatPrice(p.price)}</div>
-                </div>
-            `).join('');
+            document.getElementById('productsGrid').innerHTML = items.map(productCardMarkup).join('');
         }
 
         async function scanBarcode() {
@@ -466,21 +512,13 @@
         });
 
         function searchProducts() {
-            const q = document.getElementById('searchBox').value.toLowerCase();
+            const q = document.getElementById('searchBox').value.trim().toLocaleLowerCase('ar');
             if(!q) { if(currentCategory) renderProducts(currentCategory); return; }
             const results = [];
-            Object.values(menu).forEach(items => {
-                items.forEach(p => { if(p.name.toLowerCase().includes(q) || String(p.barcode || '').toLowerCase().includes(q)) results.push(p); });
-            });
+            productById.forEach(p => { const name = String(p.name || '').toLocaleLowerCase('ar'); const barcode = String(p.barcode || '').toLocaleLowerCase('ar'); if(name.includes(q) || barcode.includes(q)) results.push(p); });
             document.getElementById('sectionTitle').textContent = 'نتائج البحث';
             document.getElementById('productCountHint').textContent = results.length + ' نتيجة';
-            document.getElementById('productsGrid').innerHTML = results.map(p => `
-                <div class="product-card bg-white border border-gray-200 rounded-xl p-3 text-center" role="button" tabindex="0" onclick="addProductFromCard(event,${Number(p.id)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();addProductFromCard(event,${Number(p.id)})}" aria-label="إضافة ${p.name} إلى السلة">
-                    ${p.image ? `<img src="${p.image}" alt="${p.name}" class="product-image">` : `<div class="product-image product-image-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 15l3-3 2 2 2-2 3 3M8 9h.01"></path></svg></div>`}
-                    <div class="product-name">${p.name}</div>
-                    <div class="q-product-price">${formatPrice(p.price)}</div>
-                </div>
-            `).join('');
+            document.getElementById('productsGrid').innerHTML = results.map(productCardMarkup).join('');
         }
 
         function toggleFavorite(productId) {
@@ -498,8 +536,10 @@
         }
 
         function addToCartById(productId, qty) {
+            if (saleBusy) return;
+            const safeQty = Math.max(1, Math.min(100, Math.floor(Number(qty) || 1)));
             let modifiers = [];
-            const product = Object.values(menu).flat().find(p => Number(p.id) === Number(productId));
+            const product = productById.get(Number(productId));
             if (!product) return showToast(' المنتج لم يعد موجوداً؛ حدّث المنيو');
             if (Array.isArray(product.modifiers) && product.modifiers.length) {
                 const catalog = product.modifiers.map(raw => typeof raw === 'object' ? {name: raw.name, price: Number(raw.price || 0)} : {name: String(raw), price: 0});
@@ -513,8 +553,8 @@
             }
             const key = Number(product.id) + '|' + modifiers.map(option => option.name).join(',');
             const existing = cart.find(i => i.key === key);
-            if(existing) existing.qty += qty;
-            else cart.push({key, product_id: Number(product.id), name: product.name, base_price: Number(product.price), price: Number(product.price) + modifiers.reduce((sum, option) => sum + Number(option.price || 0), 0), qty, modifiers});
+            if(existing) existing.qty = Math.min(100, existing.qty + safeQty);
+            else cart.push({key, product_id: Number(product.id), name: product.name, base_price: Number(product.price) || 0, price: (Number(product.price) || 0) + modifiers.reduce((sum, option) => sum + (Number(option.price) || 0), 0), qty: safeQty, modifiers});
             renderCart();
             showToast(' ' + product.name);
         }
@@ -564,8 +604,8 @@
             closeNumpad();
         }
 
-        function removeFromCart(index) { cart.splice(index,1); renderCart(); }
-        function updateCartQty(index, delta) { cart[index].qty += delta; if(cart[index].qty <= 0) cart.splice(index,1); renderCart(); }
+        function removeFromCart(index) { if (!Number.isInteger(index) || !cart[index]) return; cart.splice(index,1); renderCart(); }
+        function updateCartQty(index, delta) { const item = cart[index]; if (!item) return; item.qty = Math.min(100, Math.max(0, (Number(item.qty) || 0) + Number(delta || 0))); if(item.qty <= 0) cart.splice(index,1); renderCart(); }
         function undoLastItem() { if(cart.length>0){cart.pop();renderCart();showToast('↩ تراجع');} }
 
         function renderCart() {
@@ -576,30 +616,36 @@
             if(cart.length === 0) {
                 list.innerHTML = '<div class="cart-empty"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h2l2 11h9l2-8H7M10 20h.01M17 20h.01"></path></svg><p>السلة فارغة - انقر على الوجبة للإضافة</p></div>';
             } else {
-                list.innerHTML = cart.map((item, i) => `
-                    <div class="cart-item border border-slate-100 bg-gray-50 p-3 rounded-xl text-sm animate-slide">
-                        <span class="cart-item-name min-w-0"><span class="block font-black text-slate-800">${item.name}</span>${item.modifiers?.length ? `<small class="block text-[11px] text-indigo-600 mt-0.5 leading-5">+ ${item.modifiers.map(option => typeof option === 'object' ? option.name + (option.price ? ' (' + formatPrice(option.price) + ')' : '') : option).join('، ')}</small>` : ''}</span>
-                        <div class="qty-control flex items-center gap-1 rounded-lg bg-white border border-slate-200 p-0.5">
-                            <button type="button" onclick="updateCartQty(${i},-1)" class="rounded-md bg-slate-100 hover:bg-slate-200 text-sm font-black" aria-label="تقليل كمية ${item.name}">−</button>
-                            <button type="button" onclick="openNumpadForQuantity(${i})" class="qty-value w-10 min-h-[46px] text-center font-black text-slate-800 bg-white rounded-md border border-slate-100" aria-label="تعديل كمية ${item.name}">${item.qty}</button>
-                            <button type="button" onclick="updateCartQty(${i},1)" class="rounded-md bg-blue-600 text-white hover:bg-blue-700 text-sm font-black" aria-label="زيادة كمية ${item.name}">+</button>
-                        </div>
-                        <span class="cart-item-total font-black text-left text-slate-800">${formatPrice(item.price * item.qty)}</span>
-                        <button type="button" onclick="removeFromCart(${i})" class="remove-cart-item shrink-0 rounded-lg bg-red-600 text-white hover:bg-red-700" aria-label="حذف ${item.name}">حذف</button>
-                    </div>
-                `).join('');
+                list.innerHTML = cart.map((item, i) => {
+                    const name = escapeHtml(item.name);
+                    const qty = Math.max(1, Math.min(100, Math.floor(Number(item.qty) || 1)));
+                    const price = Number(item.price) || 0;
+                    const modifiers = Array.isArray(item.modifiers) ? item.modifiers.map(option => {
+                        const optionName = typeof option === 'object' ? option.name : option;
+                        const optionPrice = typeof option === 'object' ? Number(option.price) || 0 : 0;
+                        return escapeHtml(optionName) + (optionPrice ? ' (' + escapeHtml(formatPrice(optionPrice)) + ')' : '');
+                    }).join('، ') : '';
+                    return `<div class="cart-item border border-slate-100 bg-gray-50 p-3 rounded-xl text-sm animate-slide">
+                        <span class="cart-item-name min-w-0"><span class="block font-black text-slate-800">${name}</span>${modifiers ? `<small class="block text-[11px] text-indigo-600 mt-0.5 leading-5">+ ${modifiers}</small>` : ''}</span>
+                            <div class="qty-control flex items-center gap-1 rounded-lg bg-white border border-slate-200 p-0.5">
+                                <button type="button" onclick="updateCartQty(${i},-1)" class="rounded-md bg-slate-100 hover:bg-slate-200 text-sm font-black" aria-label="تقليل كمية ${name}">−</button>
+                                <button type="button" onclick="openNumpadForQuantity(${i})" class="qty-value w-10 min-h-[46px] text-center font-black text-slate-800 bg-white rounded-md border border-slate-100" aria-label="تعديل كمية ${name}">${qty}</button>
+                                <button type="button" onclick="updateCartQty(${i},1)" class="rounded-md bg-blue-600 text-white hover:bg-blue-700 text-sm font-black" aria-label="زيادة كمية ${name}">+</button>
+                            </div>
+                            <span class="cart-item-total font-black text-left text-slate-800">${formatPrice(price * qty)}</span>
+                            <button type="button" onclick="removeFromCart(${i})" class="remove-cart-item shrink-0 rounded-lg bg-red-600 text-white hover:bg-red-700" aria-label="حذف ${name}">حذف</button>
+                        </div>`;
+                }).join('');
             }
             updateTotal();
         }
 
         function computeCartTotal() {
-            const pct = parseInt(document.getElementById('discountPct').value) || 0;
-            const amt = parseInt(document.getElementById('discountAmount').value) || 0;
-            let total = cart.reduce((s,i) => s + (i.price * i.qty), 0);
-            if(pct > 0) total -= total * pct / 100;
-            if(amt > 0) total -= amt;
-            if(total < 0) total = 0;
-            return total;
+            const { pct, amount } = readDiscounts();
+            const subtotal = cart.reduce((sum, item) => sum + Math.max(0, Number(item.price) || 0) * Math.max(0, Number(item.qty) || 0), 0);
+            const percentageDiscount = subtotal * pct / 100;
+            const total = Math.max(0, subtotal - percentageDiscount - amount);
+            return Math.round((total + Number.EPSILON) * 100) / 100;
         }
 
         function updateTotal() {
@@ -607,8 +653,7 @@
         }
 
         function dineInPayload() {
-            const pct = parseFloat(document.getElementById('discountPct').value) || 0;
-            const amount = parseFloat(document.getElementById('discountAmount').value) || 0;
+            const { pct, amount } = readDiscounts();
             return {
                 table_id: document.getElementById('tableNumber').value,
                 items: cart.map(i => ({product_id:i.product_id, quantity:i.qty, modifiers:i.modifiers || []})),
@@ -645,7 +690,7 @@
                 const selected = select.value;
                 select.innerHTML = '<option value="">اختر طاولة للصالة</option>' + rows.map(table => {
                     const disabled = table.status === 'busy' && String(table.active_session_id || '') !== String(activeDineInSession?.id || '');
-                    return `<option value="${table.id}" ${disabled ? 'disabled' : ''}>${table.name}${table.status === 'busy' ? ' — مشغولة' : ''}</option>`;
+                    return `<option value="${escapeHtml(table.id)}" ${disabled ? 'disabled' : ''}>${escapeHtml(table.name)}${table.status === 'busy' ? ' — مشغولة' : ''}</option>`;
                 }).join('');
                 if (selected) select.value = selected;
                 if (activeDineInSession) select.value = activeDineInSession.table_id;
@@ -667,11 +712,11 @@
             } else if (isDineIn) {
                 banner.textContent = 'حدد طاولة ثم احفظ الطلب لإرساله للمطبخ. يبقى الطلب مفتوحاً حتى الدفع.';
                 banner.classList.remove('hidden');
-                saveButton.textContent = 'فتح طلب الطاولة وإرساله للمطبخ';
-                checkout.innerHTML = 'إتمام الدفع وحفظ الفاتورة <span class="opacity-75 text-xs">F4</span>';
+                saveButton.textContent = 'حفظ طلب الصالة وإرساله للمطبخ';
+                checkout.innerHTML = 'دفع وحفظ الفاتورة <span class="opacity-75 text-xs">F4</span>';
             } else {
                 banner.classList.add('hidden');
-                checkout.innerHTML = 'إتمام الدفع وحفظ الفاتورة <span class="opacity-75 text-xs">F4</span>';
+                checkout.innerHTML = 'دفع وحفظ الفاتورة <span class="opacity-75 text-xs">F4</span>';
             }
         }
 
@@ -783,9 +828,10 @@
 
         function renderHeldOrders() {
             document.getElementById('heldOrders').innerHTML = heldOrders.length > 0 ?
-                '<div class="text-xs text-orange-600 font-bold mt-2">⏸ طلبات معلقة:</div>' +
-                heldOrders.map((h,i) => `<button onclick="resumeOrder(${i})" class="block w-full text-xs bg-orange-50 px-2 py-1 rounded mt-1 text-right"> ${h.items.length} منتجات - ${h.type}</button>`).join('')
+                '<div class="text-xs text-orange-600 font-bold mt-2">طلبات معلقة:</div>' +
+                heldOrders.map((h,i) => `<button type="button" data-held-index="${i}" class="block w-full text-xs bg-orange-50 px-2 py-2 rounded mt-1 text-right">${Array.isArray(h.items) ? h.items.length : 0} منتجات - ${escapeHtml(h.type || '')}</button>`).join('')
                 : '';
+            document.querySelectorAll('[data-held-index]').forEach(button => button.addEventListener('click', () => resumeOrder(Number(button.dataset.heldIndex))));
         }
 
         function openPaymentModal() {
@@ -796,6 +842,7 @@
         }
         function closePaymentModal() { document.getElementById('paymentModal').classList.add('hidden'); }
         function quickPay(method) {
+            if (saleBusy) return;
             if (method === 'مختلط') {
                 closePaymentModal();
                 openMixedModal();
@@ -820,12 +867,14 @@
         function closeMixedModal() { document.getElementById('mixedPaymentModal').classList.add('hidden'); }
 
         function onMixedCashChange() {
-            const cash = parseFloat(document.getElementById('mixedCashInput').value) || 0;
+            const cash = Math.min(mixedTotalValue, Math.max(0, Number.parseFloat(document.getElementById('mixedCashInput').value) || 0));
+            document.getElementById('mixedCashInput').value = cash;
             document.getElementById('mixedCardInput').value = Math.max(0, mixedTotalValue - cash);
             document.getElementById('mixedError').classList.add('hidden');
         }
         function onMixedCardChange() {
-            const card = parseFloat(document.getElementById('mixedCardInput').value) || 0;
+            const card = Math.min(mixedTotalValue, Math.max(0, Number.parseFloat(document.getElementById('mixedCardInput').value) || 0));
+            document.getElementById('mixedCardInput').value = card;
             document.getElementById('mixedCashInput').value = Math.max(0, mixedTotalValue - card);
             document.getElementById('mixedError').classList.add('hidden');
         }
@@ -833,7 +882,7 @@
         function confirmMixedPayment() {
             const cash = parseFloat(document.getElementById('mixedCashInput').value) || 0;
             const card = parseFloat(document.getElementById('mixedCardInput').value) || 0;
-            if (Math.abs((cash + card) - mixedTotalValue) > 0.5) {
+            if (cash < 0 || card < 0 || Math.abs((cash + card) - mixedTotalValue) > 0.01) {
                 document.getElementById('mixedError').classList.remove('hidden');
                 return;
             }
@@ -854,10 +903,10 @@
         }
 
         async function saveOrder() {
+            if (saleBusy) return;
             if(cart.length===0) return showToast(' السلة فارغة');
             updateTotal();
-            const pct = parseFloat(document.getElementById('discountPct').value) || 0;
-            const amt = parseFloat(document.getElementById('discountAmount').value) || 0;
+            const { pct, amount: amt } = readDiscounts();
             let total = computeCartTotal();
             const order = {
                 items: cart.map(i => ({product_id:i.product_id, quantity:i.qty, modifiers:i.modifiers || []})),
@@ -905,44 +954,41 @@
             const width = (printerSettings.paper_width || 80) + 'mm';
             const restaurantName = document.getElementById('restaurantTitle').textContent.replace('','').trim();
             const now = new Date();
+            const escapeReceiptText = (value) => String(value || '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
             const logoDimensions = { small: ['42%', '30px'], medium: ['62%', '42px'], large: ['82%', '58px'] }[printerSettings.logo_size] || ['62%', '42px'];
             const logoMargins = printerSettings.logo_alignment === 'right' ? '0 0 4px auto' : (printerSettings.logo_alignment === 'left' ? '0 auto 4px 0' : '0 auto 4px');
-            const receiptLogo = printerSettings.logo_data
-                ? `<img src="${printerSettings.logo_data}" alt="شعار المطعم" style="max-height:${logoDimensions[1]}; max-width:${logoDimensions[0]}; object-fit:contain; margin:${logoMargins};">`
-                : (printerSettings.logo_caption ? `<div style="font-size:.85em; margin-bottom:3px;">${printerSettings.logo_caption}</div>` : '');
-            const escapeReceiptText = (value) => String(value || '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+            const logoSource = safeImageUrl(printerSettings.logo_data);
+            const receiptLogo = logoSource
+                ? `<img src="${escapeHtml(logoSource)}" alt="شعار المطعم" style="max-height:${logoDimensions[1]}; max-width:${logoDimensions[0]}; object-fit:contain; margin:${logoMargins};">`
+                : (printerSettings.logo_caption ? `<div style="font-size:.85em; margin-bottom:3px;">${escapeReceiptText(printerSettings.logo_caption)}</div>` : '');
             const socialFooter = [['Facebook', printerSettings.social_facebook], ['Instagram', printerSettings.social_instagram], ['WhatsApp', printerSettings.social_whatsapp]]
                 .filter(([, value]) => value)
                 .map(([label, value]) => `<div dir="ltr" style="text-align:center; margin-top:2px; font-size:.82em;">${label}: ${escapeReceiptText(value)}</div>`).join('');
 
             const itemsHtml = cart.map(i => `
                 <div style="display:flex; justify-content:space-between;">
-                    <span>${i.name} × ${i.qty}</span>
-                    <span>${formatPrice(i.price * i.qty)}</span>
+                    <span>${escapeReceiptText(i.name)} × ${Math.max(0, Number(i.qty) || 0)}</span>
+                    <span>${escapeReceiptText(formatPrice((Number(i.price) || 0) * (Number(i.qty) || 0)))}</span>
                 </div>`).join('');
 
-            const pct = parseInt(document.getElementById('discountPct').value) || 0;
-            const amt = parseInt(document.getElementById('discountAmount').value) || 0;
-            const subtotal = cart.reduce((s,i) => s + (i.price * i.qty), 0);
-            let total = subtotal;
-            if(pct > 0) total -= total * pct / 100;
-            if(amt > 0) total -= amt;
-            if(total < 0) total = 0;
+            const { pct, amount: amt } = readDiscounts();
+            const subtotal = cart.reduce((s,i) => s + ((Number(i.price) || 0) * (Number(i.qty) || 0)), 0);
+            const total = Math.max(0, subtotal - (subtotal * pct / 100) - amt);
             const discountLine = (pct > 0 || amt > 0)
                 ? `<div style="display:flex; justify-content:space-between;"><span>الخصم</span><span>-${formatPrice(subtotal - total)}</span></div>` : '';
 
             const customer = document.getElementById('customerName').value;
             const table = document.getElementById('tableNumber').value;
             const orderNumberLine = orderId
-                ? `<div style="text-align:center; font-weight:bold;">فاتورة رقم: <span dir="ltr" style="unicode-bidi:isolate;">${orderId}</span></div>`
+                ? `<div style="text-align:center; font-weight:bold;">فاتورة رقم: <span dir="ltr" style="unicode-bidi:isolate;">${escapeReceiptText(orderId)}</span></div>`
                 : `<div style="text-align:center; color:#888;">-- معاينة قبل الدفع (بدون رقم فاتورة) --</div>`;
             const layoutDefault = ['logo', 'header', 'details', 'items', 'totals', 'footer'];
             const configuredLayout = printerSettings.receipt_layout;
             const receiptLayout = Array.isArray(configuredLayout) && configuredLayout.length === layoutDefault.length && configuredLayout.every(id => layoutDefault.includes(id)) && new Set(configuredLayout).size === layoutDefault.length ? configuredLayout : layoutDefault;
             const receiptBlocks = {
                 logo: receiptLogo ? `<div style="text-align:center;">${receiptLogo}</div>` : '',
-                header: `<div style="text-align:center; font-weight:bold; font-size:1.2em;">${restaurantName}</div>`,
-                details: `${orderNumberLine}<div style="text-align:center; margin-bottom:4px;">${now.toLocaleString('ar')}</div><div>نوع الطلب: ${orderType}</div>${customer ? `<div>الزبون: ${customer}</div>` : ''}${table ? `<div>الطاولة: ${table}</div>` : ''}<hr>`,
+                header: `<div style="text-align:center; font-weight:bold; font-size:1.2em;">${escapeReceiptText(restaurantName)}</div>`,
+                details: `${orderNumberLine}<div style="text-align:center; margin-bottom:4px;">${escapeReceiptText(now.toLocaleString('ar'))}</div><div>نوع الطلب: ${escapeReceiptText(orderType)}</div>${customer ? `<div>الزبون: ${escapeReceiptText(customer)}</div>` : ''}${table ? `<div>الطاولة: ${escapeReceiptText(table)}</div>` : ''}<hr>`,
                 items: `${itemsHtml}<hr>`,
                 totals: `${discountLine}<div style="display:flex; justify-content:space-between; font-weight:bold;"><span>الإجمالي</span><span>${formatPrice(total)}</span></div>`,
                 footer: `${printerSettings.footer_text ? `<div style="text-align:center; margin-top:6px;">${escapeReceiptText(printerSettings.footer_text)}</div>` : ''}${socialFooter}`
@@ -1002,7 +1048,7 @@
                 showToast('تعذرت طباعة الفاتورة');
             } finally {
                 button.disabled = false;
-                button.textContent = 'طباعة آخر فاتورة';
+                button.textContent = 'إعادة طباعة الفاتورة الأخيرة';
             }
         }
         async function changeCurrency() {
@@ -1112,6 +1158,7 @@
         }
 
         function setSaleBusy(busy, text = 'جارِ حفظ الفاتورة وتجهيز الطباعة…') {
+            saleBusy = Boolean(busy);
             const progress = document.getElementById('printProgress');
             document.getElementById('printProgressText').textContent = text;
             progress.classList.toggle('hidden', !busy);
@@ -1150,7 +1197,9 @@
             if (!failures.length) return;
             const names = failures.map(job => job.type === 'kitchen' ? 'تذكرة المطبخ' : 'الإيصال');
             document.getElementById('printFailureMessage').textContent = `تعذر إرسال ${names.join(' و')} إلى الطابعة. تم حفظ الطلب، لكن يلزم فحص الطابعة أو الاتصال بها.`;
-            document.getElementById('printFailureJobs').innerHTML = failures.map(job => `<div class="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-2 py-2 text-xs font-bold text-rose-800"><span>حذف ${job.type === 'kitchen' ? 'المطبخ' : 'الإيصال'}: ${job.message || 'تعذر إرسال الأمر'}</span><button data-retry-print="${job.type}" onclick="retryFailedPrint('${String(job.order_id || '').replace(/'/g, '')}', '${job.type}')" class="rounded-md bg-rose-700 px-2 py-1 text-white hover:bg-rose-800">إعادة المحاولة</button></div>`).join('');
+            const retryJobs = failures.map(job => ({...job, type: job.type === 'kitchen' ? 'kitchen' : 'receipt'}));
+            document.getElementById('printFailureJobs').innerHTML = retryJobs.map((job, index) => `<div class="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-2 py-2 text-xs font-bold text-rose-800"><span>تعذر ${job.type === 'kitchen' ? 'المطبخ' : 'الإيصال'}: ${escapeHtml(job.message || 'تعذر إرسال الأمر')}</span><button type="button" data-retry-index="${index}" class="rounded-md bg-rose-700 px-2 py-1 text-white hover:bg-rose-800">إعادة المحاولة</button></div>`).join('');
+            document.querySelectorAll('[data-retry-index]').forEach(button => button.addEventListener('click', () => { const job = retryJobs[Number(button.dataset.retryIndex)]; retryFailedPrint(String(job.order_id || ''), job.type); }));
             document.getElementById('printFailureAlert').classList.remove('hidden');
             loadPrintErrorCount();
         }

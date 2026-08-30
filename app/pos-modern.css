@@ -433,239 +433,225 @@ body.qaisar-page-index .cart-footer #printLastOrderButton { min-height: 56px !im
 }
 
 
-/* تخطيط مضغوط لرأس السلة والشريط العلوي مع الحفاظ على مساحة العناصر والطباعة */
-body.qaisar-page-index > header {
-  min-height: 58px !important;
-  padding: 7px 12px !important;
-}
-body.qaisar-page-index > header .brand-mark { width: 34px !important; height: 34px !important; }
-body.qaisar-page-index > header .brand-mark::after { font-size: 22px !important; }
-body.qaisar-page-index > header .brand-copy h1 { font-size: 14px !important; }
-body.qaisar-page-index > header .brand-copy small { font-size: 10px !important; }
-body.qaisar-page-index > header .header-tools { gap: 5px !important; }
-body.qaisar-page-index > header .top-field,
-body.qaisar-page-index > header .nav-link { min-height: 34px !important; height: 34px !important; font-size: 11px !important; }
-body.qaisar-page-index > header .cashier-search { width: 150px !important; }
-body.qaisar-page-index > header .nav-link { padding: 0 8px !important; }
-body.qaisar-page-index > header .nav-link svg { width: 16px !important; height: 16px !important; }
-body.qaisar-page-index #connectionStatus { padding: 4px 7px !important; font-size: 10px !important; }
-
-body.qaisar-page-index .cart-head { padding: 11px 14px !important; }
-body.qaisar-page-index .cart-head h3 { font-size: 17px !important; }
-body.qaisar-page-index .cart-head > div:first-child { margin-bottom: 8px !important; }
-body.qaisar-page-index .cart-head .order-type-btn {
-  min-height: 31px !important;
-  height: 31px !important;
-  padding: 0 7px !important;
-  gap: 4px !important;
-  border-radius: 8px !important;
-  font-size: 11px !important;
-  line-height: 1 !important;
-}
-body.qaisar-page-index .cart-head .order-type-btn .q-line-icon {
-  width: 14px !important;
-  height: 14px !important;
-}
-body.qaisar-page-index .cart-head > .flex.gap-1\.5 { margin-bottom: 8px !important; }
-body.qaisar-page-index .cart-head details summary { font-size: 11px !important; }
-body.qaisar-page-index .cart-head details input,
-body.qaisar-page-index .cart-head details select { min-height: 31px !important; padding: 5px 8px !important; font-size: 11px !important; }
-body.qaisar-page-index .cart-head .mt-3.rounded-xl { margin-top: 8px !important; padding: 8px !important; }
-body.qaisar-page-index .cart-head .mt-3.rounded-xl b { font-size: 11px !important; }
-body.qaisar-page-index .cart-head .mt-3.rounded-xl span,
-body.qaisar-page-index .cart-head .mt-3.rounded-xl label { font-size: 10px !important; }
-body.qaisar-page-index .cart-head .mt-3.rounded-xl label { padding: 6px 5px !important; }
-
-/* أولوية عملية: لا تختفي مساحة العناصر عند تصغير رأس السلة */
-body.qaisar-page-index #cartItems { min-height: 300px !important; }
-body.qaisar-page-index .cart-footer { max-height: 43% !important; }
-@media (max-width: 860px) {
-  body.qaisar-page-index > header .cashier-search { width: 130px !important; }
-  body.qaisar-page-index #cartItems { min-height: 280px !important; }
-  body.qaisar-page-index .cart-footer { max-height: 46% !important; }
-}
-@media (max-width: 620px) {
-  body.qaisar-page-index > header .cashier-search { width: 120px !important; }
-  body.qaisar-page-index #cartItems { min-height: 240px !important; }
-  body.qaisar-page-index .cart-footer { max-height: 48% !important; }
-}
-
-
-/* صف علوي موحّد: نوع الطلب بجانب إطلاق المطبخ */
-body.qaisar-page-index .cart-top-row {
-  display: flex !important;
-  align-items: stretch !important;
-  gap: 8px !important;
-  width: 100% !important;
-  margin-bottom: 8px !important;
-}
-body.qaisar-page-index .order-type-group {
-  display: grid !important;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  gap: 5px !important;
-  flex: 1 1 auto !important;
-  min-width: 0 !important;
-}
-body.qaisar-page-index .cart-top-row .order-type-btn {
-  min-width: 0 !important;
-  min-height: 30px !important;
-  height: 30px !important;
-  padding: 0 5px !important;
-  gap: 3px !important;
-  white-space: nowrap !important;
-  font-size: 10px !important;
-}
-body.qaisar-page-index .cart-top-row .order-type-btn .q-line-icon {
-  width: 13px !important;
-  height: 13px !important;
-  flex: 0 0 auto !important;
-}
-body.qaisar-page-index .kitchen-release-compact {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 5px !important;
-  flex: 0 0 auto !important;
-  min-width: 118px !important;
-  padding: 3px 6px !important;
-  border: 1px solid #c7d2fe !important;
-  border-radius: 8px !important;
-  background: #eef2ff !important;
-  color: #1e1b4b !important;
-  font-size: 10px !important;
-  white-space: nowrap !important;
-}
-body.qaisar-page-index .kitchen-release-compact b { font-size: 10px !important; }
-body.qaisar-page-index .kitchen-release-compact label {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 2px !important;
-  padding: 3px 4px !important;
-  border: 1px solid #c7d2fe !important;
-  border-radius: 6px !important;
-  background: #fff !important;
-  color: #312e81 !important;
-  font-weight: 900 !important;
-}
-body.qaisar-page-index .kitchen-release-compact input { margin: 0 !important; }
-@media (max-width: 430px) {
-  body.qaisar-page-index .cart-top-row { gap: 4px !important; }
-  body.qaisar-page-index .cart-top-row .order-type-btn { font-size: 9px !important; padding: 0 2px !important; }
-  body.qaisar-page-index .cart-top-row .order-type-btn .q-line-icon { display: none !important; }
-  body.qaisar-page-index .kitchen-release-compact { min-width: 106px !important; gap: 2px !important; padding-inline: 3px !important; }
-  body.qaisar-page-index .kitchen-release-compact label { padding-inline: 2px !important; }
-}
-
-
-/* قائمة الطلب الحالية في الشريط العلوي */
-body.qaisar-page-index .top-order-menu { position: relative; display: inline-block; z-index: 30; }
-body.qaisar-page-index .top-order-menu > summary { list-style: none; cursor: pointer; display: inline-flex !important; align-items: center; justify-content: center; gap: 5px; }
-body.qaisar-page-index .top-order-menu > summary::-webkit-details-marker { display: none; }
-body.qaisar-page-index .top-order-menu[open] > summary { background: #2563eb !important; border-color: #93c5fd !important; color: #fff !important; }
-body.qaisar-page-index .top-order-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  inset-inline-end: 0;
-  width: 330px;
-  padding: 10px;
-  border: 1px solid #94a3b8;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 18px 38px rgba(15,23,42,.25);
-  direction: rtl;
-}
-body.qaisar-page-index .top-order-section { padding: 8px; border: 1px solid #dbe5f0; border-radius: 8px; background: #f8fbff; }
-body.qaisar-page-index .top-order-section + .top-order-section { margin-top: 8px; }
-body.qaisar-page-index .top-order-section > b { display: block; margin-bottom: 6px; color: #0f172a; font-size: 11px; font-weight: 900; }
-body.qaisar-page-index .top-order-types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-body.qaisar-page-index .top-order-types .order-type-btn { min-height: 34px !important; height: 34px !important; padding: 0 5px !important; border: 1px solid #94a3b8 !important; border-radius: 8px !important; background: #fff !important; color: #1e293b !important; font-size: 11px !important; font-weight: 900 !important; }
-body.qaisar-page-index .top-order-types .order-type-btn.type-selected { background: #2563eb !important; color: #fff !important; border-color: #1d4ed8 !important; }
-body.qaisar-page-index .top-order-types .order-type-btn .q-line-icon { width: 14px !important; height: 14px !important; }
-body.qaisar-page-index .top-kitchen-release { display: flex; align-items: center; gap: 6px; }
-body.qaisar-page-index .top-kitchen-release label { display: inline-flex; align-items: center; gap: 3px; padding: 5px 8px; border: 1px solid #c7d2fe; border-radius: 6px; background: #fff; color: #312e81; font-size: 11px; font-weight: 900; }
-body.qaisar-page-index .top-kitchen-release input { margin: 0; }
-@media (max-width: 620px) {
-  body.qaisar-page-index .top-order-dropdown { position: fixed; top: 54px; inset-inline: 10px; width: auto; }
-}
-
-
-/* توحيد نهائي للسلة والشريط والقائمة المنسدلة */
-body.qaisar-page-index #categoryPanel,
-body.qaisar-page-index .cart-panel {
-  border-radius: 8px !important;
-}
-body.qaisar-page-index .cart-head,
-body.qaisar-page-index #categoryPanel > div {
-  padding: 14px !important;
-}
-body.qaisar-page-index .cart-head h3 { font-size: 15px !important; }
-body.qaisar-page-index .cart-head p,
-body.qaisar-page-index #categoryPanel h3,
-body.qaisar-page-index .cart-item-name,
-body.qaisar-page-index .cart-item-total { line-height: 1.45 !important; }
-body.qaisar-page-index .cart-head .text-xs,
-body.qaisar-page-index #categoryPanel h3 { font-size: 12px !important; }
-body.qaisar-page-index .cart-item { padding: 12px !important; gap: 10px !important; min-height: 72px !important; }
-body.qaisar-page-index .cart-item-name { font-size: 14px !important; }
-body.qaisar-page-index .cart-item-total { font-size: 14px !important; }
-
-/* لون موحّد لكل أزرار الشريط العلوي */
-body.qaisar-page-index > header .nav-link,
-body.qaisar-page-index > header .top-order-menu > summary {
-  color: #ffffff !important;
-  background: #1d4ed8 !important;
-  border: 1px solid #60a5fa !important;
-  border-radius: 8px !important;
-}
-body.qaisar-page-index > header .nav-link:hover,
-body.qaisar-page-index > header .top-order-menu > summary:hover,
-body.qaisar-page-index > header .top-order-menu[open] > summary {
-  color: #ffffff !important;
-  background: #2563eb !important;
-  border-color: #bfdbfe !important;
-}
-body.qaisar-page-index > header .nav-link svg,
-body.qaisar-page-index > header .top-order-menu > summary svg { color: #ffffff !important; }
-
-/* تظهر القائمة فوق كامل المحتوى عند الضغط، ولا تختبئ خلف السلة */
-body.qaisar-page-index .top-order-menu { position: static !important; }
-body.qaisar-page-index .top-order-dropdown {
-  position: fixed !important;
-  top: 66px !important;
-  inset-inline-end: 18px !important;
-  width: 330px !important;
-  max-width: calc(100vw - 36px) !important;
-  z-index: 1000 !important;
-  display: block;
-}
-body.qaisar-page-index .top-order-menu:not([open]) .top-order-dropdown { display: none !important; }
-body.qaisar-page-index .top-order-menu[open] .top-order-dropdown { display: block !important; }
-@media (max-width: 620px) {
-  body.qaisar-page-index .top-order-dropdown {
-    top: 60px !important;
-    inset-inline: 10px !important;
+/* الإصدار المحسّن 2026-08: عمودان متوازنان ومنطقة دفع واضحة */
+@media (min-width: 861px) {
+  body.qaisar-page-index #mainLayout {
+    display: grid !important;
+    grid-template-columns: minmax(390px, 42vw) minmax(0, 1fr) !important;
+    grid-template-areas: 'cart catalog' !important;
+    gap: 16px !important;
+    height: calc(100vh - 108px) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    direction: ltr !important;
+  }
+  body.qaisar-page-index #catalogPanel {
+    grid-area: catalog !important;
+    display: flex !important;
+    flex-direction: row !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    gap: 14px !important;
+    overflow: hidden !important;
+    direction: rtl !important;
+  }
+  body.qaisar-page-index #categoryPanel {
+    flex: 0 0 210px !important;
+    width: 210px !important;
+    min-width: 210px !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    grid-area: unset !important;
+  }
+  body.qaisar-page-index #productsPanel {
+    flex: 1 1 auto !important;
     width: auto !important;
-    max-width: none !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    grid-area: unset !important;
+  }
+  body.qaisar-page-index .cart-panel {
+    grid-area: cart !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    max-height: none !important;
+    position: relative !important;
+    grid-column: auto !important;
+    grid-row: auto !important;
   }
 }
-
-
-/* موازنة الأعمدة: السلة ومنطقة المنتجات بحجمين متقاربين */
-@media (min-width: 1181px) {
-  body.qaisar-page-index #mainLayout {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 205px !important;
-    gap: 18px !important;
-  }
-  body.qaisar-page-index .cart-panel { min-width: 0 !important; }
+body.qaisar-page-index #catalogPanel,
+body.qaisar-page-index #productsPanel,
+body.qaisar-page-index #categoryPanel { scrollbar-color: #94a3b8 #eef2f7; }
+body.qaisar-page-index #productsGrid { grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)) !important; }
+body.qaisar-page-index .product-card {
+  min-height: 198px !important;
+  border-radius: 14px !important;
+  border-width: 1px !important;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease !important;
 }
-@media (min-width: 861px) and (max-width: 1180px) {
-  body.qaisar-page-index #mainLayout {
-    grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr) 170px !important;
-    gap: 12px !important;
-  }
-  body.qaisar-page-index .cart-panel { min-width: 0 !important; }
-  body.qaisar-page-index #productsGrid { grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)) !important; }
+body.qaisar-page-index .product-card .product-image { height: 108px !important; border-radius: 11px !important; }
+body.qaisar-page-index .product-card .product-name { font-size: 16px !important; }
+body.qaisar-page-index .product-card .q-product-price { font-size: 15px !important; }
+body.qaisar-page-index .cart-panel { border-radius: 16px !important; border-width: 1px !important; }
+body.qaisar-page-index .cart-head { padding: 16px !important; }
+body.qaisar-page-index .cart-head h3 { font-size: 20px !important; }
+body.qaisar-page-index #cartItems { padding: 14px !important; }
+body.qaisar-page-index .cart-item { grid-template-columns: minmax(0,1fr) auto minmax(94px,auto) auto !important; min-height: 82px !important; padding: 12px !important; gap: 10px !important; }
+body.qaisar-page-index .cart-item-name { font-size: 15px !important; }
+body.qaisar-page-index .cart-footer { max-height: 48% !important; padding: 12px !important; }
+body.qaisar-page-index .cart-summary { background: linear-gradient(135deg,#0f766e,#047857) !important; border-color: #065f46 !important; }
+body.qaisar-page-index #totalDisplay { font-size: 32px !important; }
+body.qaisar-page-index .primary-checkout { background: linear-gradient(135deg,#16a34a,#15803d) !important; border-color:#166534 !important; }
+body.qaisar-page-index .quick-pay-btn { min-height: 80px !important; border-radius: 12px !important; }
+@media (min-width: 861px) and (max-width: 1120px) {
+  body.qaisar-page-index #mainLayout { grid-template-columns: minmax(360px, 40vw) minmax(0, 1fr) !important; }
+  body.qaisar-page-index #categoryPanel { flex-basis: 175px !important; min-width: 175px !important; }
+  body.qaisar-page-index #productsGrid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important; }
 }
 @media (max-width: 860px) {
-  body.qaisar-page-index #mainLayout { grid-template-columns: minmax(0, 1fr) 180px !important; }
+  body.qaisar-page-index #mainLayout { display: flex !important; flex-direction: column !important; overflow-y: auto !important; }
+  body.qaisar-page-index #catalogPanel { display: flex !important; flex-direction: column !important; flex: 0 0 auto !important; overflow: visible !important; }
+  body.qaisar-page-index #categoryPanel { width: 100% !important; min-width: 0 !important; max-height: 145px !important; }
+  body.qaisar-page-index #productsPanel { width: 100% !important; height: auto !important; overflow: visible !important; }
+  body.qaisar-page-index .cart-panel { height: 68vh !important; max-height: 68vh !important; width: 100% !important; }
+}
+
+
+/* Reference POS skin — مطابق لتوزيع شاشة الكاشير المرجعية */
+body.qaisar-page-index { background: #eef2f7 !important; color: #172033; }
+body.qaisar-page-index > header {
+  min-height: 64px !important; padding: 8px 14px !important; gap: 10px;
+  background: linear-gradient(90deg, #073b8f 0%, #0756bd 52%, #0874ce 100%) !important;
+  box-shadow: 0 3px 12px rgba(11,48,105,.22) !important;
+}
+body.qaisar-page-index .brand-mark { width: 38px; height: 38px; border-radius: 8px; background: #e9f1fb !important; }
+body.qaisar-page-index .brand-mark::after { color: #0756bd; font-size: 24px; }
+body.qaisar-page-index .brand-copy h1 { font-size: 16px !important; }
+body.qaisar-page-index .brand-copy small { color: #cfe1fb !important; }
+body.qaisar-page-index .header-tools { gap: 6px !important; }
+body.qaisar-page-index .top-field, body.qaisar-page-index .header-input input, body.qaisar-page-index #currency {
+  min-height: 42px !important; height: 42px !important; border: 1px solid #c4d0df !important; border-radius: 8px !important; background: #f8fbff !important; color: #172033 !important;
+}
+body.qaisar-page-index .nav-link { min-height: 42px !important; border: 1px solid rgba(255,255,255,.3) !important; border-radius: 8px !important; background: rgba(7,40,96,.4) !important; color: #fff !important; }
+body.qaisar-page-index .nav-link:hover { background: rgba(255,255,255,.16) !important; }
+body.qaisar-page-index #mainLayout {
+  display: grid !important; grid-template-columns: 390px minmax(360px,1fr) 355px !important; grid-template-areas: 'cart spacer catalog' !important;
+  gap: 12px !important; padding: 12px !important; background: #eef2f7; direction: ltr; overflow: auto !important;
+}
+body.qaisar-page-index #catalogPanel { grid-area: catalog !important; display: flex !important; flex-direction: row !important; gap: 12px !important; min-width: 0; min-height: calc(100vh - 92px); direction: rtl; }
+body.qaisar-page-index #categoryPanel { flex: 0 0 190px !important; width: 190px !important; height: fit-content; max-height: none !important; border: 1px solid #d3deeb !important; border-radius: 10px !important; background: #fff !important; box-shadow: 0 4px 12px rgba(24,49,84,.08) !important; }
+body.qaisar-page-index #categoryPanel > div:first-child { padding: 12px !important; }
+body.qaisar-page-index #categoryPanel > div:first-child h3 { margin-bottom: 9px !important; color: #14213d !important; font-size: 15px !important; text-transform: none; }
+body.qaisar-page-index #categoriesList { display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px !important; max-height: none !important; }
+body.qaisar-page-index #categoryPanel .category-item {
+  min-height: 62px !important; margin: 0 !important; padding: 7px 6px !important; display: flex !important; flex-direction: column; justify-content: center; align-items: center; gap: 3px;
+  border: 1px solid transparent !important; border-radius: 9px !important; color: #172033 !important; background: #e8f4ff !important; font-size: 12px !important; font-weight: 900 !important; text-align: center !important;
+}
+body.qaisar-page-index #categoryPanel .category-item::before { content: '▣'; color: #0756bd; font-size: 18px; line-height: 1; }
+body.qaisar-page-index #categoryPanel .category-item:nth-child(2n)::before { content: '◆'; color: #9b4b3b; }
+body.qaisar-page-index #categoryPanel .category-item:nth-child(3n)::before { content: '✦'; color: #8b6b20; }
+body.qaisar-page-index #categoryPanel .category-item:nth-child(4n)::before { content: '◈'; color: #168184; }
+body.qaisar-page-index #categoryPanel .category-item:nth-child(5n)::before { content: '✚'; color: #7c3aed; }
+body.qaisar-page-index #categoryPanel .category-item:nth-child(2) { background: #ffe7e2 !important; }
+body.qaisar-page-index #categoryPanel .category-item:nth-child(3) { background: #fff3c9 !important; }
+body.qaisar-page-index #categoryPanel .category-item:nth-child(4) { background: #dff5f4 !important; }
+body.qaisar-page-index #categoryPanel .category-item:nth-child(5) { background: #e4f7e7 !important; }
+body.qaisar-page-index #categoryPanel .category-item:nth-child(6) { background: #f5e6d4 !important; }
+body.qaisar-page-index #categoryPanel .category-item:nth-child(7) { background: #eee4ff !important; }
+body.qaisar-page-index #categoryPanel .category-item.category-active { color: #fff !important; background: #0874ce !important; box-shadow: 0 5px 10px rgba(8,116,206,.25); }
+body.qaisar-page-index #categoryPanel .category-item.category-active::before { color: #fff !important; }
+body.qaisar-page-index #categoryPanel > div:last-child { margin-top: 12px !important; padding: 12px !important; }
+body.qaisar-page-index #productsPanel { flex: 1 1 auto !important; min-width: 0; padding: 0 !important; overflow-y: auto !important; direction: rtl; }
+body.qaisar-page-index .product-toolbar { min-height: 58px !important; margin-bottom: 10px !important; padding: 10px 14px !important; border: 1px solid #d3deeb !important; border-radius: 10px !important; background: #fff !important; box-shadow: 0 4px 12px rgba(24,49,84,.07) !important; }
+body.qaisar-page-index #productsGrid { grid-template-columns: repeat(3,minmax(0,1fr)) !important; gap: 9px !important; }
+body.qaisar-page-index .product-card { min-height: 165px !important; padding: 7px !important; gap: 5px !important; border: 1px solid #ced8e4 !important; border-radius: 9px !important; background: #fff !important; box-shadow: 0 3px 8px rgba(24,49,84,.09) !important; }
+body.qaisar-page-index .product-card:hover, body.qaisar-page-index .product-card:focus-visible { transform: translateY(-2px); border-color: #0874ce !important; box-shadow: 0 8px 15px rgba(8,116,206,.18) !important; }
+body.qaisar-page-index .product-card .product-image { height: 92px !important; padding: 3px !important; border-radius: 7px !important; background: #edf2f7 !important; }
+body.qaisar-page-index .product-card .product-name { min-height: 30px; color: #172033 !important; font-size: 12px !important; line-height: 1.35 !important; text-align: center; }
+body.qaisar-page-index .product-card .q-product-price { color: #0756bd !important; font-size: 13px !important; text-align: center; }
+body.qaisar-page-index .cart-panel { grid-area: cart !important; position: sticky !important; top: 12px !important; height: calc(100vh - 92px); max-height: none !important; border: 1px solid #c8d3df !important; border-radius: 10px !important; background: #fff !important; box-shadow: 0 5px 14px rgba(24,49,84,.12) !important; }
+body.qaisar-page-index .cart-head { padding: 14px !important; background: #f8fbff !important; }
+body.qaisar-page-index .cart-head h3 { font-size: 17px !important; }
+body.qaisar-page-index .order-type-btn { min-height: 38px !important; }
+body.qaisar-page-index #cartItems { min-height: 230px; padding: 12px !important; background: #fff !important; }
+body.qaisar-page-index .cart-item { grid-template-columns: minmax(0,1fr) auto minmax(74px,auto) auto; gap: 7px !important; padding: 10px !important; border: 1px solid #d6e0ea !important; border-radius: 8px !important; background: #fbfdff !important; }
+body.qaisar-page-index .cart-footer { padding: 10px 12px !important; background: #fff !important; }
+body.qaisar-page-index .cart-summary { padding: 13px !important; border-radius: 9px !important; background: linear-gradient(135deg,#067d71,#079c85) !important; }
+body.qaisar-page-index #totalDisplay { font-size: 25px !important; }
+body.qaisar-page-index .primary-checkout { min-height: 57px !important; border-radius: 8px !important; background: #0874ce !important; font-size: 15px !important; box-shadow: 0 7px 14px rgba(8,116,206,.22) !important; }
+body.qaisar-page-index .quick-pay-btn { min-height: 92px !important; border-radius: 9px !important; }
+@media (max-width: 1150px) and (min-width: 861px) { body.qaisar-page-index #mainLayout { grid-template-columns: 360px minmax(320px,1fr) 310px !important; } body.qaisar-page-index #categoryPanel { flex-basis: 165px !important; width: 165px !important; } body.qaisar-page-index #productsGrid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; } }
+@media (max-width: 860px) { body.qaisar-page-index #mainLayout { grid-template-columns: minmax(0,1fr) 180px !important; grid-template-areas: 'catalog catalog' 'cart cart' !important; } body.qaisar-page-index #catalogPanel { min-height: auto; } body.qaisar-page-index .cart-panel { position: static !important; height: auto; } }
+@media (max-width: 620px) { body.qaisar-page-index #catalogPanel { flex-direction: column !important; } body.qaisar-page-index #categoryPanel { width: 100% !important; flex-basis: auto !important; } body.qaisar-page-index #categoriesList { grid-template-columns: repeat(4,minmax(0,1fr)); } body.qaisar-page-index #productsGrid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; } }
+
+
+/* تصحيح المطابقة النهائية: لوحة الفئات أعلى المنتجات داخل العمود الأيمن */
+body.qaisar-page-index #catalogPanel { flex-direction: column !important; gap: 12px !important; }
+body.qaisar-page-index #categoryPanel { flex: 0 0 auto !important; width: 100% !important; max-height: none !important; }
+body.qaisar-page-index #categoryPanel > div:first-child { padding: 12px !important; }
+body.qaisar-page-index #categoriesList { grid-template-columns: repeat(4,minmax(0,1fr)) !important; gap: 7px !important; }
+body.qaisar-page-index #categoryPanel .category-item { min-height: 70px !important; }
+body.qaisar-page-index #productsPanel { flex: 1 1 auto !important; width: 100% !important; min-height: 0; }
+body.qaisar-page-index #productsGrid { grid-template-columns: repeat(3,minmax(0,1fr)) !important; gap: 9px !important; }
+@media (max-width: 1150px) and (min-width: 861px) {
+  body.qaisar-page-index #categoriesList { grid-template-columns: repeat(4,minmax(0,1fr)) !important; }
+  body.qaisar-page-index #productsGrid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+}
+@media (max-width: 620px) {
+  body.qaisar-page-index #categoriesList { grid-template-columns: repeat(4,minmax(0,1fr)) !important; }
+  body.qaisar-page-index #productsGrid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+}
+
+
+/* منع تمدد بطاقة الفئات بطول العمود حتى تظهر المنتجات أسفلها */
+body.qaisar-page-index #catalogPanel { align-items: stretch !important; }
+body.qaisar-page-index #categoryPanel { align-self: flex-start !important; height: auto !important; flex: 0 0 auto !important; }
+body.qaisar-page-index #productsPanel { align-self: flex-start !important; height: auto !important; flex: 0 0 auto !important; overflow: visible !important; }
+
+
+/* تبسيط الشاشة الرئيسية حسب التصميم رقم 2: الأدوات الثانوية تبقى متاحة برمجيًا ولا تزاحم الكاشير */
+body.qaisar-page-index a[href="tables.html"] { display: none !important; }
+body.qaisar-page-index .cart-footer > .grid.grid-cols-3 { display: none !important; }
+body.qaisar-page-index #lastPrintStatus:empty { display: none !important; }
+body.qaisar-page-index .cart-head > div:first-child p { font-size: 11px !important; }
+body.qaisar-page-index #btnTakeaway,
+body.qaisar-page-index #btnDinein,
+body.qaisar-page-index #btnDelivery { font-weight: 900 !important; }
+
+
+/* التخطيط النهائي لنمط لوحة الإدارة: سلة يسار، منتجات وسط، أقسام يمين */
+@media (min-width: 861px) {
+  body.qaisar-page-index #mainLayout {
+    grid-template-columns: minmax(300px, 360px) minmax(320px, 1fr) minmax(200px, 235px) !important;
+    grid-template-areas: 'cart products categories' !important;
+    gap: 12px !important;
+    align-items: stretch !important;
+  }
+  body.qaisar-page-index #catalogPanel { display: contents !important; }
+  body.qaisar-page-index #categoryPanel {
+    grid-area: categories !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: fit-content !important;
+    max-height: calc(100vh - 112px) !important;
+    overflow-y: auto !important;
+  }
+  body.qaisar-page-index #productsPanel {
+    grid-area: products !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: calc(100vh - 112px) !important;
+    overflow-y: auto !important;
+    align-self: stretch !important;
+  }
+}
+@media (max-width: 1150px) and (min-width: 861px) {
+  body.qaisar-page-index #mainLayout { grid-template-columns: 300px minmax(320px, 1fr) 200px !important; }
+  body.qaisar-page-index #productsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 860px) {
+  body.qaisar-page-index #catalogPanel { display: flex !important; }
 }
