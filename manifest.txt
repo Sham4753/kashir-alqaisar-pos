@@ -1,0 +1,4 @@
+Kashir AlQaisar complete delivery — 2026-08-29
+POS commit: 5e7d200eb68055be358d524e5bcd553c288a109b
+Waiter commit: 46a064f218be62b2127f107510dd18f29880b6e0
+Contents: latest POS source, latest waiter mobile source, documentation, reusable audit skill, Windows base package.
