@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الموظفين - كاشير قيصر قيصر</title>
+    <link rel="stylesheet" href="tailwind.css">
+    <link rel="stylesheet" href="design-system.css">
+    <script defer src="design-system.js"></script>
+    <script defer src="currency-manager.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+<nav class="q-appbar" aria-label="التنقل الرئيسي">
+  <a class="q-appbar-brand" href="index.html"><span class="q-appbar-brand-mark"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg></span><span>كاشير قيصر قيصر</span></a>
+  <div class="q-appbar-links">
+<a class="q-appbar-link " href="menu_manager.html"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM7 9h10M7 13h6"/></svg><span>المنيو</span></a>
+<a class="q-appbar-link " href="raw_materials.html"><svg viewBox="0 0 24 24"><path d="M3 7h18v13H3zM5 7l2-4h10l2 4M8 12h8"/></svg><span>المخزون</span></a>
+<a class="q-appbar-link " href="orders_list.html"><svg viewBox="0 0 24 24"><path d="M6 2h12v20H6zM9 7h6M9 11h6M9 15h4"/></svg><span>الطلبات</span></a>
+<a class="q-appbar-link " href="analytics.html"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>التقارير</span></a>
+<a class="q-appbar-link " href="settings.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.18 2.18-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.04 1.56V21h-3.08v-.08a1.7 1.7 0 0 0-1.04-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-2.18-2.18.06-.06A1.7 1.7 0 0 0 6.8 15a1.7 1.7 0 0 0-1.56-1.04H5v-3.08h.24A1.7 1.7 0 0 0 6.8 9.84 1.7 1.7 0 0 0 6.46 7.96l-.06-.06 2.18-2.18.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.04-1.56V4.5h3.08v.06a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.18 2.18-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.04H21v3.08h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg><span>الإعدادات</span></a></div>
+  <span class="q-appbar-status">محلي وآمن</span>
+</nav>
+
+    <div class="container mx-auto px-4 py-6 max-w-lg">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-bold text-gray-800"> الموظفين</h1>
+            <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩ رجوع</a>
+        </div>
+
+        <!-- إضافة موظف جديد -->
+        <div class="bg-white rounded-xl shadow-md p-6 space-y-5 mb-6">
+            <h2 class="text-lg font-bold text-gray-700"> إضافة موظف جديد</h2>
+            <input type="text" id="newName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="اسم الموظف">
+            <input type="number" id="newSalary" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="الراتب الشهري">
+            <input type="number" id="newAdvance" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="سلفة (تخصم من الكاشير قيصر فوراً)">
+            <button onclick="addEmployee()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition"> إضافة (السلفة تخصم فوراً من الكاشير قيصر)</button>
+        </div>
+
+        <!-- تعديل وحذف موظف -->
+        <div class="bg-white rounded-xl shadow-md p-6 space-y-5 mb-6">
+            <h2 class="text-lg font-bold text-gray-700"> تعديل موظف</h2>
+            <select id="editSelect" onchange="onEditSelect()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500 outline-none">
+                <option value="">▼ اختر الموظف...</option>
+            </select>
+            <div id="editFields" class="space-y-4 hidden">
+                <input type="text" id="editName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500 outline-none" placeholder="اسم الموظف">
+                <input type="number" id="editSalary" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500 outline-none" placeholder="الراتب الشهري">
+                <input type="number" id="editAdvance" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-orange-500 outline-none" placeholder="السلفة">
+                <div class="flex gap-2">
+                    <button onclick="updateEmployee()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition"> حفظ</button>
+                    <button onclick="deleteEmployee()" class="flex-1 bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition">حذف حذف (ترجع السلفة للكاشير قيصر)</button>
+                </div>
+                <div id="cashierAdvanceBox" class="hidden mt-3 rounded-lg border border-orange-200 bg-orange-50 p-3"><input id="cashierAdvanceAmount" type="number" min="1" class="w-full border rounded-lg p-2" placeholder="مبلغ السلفة"><button onclick="addAdvance()" class="mt-2 w-full bg-orange-600 text-white font-bold py-2 rounded-lg">تسجيل سلفة</button></div>
+                <button onclick="paySalary()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition"> دفع الراتب الآن (يخصم من الكاشير قيصر)</button>
+            </div>
+        </div>
+
+        <!-- قائمة الموظفين -->
+        <div class="bg-white rounded-xl shadow-md p-6 space-y-5">
+            <h2 class="text-lg font-bold text-gray-700"> قائمة الموظفين</h2>
+            <input type="text" id="searchBox" oninput="renderEmployees()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder=" بحث بالاسم أو الراتب...">
+            <div id="employeesList" class="space-y-2"></div>
+            <div class="border-t border-gray-200 pt-3 space-y-1">
+                <div id="totalSalaries" class="text-center font-bold text-gray-700"></div>
+                <div id="totalAdvances" class="text-center font-bold text-red-500"></div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast" class="hidden fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg text-center z-50"></div>
+    </div>
+
+    <script>
+        let employees = [];
+        let currentEditId = null;
+        let currentCurrency = 'SYP', usdRate = 0, eurRate = 0;
+
+        async function loadCurrency() {
+            try {
+                const r = await fetch('/api/settings/currency');
+                const d = await r.json();
+                if (d) { currentCurrency = d.currency || 'SYP'; usdRate = d.usd_rate || 0; eurRate = d.eur_rate || 0; }
+            } catch (e) {}
+        }
+        function formatPrice(p) {
+            p = p || 0;
+            if (currentCurrency === 'USD') return usdRate ? '$' + (p / usdRate).toFixed(2) : (p.toLocaleString() + ' ل.س');
+            if (currentCurrency === 'EUR') return eurRate ? '€' + (p / eurRate).toFixed(2) : (p.toLocaleString() + ' ل.س');
+            return p.toLocaleString() + ' ل.س';
+        }
+
+        async function loadEmployees() {
+            await loadCurrency();
+            try {
+                const r = await fetch('/api/employees');
+                employees = await r.json();
+                fillSelects();
+                renderEmployees();
+            } catch(e) { console.error(e); }
+        }
+
+        function fillSelects() {
+            const sel = document.getElementById('editSelect');
+            const val = sel.value;
+            sel.innerHTML = '<option value="">▼ اختر الموظف...</option>';
+            employees.forEach(emp => {
+                sel.innerHTML += `<option value="${emp.id}">${emp.name} - راتب: ${emp.salary} - سلفة: ${emp.advance||0}</option>`;
+            });
+            if (val) sel.value = val;
+        }
+
+        function renderEmployees() {
+            const q = document.getElementById('searchBox').value.toLowerCase();
+            const filtered = employees.filter(e =>
+                e.name.toLowerCase().includes(q) || String(e.salary).includes(q)
+            );
+            const list = document.getElementById('employeesList');
+            let totalSalary = 0, totalAdvance = 0;
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<p class="text-gray-500 text-center py-4">لا يوجد موظفين</p>';
+            } else {
+                list.innerHTML = filtered.map(emp => {
+                    totalSalary += emp.salary || 0;
+                    totalAdvance += emp.advance || 0;
+                    return `
+                    <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <span class="font-bold">${emp.name}</span>
+                        <div class="text-left">
+                            <div class="text-green-600">راتب: ${formatPrice(emp.salary||0)}</div>
+                            <div class="text-red-500">سلف: ${formatPrice(emp.advance||0)}</div>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+            document.getElementById('totalSalaries').textContent =
+                filtered.length > 0 ? ` إجمالي الرواتب: ${formatPrice(totalSalary)}` : '';
+            document.getElementById('totalAdvances').textContent =
+                filtered.length > 0 ? ` إجمالي السلف: ${formatPrice(totalAdvance)}` : '';
+        }
+
+        // ===== إضافة =====
+        async function addEmployee() {
+            const name = document.getElementById('newName').value.trim();
+            const salary = parseInt(document.getElementById('newSalary').value) || 0;
+            const advance = parseInt(document.getElementById('newAdvance').value) || 0;
+            if (!name || !salary) return showToast(' املأ الاسم والراتب على الأقل');
+
+            const res = await fetch('/api/employees', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, salary, advance })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                document.getElementById('newName').value = '';
+                document.getElementById('newSalary').value = '';
+                document.getElementById('newAdvance').value = '';
+                await fetch('/api/auth/me').then(r=>r.json()).then(me=>{ if(me.role==='cashier'){ document.getElementById('cashierAdvanceBox').classList.remove('hidden'); document.querySelectorAll('#editFields button').forEach(b=>{ if(!b.textContent.includes('دفع الراتب')) b.classList.add('hidden'); }); }}).catch(()=>{}); loadEmployees();
+                showToast(advance > 0 ? ' تم الإضافة وخصم السلفة من الكاشير قيصر' : ' تم الإضافة');
+            } else {
+                showToast(' فشل الإضافة');
+            }
+        }
+
+        // ===== تعديل =====
+        function onEditSelect() {
+            const id = parseInt(document.getElementById('editSelect').value);
+            if (!id) {
+                document.getElementById('editFields').classList.add('hidden');
+                return;
+            }
+            currentEditId = id;
+            const emp = employees.find(e => e.id === id);
+            if (emp) {
+                document.getElementById('editName').value = emp.name;
+                document.getElementById('editSalary').value = emp.salary;
+                document.getElementById('editAdvance').value = emp.advance || 0;
+                document.getElementById('editFields').classList.remove('hidden');
+            }
+        }
+
+        async function updateEmployee() {
+            if (!currentEditId) return;
+            const name = document.getElementById('editName').value.trim();
+            const salary = parseInt(document.getElementById('editSalary').value) || 0;
+            const advance = parseInt(document.getElementById('editAdvance').value) || 0;
+            if (!name || !salary) return showToast(' املأ الاسم والراتب');
+
+            const res = await fetch('/api/employees/' + currentEditId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, salary, advance })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                await loadEmployees();
+                document.getElementById('editSelect').value = '';
+                document.getElementById('editFields').classList.add('hidden');
+                currentEditId = null;
+                showToast(' تم التحديث');
+            } else {
+                showToast(' فشل التحديث');
+            }
+        }
+
+        async function deleteEmployee() {
+            if (!currentEditId) return;
+            if (!confirm('حذف هذا الموظف؟ ستُرجع السلفة للكاشير قيصر')) return;
+
+            const res = await fetch('/api/employees/' + currentEditId, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.ok) {
+                await loadEmployees();
+                document.getElementById('editSelect').value = '';
+                document.getElementById('editFields').classList.add('hidden');
+                currentEditId = null;
+                showToast(' تم الحذف ورجعت السلفة للكاشير قيصر');
+            } else {
+                showToast(' فشل الحذف');
+            }
+        }
+
+        async function addAdvance() { const amount = Number(document.getElementById('cashierAdvanceAmount').value); if (!currentEditId || amount <= 0) return showToast('أدخل مبلغ السلفة'); const r = await fetch('/api/employees/' + currentEditId + '/advance', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount})}); const d=await r.json(); if(!r.ok||!d.ok) return showToast(' ' + (d.error||'تعذر تسجيل السلفة')); document.getElementById('cashierAdvanceAmount').value=''; showToast(' تم تسجيل السلفة وخصمها من الصندوق'); loadEmployees(); }
+
+        async function paySalary() {
+            if (!currentEditId) return;
+            const emp = employees.find(e => e.id === currentEditId);
+            if (!emp) return;
+            if (!confirm(`تسجيل دفع راتب ${emp.name} بمبلغ ${formatPrice(emp.salary||0)} وخصمه من الكاشير قيصر؟`)) return;
+
+            const res = await fetch('/api/employees/' + currentEditId + '/pay-salary', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: emp.salary || 0 })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                showToast(' تم تسجيل دفع الراتب وخصمه من الكاشير قيصر');
+            } else {
+                showToast(' فشل تسجيل دفع الراتب');
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 2500);
+        }
+
+        loadEmployees();
+    </script>
+</body>
+</html>

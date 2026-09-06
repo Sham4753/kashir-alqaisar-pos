@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إعدادات الطابعة - كاشير قيصر قيصر</title>
+    <link rel="stylesheet" href="tailwind.css">
+    <link rel="stylesheet" href="design-system.css">
+    <script defer src="design-system.js"></script>
+    <script defer src="currency-manager.js"></script>
+    <style>
+        .receipt-preset{border:1px solid #cbd5e1;background:#f8fafc;color:#334155;border-radius:8px;padding:.65rem .8rem;font-weight:700;transition:.18s}
+        .receipt-preset:hover,.receipt-preset:focus{border-color:#2563eb;background:#eff6ff;color:#1d4ed8;outline:0}
+        .receipt-preview-shell{background:linear-gradient(135deg,#e2e8f0,#f8fafc);border:1px solid #cbd5e1;border-radius:8px;padding:1rem;overflow:auto}
+        .receipt-paper{margin:auto;min-height:360px;background:white;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 12px 24px #0f172a1a;padding:18px 14px;transition:width .2s ease}
+        .receipt-paper pre{font-family:var(--receipt-font-family,ui-monospace,SFMono-Regular,Menlo,monospace);font-size:var(--receipt-font-size,11px);line-height:1.6;white-space:pre-wrap;word-break:break-word;margin:0;color:#111827}
+        .receipt-paper.compact pre{line-height:1.35}.receipt-paper.spacious pre{line-height:1.95}
+        .receipt-preview-logo{display:block;max-width:72%;max-height:56px;object-fit:contain;margin:0 auto 9px;transition:max-width .2s ease,max-height .2s ease}.receipt-preview-logo.hidden{display:none}
+        .template-row{display:flex;align-items:center;gap:.5rem;border:1px solid #dbeafe;background:#fff;border-radius:8px;padding:.55rem .65rem}.template-name{font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .print-loading{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.46);padding:1.25rem}.print-loading.hidden{display:none}.print-loading-card{width:min(100%,21rem);border-radius:8px;background:#fff;padding:1.35rem;text-align:center;box-shadow:0 20px 45px rgba(15,23,42,.3)}.print-spinner{width:2.75rem;height:2.75rem;border:4px solid #dbeafe;border-top-color:#2563eb;border-radius:50%;margin:0 auto .8rem;animation:spin .75s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+        .layout-item{display:flex;align-items:center;gap:.55rem;border:1px solid #bfdbfe;border-radius:8px;background:#fff;padding:.58rem .65rem;cursor:grab;user-select:none}.layout-item:active{cursor:grabbing}.layout-item.dragging{opacity:.45;border-style:dashed}.layout-handle{color:#2563eb;font-size:1.1rem}.layout-label{font-weight:700;flex:1}.layout-move{border:1px solid #bfdbfe;border-radius:8px;color:#1d4ed8;background:#eff6ff;padding:.08rem .42rem;font-weight:700}.file-import-label{display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+        .thermal-mode-toggle{border:1px solid #475569;background:#fff;color:#0f172a;border-radius:8px;padding:.55rem .8rem;font-weight:700;font-size:.8rem;transition:.18s}.thermal-mode-toggle.active{background:#334155;color:#fff;border-color:#334155}.receipt-preview-shell.thermal-sim{background:#111827;border-color:#111827}.receipt-paper.thermal-sim{background:#fff;border:2px solid #000;box-shadow:none;filter:grayscale(1) contrast(1.65)}.receipt-paper.thermal-sim pre{color:#000;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;opacity:var(--thermal-ink,.9)}.receipt-paper.thermal-sim .receipt-preview-logo{filter:grayscale(1) contrast(4);opacity:var(--thermal-ink,.9)}.range-control{accent-color:#2563eb;width:100%}
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+<nav class="q-appbar" aria-label="التنقل الرئيسي">
+  <a class="q-appbar-brand" href="index.html"><span class="q-appbar-brand-mark"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg></span><span>كاشير قيصر قيصر</span></a>
+  <div class="q-appbar-links">
+<a class="q-appbar-link " href="menu_manager.html"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM7 9h10M7 13h6"/></svg><span>المنيو</span></a>
+<a class="q-appbar-link " href="raw_materials.html"><svg viewBox="0 0 24 24"><path d="M3 7h18v13H3zM5 7l2-4h10l2 4M8 12h8"/></svg><span>المخزون</span></a>
+<a class="q-appbar-link " href="orders_list.html"><svg viewBox="0 0 24 24"><path d="M6 2h12v20H6zM9 7h6M9 11h6M9 15h4"/></svg><span>الطلبات</span></a>
+<a class="q-appbar-link " href="analytics.html"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>التقارير</span></a>
+<a class="q-appbar-link " href="settings.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.18 2.18-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.04 1.56V21h-3.08v-.08a1.7 1.7 0 0 0-1.04-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-2.18-2.18.06-.06A1.7 1.7 0 0 0 6.8 15a1.7 1.7 0 0 0-1.56-1.04H5v-3.08h.24A1.7 1.7 0 0 0 6.8 9.84 1.7 1.7 0 0 0 6.46 7.96l-.06-.06 2.18-2.18.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.04-1.56V4.5h3.08v.06a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.18 2.18-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.04H21v3.08h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg><span>الإعدادات</span></a></div>
+  <span class="q-appbar-status">محلي وآمن</span>
+</nav>
+
+    <div class="container mx-auto px-4 py-6 max-w-lg">
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-bold text-gray-800"> إعدادات الطابعة</h1>
+            <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩ رجوع</a>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-6 space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"> اسم المطعم</label>
+                <input type="text" id="restaurant_name" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="مطعم القيصر">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"> عرض الورق</label>
+                <select id="paper_width" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <option value="58">58mm</option>
+                    <option value="80" selected>80mm</option>
+                    <option value="112">112mm</option>
+                </select>
+            </div>
+
+            <div class="rounded-xl border border-blue-100 bg-blue-50 p-4 space-y-3">
+                <div class="flex items-center justify-between gap-3"><h2 class="font-bold text-blue-950">تخصيص شكل الإيصال</h2><span id="previewSize" class="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700">معاينة 80mm</span></div>
+                <p class="text-xs leading-5 text-blue-800">ابدأ بالقالب المناسب ثم عدّل العناصر التالية. المعاينة للتصميم النصي؛ يظل اختبار الورق والمحاذاة العربية مطلوبًا على طابعتك الفعلية.</p>
+                <div class="grid grid-cols-2 gap-2"><button type="button" class="receipt-preset" onclick="applyReceiptPreset(58)">قالب مختصر 58mm</button><button type="button" class="receipt-preset" onclick="applyReceiptPreset(80)">قالب قياسي 80mm</button></div>
+                <div class="rounded-xl border border-blue-200 bg-white/70 p-3"><label class="block text-xs font-bold text-blue-900 mb-2">قوالب التصميم المحفوظة</label><div class="flex gap-2"><input id="templateName" maxlength="36" class="min-w-0 flex-1 border border-blue-200 rounded-lg px-3 py-2 text-sm" placeholder="مثال: 58mm سفري"><button type="button" onclick="saveReceiptTemplate()" class="bg-blue-700 text-white font-bold rounded-lg px-3 text-sm">حفظ كقالب</button></div><div class="mt-2 grid grid-cols-2 gap-2"><button type="button" onclick="exportReceiptTemplates()" class="border border-blue-200 rounded-lg bg-white text-blue-800 px-3 py-2 text-xs font-bold">تصدير القوالب</button><label class="file-import-label border border-blue-200 rounded-lg bg-white text-blue-800 px-3 py-2 text-xs font-bold">استيراد ملف<input id="templateImportFile" class="hidden" type="file" accept="application/json,.json" onchange="importReceiptTemplates(event)"></label></div><div id="receiptTemplateList" class="mt-3 space-y-2 text-sm"><p class="text-slate-500">جار تحميل القوالب…</p></div><p class="mt-2 text-[11px] leading-4 text-slate-500">يحفظ القالب شكل الإيصال والتذييل وروابط التواصل وترتيب العناصر، وليس اسم الطابعة أو صورة الشعار أو إعدادات درج النقد. يُحتفظ بآخر 8 قوالب.</p></div>
+                <div class="rounded-xl border border-blue-200 bg-white/70 p-3"><div class="flex items-center justify-between gap-3"><label class="text-xs font-bold text-blue-900">ترتيب عناصر الإيصال</label><button type="button" onclick="resetReceiptLayout()" class="text-xs font-bold text-blue-700">إعادة الافتراضي</button></div><p class="mt-1 text-[11px] leading-4 text-slate-500">اسحب العنصر وأفلته إلى موضعه، أو استخدم السهمين. يحفظ هذا الترتيب مع التصميم والقالب.</p><div id="receiptLayoutEditor" class="mt-3 space-y-2" aria-label="محرر ترتيب عناصر الإيصال"></div></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">عنوان الإيصال</label><input id="receipt_header" maxlength="36" type="text" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" value="إيصال مبيعات"></div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div><label class="block text-xs font-medium text-gray-600 mb-1">محاذاة الرأس</label><select id="receipt_alignment" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="center">توسيط</option><option value="right">يمين</option></select></div>
+                    <div><label class="block text-xs font-medium text-gray-600 mb-1">شكل الفاصل</label><select id="receipt_divider" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="line">خط</option><option value="double">مزدوج</option><option value="dots">نقاط</option></select></div>
+                    <div><label class="block text-xs font-medium text-gray-600 mb-1">كثافة الأسطر</label><select id="receipt_density" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="compact">مختصر</option><option value="standard">قياسي</option><option value="spacious">مريح</option></select></div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="block text-xs font-medium text-gray-600 mb-1">نوع خط المعاينة والطباعة عبر المتصفح</label><select id="receipt_font_family" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="system">قياسي واضح</option><option value="cairo">Cairo عربي</option><option value="serif">تقليدي</option><option value="mono">ثابت العرض</option></select></div><div><label class="block text-xs font-medium text-gray-600 mb-1">حجم خط الإيصال</label><select id="receipt_font_scale" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="small">صغير</option><option value="medium">متوسط</option><option value="large">كبير</option></select></div></div><p class="-mt-1 text-[11px] leading-4 text-gray-500">يستخدم خيار Cairo خطًا متاحًا في الجهاز أو بديله القياسي؛ لا يحتاج اتصال إنترنت. جرّب الحجم الكبير على 80mm أولًا لتفادي ازدحام 58mm.</p>
+                <div id="escposFontWarning" class="hidden rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950" role="alert"><b>تنبيه توافق الطباعة الحرارية:</b> الخط المخصص يظهر في المعاينة والطباعة من المتصفح، لكن طابعات ESC/POS النصية تستخدم خطها المدمج وقد تختلف النتيجة. نفّذ طباعة تجريبية فعلية قبل اعتماد القالب.</div>
+                <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3"><div><b class="text-sm text-slate-800">محاكاة طباعة حرارية</b><p class="mt-1 text-[11px] leading-4 text-slate-500">عرض أبيض وأسود عالي التباين بخط ثابت؛ لا يغيّر إعدادات الطباعة.</p></div><button id="thermalPreviewToggle" type="button" class="thermal-mode-toggle" aria-pressed="false" onclick="toggleThermalPreview()">أبيض وأسود</button></div>
+                <div class="rounded-lg border border-slate-200 bg-white p-3"><div class="flex items-center justify-between gap-3"><label for="thermalInkDensity" class="text-sm font-bold text-slate-800">كثافة الحبر في المحاكاة</label><output id="thermalInkDensityValue" class="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">90%</output></div><input id="thermalInkDensity" class="range-control mt-3" type="range" min="30" max="100" step="5" value="90" oninput="setThermalInkDensity(this.value)"><p class="mt-1 text-[11px] leading-4 text-slate-500">تؤثر في معاينة الأبيض والأسود فقط: قيمة أقل تحاكي طباعة باهتة.</p></div>
+                <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3"><div><b class="text-sm text-slate-800">خط المعاينة الفعلي</b><p class="mt-1 text-[11px] leading-4 text-slate-500">بدّل إلى خط ESC/POS الثابت لتقدير النتيجة عند عدم دعم خطك المخصص.</p></div><button id="escposFontToggle" type="button" class="thermal-mode-toggle" aria-pressed="false" onclick="toggleEscposFontPreview()">معاينة خط ESC/POS</button></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><label class="flex items-center gap-2 rounded-lg bg-white p-3 text-sm cursor-pointer"><input id="receipt_show_cashier" type="checkbox" class="w-4 h-4 accent-blue-600" checked><span>إظهار اسم الكاشير قيصر</span></label><label class="flex items-center gap-2 rounded-lg bg-white p-3 text-sm cursor-pointer"><input id="receipt_show_order_type" type="checkbox" class="w-4 h-4 accent-blue-600" checked><span>إظهار نوع الطلب</span></label></div>
+                <div class="receipt-preview-shell"><div id="receiptPaper" class="receipt-paper"><div id="receiptPreviewBlocks" aria-live="polite"></div></div></div><div id="receipt58LongTextWarning" class="hidden mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950" role="alert"></div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"> حجم الخط</label>
+                <select id="font_size" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <option value="small">صغير</option>
+                    <option value="medium" selected>وسط</option>
+                    <option value="large">كبير</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"> عدد النسخ</label>
+                <select id="copies" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <option value="1" selected>1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                </select>
+            </div>
+
+            <div class="border-y border-slate-100 py-4 space-y-3">
+                <h2 class="font-bold text-gray-700">الطباعة التلقائية</h2>
+                <label class="flex items-center justify-between gap-4 p-3 rounded-lg bg-slate-50 cursor-pointer"><span><b>إيصال العميل</b><small class="block text-xs text-gray-500 mt-1">يرسل الإيصال للطابعة المحددة بعد دفع الفاتورة.</small></span><input id="auto_print_receipt" type="checkbox" class="w-5 h-5 accent-emerald-600"></label>
+                <label class="flex items-center justify-between gap-4 p-3 rounded-lg bg-slate-50 cursor-pointer"><span><b>تذكرة المطبخ</b><small class="block text-xs text-gray-500 mt-1">يرسل قائمة الأصناف للمطبخ بعد حفظ الطلب.</small></span><input id="auto_print_kitchen" type="checkbox" class="w-5 h-5 accent-emerald-600"></label>
+            </div>
+
+            <div class="border-b border-slate-100 pb-4 space-y-3">
+                <h2 class="font-bold text-gray-700">درج النقد</h2>
+                <label class="flex items-center justify-between gap-4 p-3 rounded-lg bg-amber-50 cursor-pointer"><span><b>تفعيل الفتح اليدوي للدرج</b><small class="block text-xs text-gray-600 mt-1">يتطلب درجًا موصولًا بمنفذ RJ11 في طابعة حرارية تدعم ESC/POS على Windows.</small></span><input id="cash_drawer_enabled" type="checkbox" class="w-5 h-5 accent-amber-600"></label>
+                <label class="flex items-center justify-between gap-4 p-3 rounded-lg bg-emerald-50 cursor-pointer"><span><b>فتح الدرج تلقائيًا بعد دفع نقدي</b><small class="block text-xs text-gray-600 mt-1">يفتح فقط عندما تتضمن الفاتورة مبلغًا نقديًا، وليس لعمليات البطاقة فقط.</small></span><input id="auto_open_cash_drawer" type="checkbox" class="w-5 h-5 accent-emerald-600"></label>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">اسم طابعة الدرج</label><input id="cash_drawer_printer" type="text" maxlength="160" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="اتركه فارغًا لاستخدام طابعة الإيصال المحددة"><p class="mt-1 text-xs text-gray-500">لا توصل درج النقد مباشرة بمنفذ USB؛ استخدم منفذ الدرج المخصص في الطابعة المتوافقة.</p></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">نمط نبضة فتح الدرج</label><select id="cash_drawer_pulse_profile" class="w-full border border-gray-300 rounded-lg px-4 py-2.5"><option value="pin2_standard">المخرج 1 — قياسي (موصى به)</option><option value="pin2_short">المخرج 1 — نبضة قصيرة</option><option value="pin5_standard">المخرج 2 — قياسي</option><option value="pin5_short">المخرج 2 — نبضة قصيرة</option></select><p class="mt-1 text-xs text-gray-500">ابدأ بالمخرج 1 القياسي. غيّر النمط فقط وفق دليل الطابعة أو بعد اختبار فتح الدرج على جهاز Windows.</p></div>
+            </div>
+
+            <div class="border-b border-slate-100 pb-4 space-y-3">
+                <h2 class="font-bold text-gray-700">شعار الإيصال</h2>
+                <p class="text-xs text-gray-500">اختر صورة PNG أو JPG أو WebP. يصغّرها النظام ويضغطها تلقائيًا مع الحفاظ على النسبة؛ يظهر الشعار في معاينة الإيصال والطباعة عبر المتصفح، ويطبع العنوان المختصر أدناه للطابعات النصية الحرارية.</p>
+                <label for="logo_file" class="block text-sm font-medium text-gray-700">ملف شعار الإيصال</label>
+                <input id="logo_file" type="file" accept="image/png,image/jpeg,image/webp" onchange="loadLogoFile(event)" class="block w-full text-sm">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="block text-xs font-medium text-gray-600 mb-1">حجم الشعار في المعاينة</label><select id="logo_size" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="small">صغير</option><option value="medium">متوسط</option><option value="large">كبير</option></select></div><div><label class="block text-xs font-medium text-gray-600 mb-1">محاذاة الشعار</label><select id="logo_alignment" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="right">يمين</option><option value="center">وسط</option><option value="left">يسار</option></select></div></div>
+                <div><label for="logo_caption" class="block text-xs font-medium text-gray-600 mb-1">عنوان حراري مختصر</label><input id="logo_caption" type="text" maxlength="36" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="اختياري للطابعات النصية الحرارية"></div>
+                <div class="flex items-center gap-3"><img id="logoPreview" class="hidden max-h-20 max-w-40 object-contain border rounded-lg p-1" alt="معاينة الشعار"><button type="button" onclick="clearLogo()" class="text-sm text-red-600 border border-red-200 px-3 py-2 rounded-lg">حذف الشعار</button></div>
+            </div>
+
+
+            <div class="rounded-xl border border-indigo-100 bg-indigo-50 p-4 space-y-3">
+                <h2 class="font-bold text-indigo-900">طريقة اتصال الطابعة</h2>
+                <select id="connection_mode" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
+                    <option value="windows">تلقائي — أي طابعة مثبتة في Windows (USB أو Wi‑Fi)</option>
+                    <option value="network">Wi‑Fi/LAN مباشر — طابعة حرارية بعنوان IP</option>
+                </select>
+                <div id="networkPrinterFields" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label class="text-sm font-medium">عنوان IP للطابعة<input id="network_host" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 direction-ltr text-left" placeholder="192.168.1.100"></label>
+                    <label class="text-sm font-medium">المنفذ<input id="network_port" type="number" value="9100" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 direction-ltr text-left"></label>
+                </div>
+                <p class="text-xs leading-5 text-indigo-800">اختر الوضع التلقائي للطابعات التي تظهر في إعدادات Windows، سواء كانت USB أو Wi‑Fi. استخدم الوضع المباشر فقط لطابعة حرارية تدعم RAW/ESC-POS على الشبكة.</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"> نص نهاية الإيصال</label>
+                <textarea id="footer_text" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="شكراً لزيارتكم"></textarea>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3"><h2 class="font-bold text-slate-800">روابط التواصل في التذييل</h2><p class="text-xs leading-5 text-slate-500">تظهر كرابط نصي في المعاينة والطباعة الحرارية. اترك الحقل فارغًا إن لم ترغب بإظهاره.</p><div><label for="social_facebook" class="block text-xs font-medium text-gray-600 mb-1">Facebook</label><input id="social_facebook" type="url" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-left direction-ltr text-sm" placeholder="https://facebook.com/store"></div><div><label for="social_instagram" class="block text-xs font-medium text-gray-600 mb-1">Instagram</label><input id="social_instagram" type="url" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-left direction-ltr text-sm" placeholder="https://instagram.com/store"></div><div><label for="social_whatsapp" class="block text-xs font-medium text-gray-600 mb-1">WhatsApp</label><input id="social_whatsapp" type="url" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-left direction-ltr text-sm" placeholder="https://wa.me/963xxxxxxxxx"></div></div>
+
+            <button onclick="saveSettings()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition text-lg">
+                 حفظ الإعدادات
+            </button>
+            <button id="saveAndTestPrintButton" onclick="saveAndTestPrint()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition text-lg disabled:opacity-60 disabled:cursor-not-allowed">
+                 حفظ الإعدادات وطباعة اختبار
+            </button>
+            <p class="text-center text-xs leading-5 text-slate-500">يحفظ الزر الإعدادات أولًا ثم يرسل اختبارًا للطابعة المحددة. تظهر النتيجة الفعلية من Windows بعد الإرسال.</p>
+
+            <div id="toast" class="hidden fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg text-center z-50"></div>
+        </div>
+
+        <!-- الطابعة المتصلة -->
+        <div class="bg-white rounded-xl shadow-md p-6 space-y-4 mt-6">
+                <h2 class="text-lg font-bold text-gray-700">الطابعة المتصلة</h2>
+            <div id="currentPrinterBox" class="bg-gray-50 p-3 rounded-lg text-sm text-gray-600">
+                الطابعة الحالية: <span id="currentPrinterName" class="font-bold text-gray-800">-</span>
+            </div>
+
+            <button onclick="discoverPrinters()" class="w-full bg-gray-700 text-white font-bold py-2.5 rounded-lg hover:bg-gray-800 transition">
+                 البحث عن طابعات متصلة
+            </button>
+
+            <div id="printerListBox" class="hidden space-y-3">
+                <label for="printerSelect" class="block text-sm font-medium text-gray-700">اختر طابعة Windows</label><select id="printerSelect" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                </select>
+                <button onclick="selectPrinter()" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 transition">
+                     استخدام هذه الطابعة
+                </button>
+            </div>
+
+            <button id="testPrintButton" onclick="testPrint()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition text-lg disabled:opacity-60 disabled:cursor-not-allowed">
+                 طباعة تجريبية
+            </button>
+            <p class="text-xs text-gray-400 text-center">
+                ملاحظة: البحث عن الطابعات والتعيين والاختبار الفعلي متاحين فقط عند تشغيل النظام على جهاز ويندوز فعلي، وليس أثناء التطوير.
+            </p>
+        </div>
+    </div>
+    <div id="testPrintLoading" class="print-loading hidden" role="status" aria-live="assertive" aria-label="جار إرسال اختبار الطباعة"><div class="print-loading-card"><div class="print-spinner"></div><h2 class="font-bold text-slate-900">جارِ تجهيز الطباعة التجريبية</h2><p id="testPrintLoadingText" class="mt-2 text-sm leading-6 text-slate-600">لا تغلق الصفحة حتى تظهر نتيجة الإرسال.</p></div></div>
+
+    <script>
+        const RECEIPT_LAYOUT_DEFAULT = ['logo','header','details','items','totals','footer'];
+        const RECEIPT_LAYOUT_LABELS = {logo:'الشعار', header:'اسم وعنوان الإيصال', details:'تفاصيل الطلب', items:'الأصناف', totals:'الإجمالي والدفع', footer:'التذييل والتواصل'};
+        let logoData = '', receiptLayout = [...RECEIPT_LAYOUT_DEFAULT], draggedLayoutId = '', thermalPreviewActive = localStorage.getItem('caesarThermalPreview') === 'true', thermalInkDensity = Number(localStorage.getItem('caesarThermalInkDensity') || 90), escposFontPreviewActive = localStorage.getItem('caesarEscposFontPreview') === 'true';
+        async function loadSettings() {
+            try {
+                const res = await fetch('/api/printer/settings');
+                const config = await res.json();
+                document.getElementById('paper_width').value = config.paper_width || 80;
+                document.getElementById('font_size').value = config.font_size || 'medium';
+                document.getElementById('copies').value = config.copies || 1;
+                document.getElementById('footer_text').value = config.footer_text || '';
+                document.getElementById('currentPrinterName').textContent = config.printer_name || (config.network_host ? config.network_host + ':' + (config.network_port || 9100) : 'لم يتم تحديد طابعة بعد');
+                document.getElementById('connection_mode').value = config.connection_mode || 'windows';
+                document.getElementById('network_host').value = config.network_host || '';
+                document.getElementById('network_port').value = config.network_port || 9100;
+                toggleNetworkPrinterFields();
+                document.getElementById('auto_print_receipt').checked = !!config.auto_print_receipt;
+                document.getElementById('auto_print_kitchen').checked = !!config.auto_print_kitchen;
+                document.getElementById('cash_drawer_enabled').checked = !!config.cash_drawer_enabled;
+                document.getElementById('auto_open_cash_drawer').checked = !!config.auto_open_cash_drawer;
+                document.getElementById('cash_drawer_printer').value = config.cash_drawer_printer || config.printer_name || '';
+                document.getElementById('cash_drawer_pulse_profile').value = config.cash_drawer_pulse_profile || 'pin2_standard';
+                document.getElementById('logo_caption').value = config.logo_caption || '';
+                document.getElementById('receipt_header').value = config.receipt_header || 'إيصال مبيعات';
+                document.getElementById('receipt_alignment').value = config.receipt_alignment || 'center';
+                document.getElementById('receipt_divider').value = config.receipt_divider || 'line';
+                document.getElementById('receipt_density').value = config.receipt_density || 'standard';
+                document.getElementById('receipt_show_cashier').checked = config.receipt_show_cashier !== false;
+                document.getElementById('receipt_show_order_type').checked = config.receipt_show_order_type !== false;
+                document.getElementById('logo_size').value = config.logo_size || 'medium';
+                document.getElementById('logo_alignment').value = config.logo_alignment || 'center';
+                document.getElementById('receipt_font_family').value = config.receipt_font_family || 'system';
+                document.getElementById('receipt_font_scale').value = config.receipt_font_scale || config.font_size || 'medium';
+                document.getElementById('social_facebook').value = config.social_facebook || '';
+                document.getElementById('social_instagram').value = config.social_instagram || '';
+                document.getElementById('social_whatsapp').value = config.social_whatsapp || '';
+                receiptLayout = isValidReceiptLayout(config.receipt_layout) ? [...config.receipt_layout] : [...RECEIPT_LAYOUT_DEFAULT];
+                logoData = config.logo_data || '';
+                renderLogoPreview();
+                renderReceiptLayoutEditor();
+                setThermalPreview(thermalPreviewActive, false);
+                setThermalInkDensity(thermalInkDensity, false);
+                setEscposFontPreview(escposFontPreviewActive, false);
+                await loadReceiptTemplates();
+
+                const rRes = await fetch('/api/settings/restaurant');
+                const rConfig = await rRes.json();
+                document.getElementById('restaurant_name').value = rConfig.name || '';
+                updateReceiptPreview();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function saveSettings(options = {}) {
+            const config = {
+                paper_width: parseInt(document.getElementById('paper_width').value),
+                font_size: document.getElementById('font_size').value,
+                copies: parseInt(document.getElementById('copies').value),
+                footer_text: document.getElementById('footer_text').value,
+                connection_mode: document.getElementById('connection_mode').value,
+                network_host: document.getElementById('network_host').value.trim(),
+                network_port: parseInt(document.getElementById('network_port').value || 9100),
+                auto_print_receipt: document.getElementById('auto_print_receipt').checked,
+                auto_print_kitchen: document.getElementById('auto_print_kitchen').checked,
+                cash_drawer_enabled: document.getElementById('cash_drawer_enabled').checked,
+                auto_open_cash_drawer: document.getElementById('auto_open_cash_drawer').checked,
+                cash_drawer_printer: document.getElementById('cash_drawer_printer').value.trim(),
+                cash_drawer_pulse_profile: document.getElementById('cash_drawer_pulse_profile').value,
+                logo_data: logoData,
+                logo_caption: document.getElementById('logo_caption').value.trim(),
+                receipt_header: document.getElementById('receipt_header').value.trim(),
+                receipt_alignment: document.getElementById('receipt_alignment').value,
+                receipt_divider: document.getElementById('receipt_divider').value,
+                receipt_density: document.getElementById('receipt_density').value,
+                receipt_show_cashier: document.getElementById('receipt_show_cashier').checked,
+                receipt_show_order_type: document.getElementById('receipt_show_order_type').checked,
+                logo_size: document.getElementById('logo_size').value,
+                logo_alignment: document.getElementById('logo_alignment').value,
+                receipt_layout: receiptLayout,
+                receipt_font_family: document.getElementById('receipt_font_family').value,
+                receipt_font_scale: document.getElementById('receipt_font_scale').value,
+                social_facebook: document.getElementById('social_facebook').value.trim(),
+                social_instagram: document.getElementById('social_instagram').value.trim(),
+                social_whatsapp: document.getElementById('social_whatsapp').value.trim()
+            };
+            try {
+                const printResponse = await fetch('/api/printer/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                const printData = await printResponse.json();
+                if (!printResponse.ok || !printData.ok) throw new Error(printData.error || 'تعذر حفظ إعدادات الطابعة');
+                const restaurantResponse = await fetch('/api/settings/restaurant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: document.getElementById('restaurant_name').value })
+                });
+                const restaurantData = await restaurantResponse.json();
+                if (!restaurantResponse.ok || !restaurantData.ok) throw new Error(restaurantData.error || 'تعذر حفظ معلومات المطعم');
+                if (!options.silent) showToast(' تم حفظ الإعدادات بنجاح');
+                return true;
+            } catch (e) {
+                showToast(' ' + (e.message || 'خطأ في الحفظ'));
+                return false;
+            }
+        }
+
+        function toggleNetworkPrinterFields() { document.getElementById('networkPrinterFields').classList.toggle('hidden', document.getElementById('connection_mode').value !== 'network'); }
+        document.getElementById('connection_mode').addEventListener('change', toggleNetworkPrinterFields);
+
+        async function discoverPrinters() {
+            showToast(' جارِ البحث...');
+            try {
+                const res = await fetch('/api/printer/list');
+                const data = await res.json();
+                if (!data.ok) {
+                    showToast(' ' + (data.error || 'تعذر البحث عن طابعات'));
+                    return;
+                }
+                if (data.printers.length === 0) {
+                    showToast(' ما لقيت أي طابعة متصلة بويندوز');
+                    return;
+                }
+                const sel = document.getElementById('printerSelect');
+                sel.innerHTML = data.printers.map(p =>
+                    `<option value="${p}" ${p === data.default ? 'selected' : ''}>${p}${p === data.default ? ' (افتراضية بويندوز)' : ''}</option>`
+                ).join('');
+                document.getElementById('printerListBox').classList.remove('hidden');
+                showToast(` لقيت ${data.printers.length} طابعة`);
+            } catch (e) {
+                showToast(' خطأ بالبحث عن الطابعات');
+            }
+        }
+
+        async function selectPrinter() {
+            const name = document.getElementById('printerSelect').value;
+            if (!name) return showToast(' اختر طابعة أولاً');
+            try {
+                const res = await fetch('/api/printer/select', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    document.getElementById('currentPrinterName').textContent = name;
+                    showToast(' تم تعيين الطابعة: ' + name);
+                } else {
+                    showToast(' ' + (data.error || 'تعذر التعيين'));
+                }
+            } catch (e) {
+                showToast(' خطأ بتعيين الطابعة');
+            }
+        }
+
+        let testPrintInProgress = false;
+        function setTestPrintLoading(active, width) {
+            const overlay = document.getElementById('testPrintLoading');
+            const button = document.getElementById('testPrintButton');
+            const saveAndPrintButton = document.getElementById('saveAndTestPrintButton');
+            testPrintInProgress = active;
+            button.disabled = active;
+            if (saveAndPrintButton) saveAndPrintButton.disabled = active;
+            button.innerHTML = active ? '⏳ جارِ إرسال اختبار ' + width + 'mm…' : ' طباعة تجريبية';
+            document.getElementById('testPrintLoadingText').textContent = active ? 'جارِ إرسال اختبار قالب ' + width + 'mm إلى الطابعة المحددة. لا تغلق الصفحة.' : '';
+            overlay.classList.toggle('hidden', !active);
+        }
+        async function testPrint() {
+            if (testPrintInProgress) return;
+            const width = Number(document.getElementById('paper_width').value || 80);
+            setTestPrintLoading(true, width);
+            try {
+                const res = await fetch('/api/printer/test', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({paper_width: width, receipt_header: document.getElementById('receipt_header').value.trim()}) });
+                const data = await res.json();
+                showToast((data.ok ? ' ' : ' ') + data.message);
+            } catch (e) {
+                showToast(' خطأ في الطباعة');
+            } finally { setTestPrintLoading(false, width); }
+        }
+        async function saveAndTestPrint() {
+            if (testPrintInProgress) return;
+            const saved = await saveSettings({silent: true});
+            if (!saved) return;
+            showToast(' تم الحفظ؛ جارِ إرسال اختبار الطباعة…');
+            await testPrint();
+        }
+
+        async function loadLogoFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            try {
+                const prepared = await window.caesarPrepareImage(file, {maxDimension: 640, maxBytes: 180 * 1024});
+                logoData = prepared.dataUrl;
+                renderLogoPreview();
+                showToast(` جرى ضغط الشعار إلى ${Math.ceil(prepared.bytes / 1024)} كيلوبايت`);
+            } catch (error) {
+                event.target.value = '';
+                showToast(' ' + (error.message || 'تعذر معالجة الشعار'));
+            }
+        }
+
+        function renderLogoPreview() {
+            const preview = document.getElementById('logoPreview');
+            preview.src = logoData;
+            preview.classList.toggle('hidden', !logoData);
+            updateReceiptPreview();
+        }
+
+        function clearLogo() {
+            logoData = '';
+            document.getElementById('logo_file').value = '';
+            renderLogoPreview();
+        }
+
+        function applyReceiptPreset(width) {
+            document.getElementById('paper_width').value = String(width);
+            document.getElementById('font_size').value = width === 58 ? 'small' : 'medium';
+            document.getElementById('receipt_alignment').value = 'center';
+            document.getElementById('receipt_divider').value = width === 58 ? 'dots' : 'line';
+            document.getElementById('receipt_density').value = width === 58 ? 'compact' : 'standard';
+            updateReceiptPreview();
+            showToast('تم تطبيق قالب ' + width + 'mm؛ اضغط حفظ لاعتماده.');
+        }
+
+        function updateReceiptPreview() {
+            const width = Number(document.getElementById('paper_width').value || 80);
+            const chars = width >= 80 ? 42 : 32;
+            const divider = ({line:'-', double:'=', dots:'.'})[document.getElementById('receipt_divider').value] || '-';
+            const center = document.getElementById('receipt_alignment').value === 'center';
+            const centerLine = (value) => center ? String(value).padStart(Math.floor((chars + String(value).length) / 2)).padEnd(chars) : String(value);
+            const rest = document.getElementById('restaurant_name').value.trim() || 'اسم المطعم';
+            const caption = document.getElementById('logo_caption').value.trim();
+            const headerLines = [centerLine(rest)];
+            if (caption) headerLines.push(centerLine(caption));
+            headerLines.push(divider.repeat(chars), centerLine(document.getElementById('receipt_header').value.trim() || 'إيصال مبيعات'));
+            const detailsLines = ['الفاتورة: ORD-0001', 'التاريخ: 27/08/2026 20:00', divider.repeat(chars)];
+            const itemLines = ['سندويش شاورما × 2     10,000', 'عصير طبيعي × 1          5,000', divider.repeat(chars)];
+            const totalsLines = ['الإجمالي:               15,000 ل.س', 'الدفع: نقدي'];
+            const footerLines = [];
+            if (document.getElementById('receipt_show_cashier').checked) footerLines.push('الكاشير قيصر: أحمد');
+            if (document.getElementById('receipt_show_order_type').checked) footerLines.push('الطلب: سفري');
+            footerLines.push(divider.repeat(chars), document.getElementById('footer_text').value.trim() || 'شكرًا لزيارتكم');
+            [['Facebook','social_facebook'],['Instagram','social_instagram'],['WhatsApp','social_whatsapp']].forEach(([label,id]) => { const value = document.getElementById(id).value.trim(); if(value) footerLines.push(label + ': ' + value); });
+            const previewBlocks = {header: headerLines, details: detailsLines, items: itemLines, totals: totalsLines, footer: footerLines};
+            const paper = document.getElementById('receiptPaper');
+            updateEscposFontWarning();
+            const chosenFontFamily = {system:'Tahoma, Arial, sans-serif', cairo:'Cairo, Tahoma, Arial, sans-serif', serif:'Georgia, Times New Roman, serif', mono:'ui-monospace, SFMono-Regular, Menlo, monospace'}[document.getElementById('receipt_font_family').value] || 'Tahoma, Arial, sans-serif';
+            const fontFamily = (thermalPreviewActive || escposFontPreviewActive) ? 'ui-monospace, SFMono-Regular, Menlo, monospace' : chosenFontFamily;
+            const fontScale = {small:'10px',medium:'12px',large:'14px'}[document.getElementById('receipt_font_scale').value] || '12px';
+            const blockRoot = document.getElementById('receiptPreviewBlocks');
+            const receiptLogo = document.createElement('img');
+            receiptLogo.className = 'receipt-preview-logo'; receiptLogo.alt = 'شعار المتجر في معاينة الإيصال';
+            const logoSize = document.getElementById('logo_size').value;
+            const logoAlignment = document.getElementById('logo_alignment').value;
+            const logoStyle = {small:['42%','38px'], medium:['62%','56px'], large:['82%','76px']}[logoSize] || ['62%','56px'];
+            receiptLogo.src = logoData || '';
+            receiptLogo.classList.toggle('hidden', !logoData);
+            receiptLogo.style.maxWidth = logoStyle[0]; receiptLogo.style.maxHeight = logoStyle[1];
+            receiptLogo.style.marginRight = logoAlignment === 'right' ? '0' : (logoAlignment === 'center' ? 'auto' : 'auto');
+            receiptLogo.style.marginLeft = logoAlignment === 'left' ? '0' : (logoAlignment === 'center' ? 'auto' : 'auto');
+            paper.style.width = width >= 80 ? '382px' : '286px';
+            paper.style.setProperty('--receipt-font-family', fontFamily); paper.style.setProperty('--receipt-font-size', fontScale);
+            paper.style.setProperty('--thermal-ink', String(Math.max(30, Math.min(100, thermalInkDensity)) / 100));
+            paper.className = 'receipt-paper ' + document.getElementById('receipt_density').value + (thermalPreviewActive ? ' thermal-sim' : '');
+            document.getElementById('previewSize').textContent = 'معاينة ' + width + 'mm';
+            blockRoot.innerHTML = '';
+            receiptLayout.forEach(id => { if (id === 'logo') { if (logoData) blockRoot.appendChild(receiptLogo); return; } const block = document.createElement('pre'); block.className = 'receipt-preview-block'; block.textContent = (previewBlocks[id] || []).join('\n'); blockRoot.appendChild(block); });
+            updateReceipt58LongTextWarning(width, [rest, caption, document.getElementById('receipt_header').value.trim(), document.getElementById('footer_text').value.trim(), document.getElementById('social_facebook').value.trim(), document.getElementById('social_instagram').value.trim(), document.getElementById('social_whatsapp').value.trim()]);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 2500);
+        }
+
+        function isValidReceiptLayout(value) { return Array.isArray(value) && value.length === RECEIPT_LAYOUT_DEFAULT.length && value.every(id => RECEIPT_LAYOUT_DEFAULT.includes(id)) && new Set(value).size === value.length; }
+        function renderReceiptLayoutEditor() {
+            const editor = document.getElementById('receiptLayoutEditor'); editor.innerHTML = '';
+            receiptLayout.forEach((id, index) => {
+                const row = document.createElement('div'); row.className = 'layout-item'; row.draggable = true; row.dataset.layoutId = id;
+                row.innerHTML = '<span class="layout-handle" aria-hidden="true">⋮⋮</span><span class="layout-label"></span><button type="button" class="layout-move" aria-label="تحريك للأعلى">↑</button><button type="button" class="layout-move" aria-label="تحريك للأسفل">↓</button>';
+                row.querySelector('.layout-label').textContent = RECEIPT_LAYOUT_LABELS[id]; const buttons = row.querySelectorAll('button');
+                buttons[0].disabled = index === 0; buttons[0].onclick = () => moveReceiptLayout(id, -1); buttons[1].disabled = index === receiptLayout.length - 1; buttons[1].onclick = () => moveReceiptLayout(id, 1);
+                row.addEventListener('dragstart', event => { draggedLayoutId = id; row.classList.add('dragging'); event.dataTransfer.effectAllowed = 'move'; });
+                row.addEventListener('dragend', () => { draggedLayoutId = ''; row.classList.remove('dragging'); });
+                row.addEventListener('dragover', event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; });
+                row.addEventListener('drop', event => { event.preventDefault(); if (!draggedLayoutId || draggedLayoutId === id) return; const from = receiptLayout.indexOf(draggedLayoutId), to = receiptLayout.indexOf(id); receiptLayout.splice(from, 1); receiptLayout.splice(to, 0, draggedLayoutId); renderReceiptLayoutEditor(); updateReceiptPreview(); });
+                editor.appendChild(row);
+            });
+        }
+        function moveReceiptLayout(id, amount) { const from = receiptLayout.indexOf(id), to = from + amount; if (to < 0 || to >= receiptLayout.length) return; [receiptLayout[from], receiptLayout[to]] = [receiptLayout[to], receiptLayout[from]]; renderReceiptLayoutEditor(); updateReceiptPreview(); }
+        function resetReceiptLayout() { receiptLayout = [...RECEIPT_LAYOUT_DEFAULT]; renderReceiptLayoutEditor(); updateReceiptPreview(); showToast('تمت إعادة ترتيب الإيصال الافتراضي.'); }
+        function updateEscposFontWarning() { document.getElementById('escposFontWarning').classList.toggle('hidden', document.getElementById('receipt_font_family').value === 'system'); }
+        function setThermalPreview(active, persist = true) { thermalPreviewActive = !!active; const shell = document.querySelector('.receipt-preview-shell'), button = document.getElementById('thermalPreviewToggle'); shell.classList.toggle('thermal-sim', thermalPreviewActive); button.classList.toggle('active', thermalPreviewActive); button.setAttribute('aria-pressed', String(thermalPreviewActive)); button.textContent = thermalPreviewActive ? 'عودة للمعاينة العادية' : 'أبيض وأسود'; if (persist) localStorage.setItem('caesarThermalPreview', String(thermalPreviewActive)); updateReceiptPreview(); }
+        function toggleThermalPreview() { setThermalPreview(!thermalPreviewActive); }
+        function setThermalInkDensity(value, persist = true) { thermalInkDensity = Math.max(30, Math.min(100, Number(value) || 90)); document.getElementById('thermalInkDensity').value = String(thermalInkDensity); document.getElementById('thermalInkDensityValue').textContent = thermalInkDensity + '%'; if (persist) localStorage.setItem('caesarThermalInkDensity', String(thermalInkDensity)); updateReceiptPreview(); }
+        function setEscposFontPreview(active, persist = true) { escposFontPreviewActive = !!active; const button = document.getElementById('escposFontToggle'); button.classList.toggle('active', escposFontPreviewActive); button.setAttribute('aria-pressed', String(escposFontPreviewActive)); button.textContent = escposFontPreviewActive ? 'استخدام الخط المخصص' : 'معاينة خط ESC/POS'; if (persist) localStorage.setItem('caesarEscposFontPreview', String(escposFontPreviewActive)); updateReceiptPreview(); }
+        function toggleEscposFontPreview() { setEscposFontPreview(!escposFontPreviewActive); }
+        function updateReceipt58LongTextWarning(width, values) { const warning = document.getElementById('receipt58LongTextWarning'); if (width !== 58) { warning.classList.add('hidden'); return; } const longest = values.filter(Boolean).flatMap(value => String(value).split('\n')).map(line => Array.from(line)).sort((a, b) => b.length - a.length)[0] || []; if (longest.length <= 32) { warning.classList.add('hidden'); return; } warning.textContent = 'تنبيه 58mm: يوجد نص بطول ' + longest.length + ' محرفًا، وقد يلتف أو يُقص في الطباعة الحرارية. اختصر الاسم أو التذييل أو الرابط، ثم نفّذ طباعة تجريبية.'; warning.classList.remove('hidden'); }
+
+        async function loadReceiptTemplates() {
+            const list = document.getElementById('receiptTemplateList');
+            try {
+                const res = await fetch('/api/printer/templates'); const data = await res.json();
+                if (!res.ok || !data.ok) throw new Error(data.error || 'تعذر تحميل القوالب');
+                renderReceiptTemplates(data.templates || []);
+            } catch (e) { list.innerHTML = '<p class="text-red-600">تعذر تحميل القوالب.</p>'; }
+        }
+        function renderReceiptTemplates(templates) {
+            const list = document.getElementById('receiptTemplateList'); list.innerHTML = '';
+            if (!templates.length) { list.innerHTML = '<p class="text-slate-500">لا توجد قوالب محفوظة بعد.</p>'; return; }
+            templates.slice().reverse().forEach(template => { const row = document.createElement('div'); row.className = 'template-row'; const name = document.createElement('span'); name.className = 'template-name'; name.textContent = template.name; const apply = document.createElement('button'); apply.type = 'button'; apply.className = 'text-blue-700 font-bold text-xs px-2 py-1'; apply.textContent = 'تطبيق'; apply.onclick = () => applyReceiptTemplate(template.id); const del = document.createElement('button'); del.type = 'button'; del.className = 'text-red-600 font-bold text-xs px-2 py-1'; del.textContent = 'حذف'; del.onclick = () => deleteReceiptTemplate(template.id, template.name); row.append(name, apply, del); list.appendChild(row); });
+        }
+        async function saveReceiptTemplate() {
+            const input = document.getElementById('templateName'); const name = input.value.trim();
+            if (name.length < 2) return showToast(' اكتب اسمًا من حرفين على الأقل للقالب');
+            try { const res = await fetch('/api/printer/templates', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name})}); const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || 'تعذر حفظ القالب'); input.value=''; await loadReceiptTemplates(); showToast(' تم حفظ قالب: ' + data.template.name); }
+            catch(e) { showToast(' ' + (e.message || 'تعذر حفظ القالب')); }
+        }
+        async function applyReceiptTemplate(id) {
+            try { const res = await fetch('/api/printer/templates/' + encodeURIComponent(id) + '/apply', {method:'POST'}); const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || 'تعذر تطبيق القالب'); Object.entries(data.design || {}).forEach(([key,value]) => { if (key === 'receipt_layout') { receiptLayout = isValidReceiptLayout(value) ? [...value] : [...RECEIPT_LAYOUT_DEFAULT]; return; } const el=document.getElementById(key); if(!el) return; if(el.type==='checkbox') el.checked=!!value; else el.value=value ?? ''; }); renderReceiptLayoutEditor(); updateReceiptPreview(); showToast(' تم تطبيق قالب: ' + data.name); }
+            catch(e) { showToast(' ' + (e.message || 'تعذر تطبيق القالب')); }
+        }
+        async function deleteReceiptTemplate(id, name) {
+            if (!confirm('حذف قالب «' + name + '»؟')) return;
+            try { const res = await fetch('/api/printer/templates/' + encodeURIComponent(id), {method:'DELETE'}); const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || 'تعذر حذف القالب'); await loadReceiptTemplates(); showToast(' تم حذف القالب'); }
+            catch(e) { showToast(' ' + (e.message || 'تعذر حذف القالب')); }
+        }
+
+        async function exportReceiptTemplates() {
+            try { const res = await fetch('/api/printer/templates/export'); if (!res.ok) throw new Error('تعذر تصدير القوالب'); const blob = await res.blob(); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'caesar-receipt-templates.json'; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); showToast(' تم تنزيل ملف القوالب.'); }
+            catch (e) { showToast(' ' + (e.message || 'تعذر تصدير القوالب')); }
+        }
+        async function importReceiptTemplates(event) {
+            const file = event.target.files && event.target.files[0]; event.target.value = '';
+            if (!file) return; if (file.size > 100 * 1024) return showToast(' ملف القوالب يجب ألا يتجاوز 100 كيلوبايت');
+            try { const payload = JSON.parse(await file.text()); const res = await fetch('/api/printer/templates/import', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}); const data = await res.json(); if (!res.ok || !data.ok) throw new Error(data.error || 'تعذر استيراد القوالب'); await loadReceiptTemplates(); showToast(' تم استيراد ' + data.imported + ' قالب/قوالب.'); }
+            catch (e) { showToast(' ' + (e.message || 'ملف القوالب غير صالح')); }
+        }
+
+        ['paper_width','font_size','footer_text','restaurant_name','logo_caption','logo_size','logo_alignment','receipt_font_family','receipt_font_scale','receipt_header','receipt_alignment','receipt_divider','receipt_density','receipt_show_cashier','receipt_show_order_type','social_facebook','social_instagram','social_whatsapp'].forEach(id => document.getElementById(id).addEventListener('input', updateReceiptPreview));
+        loadSettings();
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "كاشير قيصر قيصر - بوابة الجوال",
+  "short_name": "كاشير قيصر قيصر",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/mobile.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "description": "بوابة الجوال المحلية للمطبخ والطاولات والكاشير قيصر"
+}

@@ -1,0 +1,520 @@
+/* POS workspace override — preserves existing IDs and JavaScript bindings */
+body.caesar-page-index { background: var(--q-bg) !important; }
+body.caesar-page-index > header {
+  min-height: 76px; padding: 12px 18px !important; border: 0 !important;
+  background: linear-gradient(120deg, #0f172a, #1e3a8a 62%, #1d4ed8) !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .22) !important;
+}
+body.caesar-page-index .brand-mark { width: 42px; height: 42px; border-radius: 8px; font-size: 0; background: linear-gradient(135deg, #60a5fa, #1d4ed8) !important; }
+body.caesar-page-index .brand-mark::after { content: '⌁'; color: #fff; font-size: 27px; font-weight: 900; line-height: 1; }
+body.caesar-page-index .brand-mark.has-restaurant-logo::after { content: none; }
+body.caesar-page-index .brand-mark.has-restaurant-logo { background: var(--q-surface) !important; }
+body.caesar-page-index .brand-copy h1 { color: #fff !important; font-size: 17px !important; }
+body.caesar-page-index .header-tools { margin-inline-start: auto; }
+body.caesar-page-index .top-field { height: 44px !important; border: 1px solid #536478 !important; background: #f9fbff !important; border-radius: 8px !important; }
+body.caesar-page-index .nav-link { min-height: 44px !important; border: 1px solid #40516a !important; border-radius: 8px !important; background: rgba(255,255,255,.03); }
+body.caesar-page-index .nav-link:hover { border-color: #93c5fd !important; background: rgba(255,255,255,.11) !important; }
+body.caesar-page-index #connectionStatus { border: 1px solid #267063 !important; border-radius: 8px !important; }
+
+body.caesar-page-index #mainLayout {
+  display: grid !important; grid-template-columns: 410px minmax(0, 1fr) 205px; grid-template-areas: 'cart products categories';
+  gap: 16px !important; padding: 16px !important; overflow: auto !important; direction: ltr;
+}
+body.caesar-page-index #categoryPanel { grid-area: categories; width: auto !important; order: unset !important; direction: rtl; border: 1px solid var(--q-line) !important; border-radius: var(--q-radius-lg) !important; background: var(--q-surface) !important; box-shadow: var(--q-shadow-soft) !important; }
+body.caesar-page-index #categoryPanel > div { padding: 14px !important; }
+body.caesar-page-index #categoryPanel h3 { color: var(--q-muted) !important; letter-spacing: .04em; }
+body.caesar-page-index #categoryPanel .category-item { display: flex; align-items: center; min-height: 44px; margin: 4px 0; border: 1px solid transparent; border-radius: 8px !important; color: var(--q-ink-soft) !important; background: transparent !important; }
+body.caesar-page-index #categoryPanel .category-item:hover { transform: none; border-color: var(--q-line); background: var(--q-surface-soft) !important; }
+body.caesar-page-index #categoryPanel .category-active { border-color: transparent !important; background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important; box-shadow: 0 8px 16px rgba(29,78,216,.2); }
+
+body.caesar-page-index #productsPanel { grid-area: products; min-height: 0; padding: 0 !important; overflow: visible !important; direction: rtl; }
+body.caesar-page-index .product-toolbar { min-height: 78px; margin-bottom: 13px !important; padding: 14px 17px !important; border: 1px solid var(--q-line) !important; border-radius: var(--q-radius-lg) !important; background: var(--q-surface) !important; box-shadow: var(--q-shadow-soft) !important; }
+body.caesar-page-index #sectionTitle { color: var(--q-ink) !important; font-size: 17px !important; font-weight: 900 !important; }
+body.caesar-page-index #productCountHint { padding: 8px 11px !important; color: var(--q-muted) !important; background: var(--q-surface-muted) !important; font-weight: 800 !important; }
+body.caesar-page-index #productsGrid { grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)) !important; gap: 12px !important; }
+body.caesar-page-index .product-card { min-height: 178px !important; padding: 10px !important; border: 1px solid var(--q-line) !important; border-radius: 8px !important; background: var(--q-surface) !important; box-shadow: var(--q-shadow-soft) !important; display: flex; flex-direction: column; justify-content: flex-start; gap: 8px; outline: none; }
+body.caesar-page-index .product-card:hover, body.caesar-page-index .product-card:focus-visible { transform: translateY(-3px); border-color: #93c5fd !important; box-shadow: 0 14px 25px rgba(37,99,235,.16) !important; }
+body.caesar-page-index .product-card:active { transform: translateY(0) scale(.985); }
+body.caesar-page-index .product-image { width: 100%; height: 100px; display: block; object-fit: contain; padding: 5px; border-radius: 8px; background: var(--q-surface-muted); }
+body.caesar-page-index .product-image-placeholder { display: grid; place-items: center; color: var(--q-blue); }
+body.caesar-page-index .product-image-placeholder svg { width: 33px; height: 33px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+body.caesar-page-index .product-name { min-height: 20px; overflow: hidden; color: var(--q-ink); font-size: 14px; font-weight: 900; line-height: 1.42; }
+body.caesar-page-index .q-product-price { color: var(--q-blue); font-size: 13px; font-weight: 900; margin-top: auto; }
+
+body.caesar-page-index .cart-panel { grid-area: cart; position: sticky; top: 16px; order: unset !important; width: auto !important; min-width: 0 !important; max-height: calc(100vh - 108px); direction: rtl; border: 2px solid #b8c6d8 !important; border-radius: 8px !important; background: #fff !important; box-shadow: 0 18px 34px rgba(15, 23, 42, .13) !important; }
+body.caesar-page-index .cart-head { padding: 19px !important; border-bottom: 1px solid var(--q-line); background: linear-gradient(135deg, #fff, #edf4ff) !important; }
+body.caesar-page-index .cart-head h3 { color: var(--q-ink) !important; font-size: 19px !important; }
+body.caesar-page-index .cart-head > p { color: var(--q-ink-soft) !important; font-weight: 700; }
+body.caesar-page-index .order-type-btn { min-height: 40px !important; border-color: var(--q-line-strong) !important; background: var(--q-surface) !important; color: var(--q-muted) !important; }
+body.caesar-page-index .type-selected { color: #fff !important; border-color: var(--q-blue) !important; background: var(--q-blue) !important; box-shadow: 0 7px 15px rgba(37,99,235,.18); }
+body.caesar-page-index #cartItems { min-height: 210px; padding: 14px 16px !important; border-top: 1px solid #eef2f7; background: #fff !important; }
+body.caesar-page-index .cart-empty { min-height: 205px; display: grid; place-items: center; align-content: center; gap: 13px; padding: 28px 18px; border: 2px dashed #aebfd3; border-radius: 8px; background: #f8fbff; color: var(--q-muted); text-align: center; }
+body.caesar-page-index .cart-empty svg { width: 46px; height: 46px; stroke: var(--q-blue); fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+body.caesar-page-index .cart-empty p { color: var(--q-ink) !important; font-size: 14px; font-weight: 900; }
+body.caesar-page-index .cart-item { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(88px,auto) auto; align-items: center; gap: 10px; padding: 12px !important; border: 1px solid #cbd5e1 !important; border-radius: 8px !important; background: #f8fbff !important; }
+body.caesar-page-index .cart-item:hover { background: var(--q-brand-soft) !important; }
+body.caesar-page-index .cart-item .qty-control { border-radius: 8px !important; }
+body.caesar-page-index .cart-item .qty-control button, body.caesar-page-index .remove-cart-item { min-width: 36px; min-height: 36px; border-radius: 8px !important; }
+body.caesar-page-index .cart-item-total { font-size: 12px; white-space: nowrap; }
+body.caesar-page-index .cart-footer { position: sticky; bottom: 0; z-index: 2; padding-top: 10px; border-top: 1px solid #dbe5f0; background: #fff; box-shadow: 0 -12px 22px rgba(15,23,42,.07); }
+body.caesar-page-index .cart-summary { padding: 16px !important; border-radius: 8px !important; background: linear-gradient(135deg, #0f1f3b, #1d4ed8) !important; }
+body.caesar-page-index #totalDisplay { font-size: 26px !important; font-weight: 900 !important; letter-spacing: -.3px; }
+body.caesar-page-index .primary-checkout { min-height: 59px !important; border-radius: 8px !important; background: var(--q-blue) !important; box-shadow: 0 11px 20px rgba(37,99,235,.24) !important; font-size: 16px !important; }
+body.caesar-page-index .secondary-action { min-height: 41px !important; border-radius: 8px !important; }
+body.caesar-page-index .quick-pay-btn { border-color: #bfdbfe !important; border-radius: 8px !important; background: var(--q-brand-soft) !important; }
+body.caesar-page-index .quick-pay-btn:hover { border-color: var(--q-blue) !important; background: #dbeafe !important; }
+body.caesar-page-index .quick-pay-btn .font-bold { color: var(--q-blue) !important; }
+body.caesar-page-index .q-payment-icon { width: 27px; height: 27px; display: block; margin: 0 auto 6px; fill: none; stroke: var(--q-blue); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+body.caesar-page-index #paymentModal > div, body.caesar-page-index #mixedPaymentModal > div, body.caesar-page-index #lockScreen > div { border: 1px solid var(--q-line) !important; background: var(--q-surface) !important; }
+body.caesar-page-index #menuPanel { width: 310px !important; padding: 18px !important; border-left: 1px solid #334155; background: #101827 !important; }
+body.caesar-page-index #menuPanel .menu-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #334155; }
+body.caesar-page-index #menuPanel .menu-close-action { min-height: 34px; display: inline-flex; align-items: center; gap: 4px; padding: 0 9px; border: 1px solid #475569; border-radius: 8px !important; color: #dbeafe; background: #1e293b; font-size: 11px; font-weight: 800; }
+body.caesar-page-index #menuPanel .menu-close-action:hover { background: #334155; color: #fff; }
+body.caesar-page-index #menuPanel .menu-group { margin: 0 0 8px; padding: 0; border: 1px solid #334155; border-radius: 8px !important; background: #17233a !important; overflow: hidden; }
+body.caesar-page-index #menuPanel .menu-group summary { min-height: 44px; display: flex; align-items: center; padding: 0 12px; color: #dbeafe !important; background: #1e293b; cursor: pointer; list-style: none; }
+body.caesar-page-index #menuPanel .menu-group summary::after { content: '⌄'; margin-inline-start: auto; color: #93c5fd; font-size: 16px; }
+body.caesar-page-index #menuPanel .menu-group[open] summary::after { transform: rotate(180deg); }
+body.caesar-page-index #menuPanel .menu-group-links { padding: 6px; }
+body.caesar-page-index #menuPanel .menu-group-links a, body.caesar-page-index #menuPanel .menu-group-links button { min-height: 40px; display: flex !important; align-items: center; width: 100%; padding: 0 10px; border-radius: 8px !important; color: #dbeafe; text-align: right; }
+body.caesar-page-index #menuPanel .menu-group-links a:hover { background: #1e40af; color: #fff; }
+body.caesar-page-index #menuPanel .menu-shift-action { color: #fecdd3; background: transparent; border: 0; }
+body.caesar-page-index #menuPanel .menu-shift-action:hover { background: #be123c; color: #fff; }
+body.caesar-page-index #toast { border: 1px solid #3d5068; background: #101827 !important; }
+
+@media (max-width: 430px) {
+  body.caesar-page-index .cart-item { grid-template-columns: minmax(0,1fr) auto auto; }
+  body.caesar-page-index .cart-item-total { grid-column: 1 / 2; }
+}
+
+@media (max-width: 1150px) {
+  body.caesar-page-index #mainLayout { grid-template-columns: 360px minmax(0, 1fr) 175px; }
+  body.caesar-page-index #productsGrid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important; }
+}
+@media (max-width: 860px) {
+  body.caesar-page-index #mainLayout { grid-template-columns: minmax(0, 1fr) 180px; grid-template-areas: 'products categories' 'cart cart'; }
+  body.caesar-page-index .cart-panel { position: static; max-height: none; }
+}
+@media (max-width: 620px) {
+  body.caesar-page-index > header { padding: 10px 12px !important; }
+  body.caesar-page-index #mainLayout { display: flex !important; flex-direction: column; padding: 10px !important; }
+  body.caesar-page-index #categoryPanel { width: 100% !important; max-height: 142px; }
+  body.caesar-page-index #categoryPanel > div:last-child { display: none; }
+  body.caesar-page-index .cart-panel { width: 100% !important; }
+  body.caesar-page-index #productsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  body.caesar-page-index .header-tools { width: 100%; order: 3; overflow-x: auto; }
+}
+
+/* Inline SVG operational tools */
+body.caesar-page-index .header-input { position: relative; display: inline-flex; align-items: center; }
+body.caesar-page-index .header-input svg { position: absolute; right: 12px; z-index: 1; width: 18px; height: 18px; color: #667085; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+body.caesar-page-index .header-input input { padding-right: 38px !important; }
+body.caesar-page-index .nav-link svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+body.caesar-page-index .nav-link .emoji-fallback { display: none; }
+
+/* وضع اللمس: أهداف تفاعلية كبيرة مع بقاء دعم الماوس ولوحة المفاتيح */
+body.caesar-page-index {
+  touch-action: manipulation;
+}
+body.caesar-page-index .nav-link,
+body.caesar-page-index #lockNowButton,
+body.caesar-page-index #cashDrawerButton {
+  min-height: 52px !important;
+  padding-inline: 14px !important;
+}
+body.caesar-page-index .header-input,
+body.caesar-page-index .header-input input,
+body.caesar-page-index #currency {
+  min-height: 52px !important;
+}
+body.caesar-page-index #categoryPanel .category-item {
+  min-height: 54px !important;
+  padding-inline: 14px !important;
+  font-size: 15px !important;
+}
+body.caesar-page-index #productsGrid {
+  gap: 16px !important;
+}
+body.caesar-page-index .product-card {
+  min-height: 210px !important;
+  padding: 13px !important;
+  gap: 10px !important;
+}
+body.caesar-page-index .product-card .product-image {
+  height: 116px !important;
+}
+body.caesar-page-index .product-card .product-name {
+  font-size: 15px !important;
+  line-height: 1.5 !important;
+}
+body.caesar-page-index .product-card button,
+body.caesar-page-index .order-type-btn,
+body.caesar-page-index .secondary-action {
+  min-height: 52px !important;
+  font-size: 14px !important;
+}
+body.caesar-page-index .cart-item {
+  gap: 12px !important;
+  padding: 14px !important;
+}
+body.caesar-page-index .cart-item .qty-control button,
+body.caesar-page-index .remove-cart-item {
+  min-width: 46px !important;
+  min-height: 46px !important;
+  font-size: 20px !important;
+}
+body.caesar-page-index .primary-checkout {
+  min-height: 66px !important;
+  font-size: 18px !important;
+}
+body.caesar-page-index .quick-pay-btn {
+  min-height: 104px !important;
+  padding: 18px !important;
+  font-size: 17px !important;
+}
+body.caesar-page-index #menuPanel .menu-close-action,
+body.caesar-page-index #menuPanel .menu-group summary,
+body.caesar-page-index #menuPanel .menu-group-links a,
+body.caesar-page-index #menuPanel .menu-group-links button {
+  min-height: 52px !important;
+  font-size: 14px !important;
+}
+@media (max-width: 620px) {
+  body.caesar-page-index #productsGrid {
+    gap: 12px !important;
+  }
+  body.caesar-page-index .product-card {
+    min-height: 194px !important;
+  }
+  body.caesar-page-index .product-card .product-image {
+    height: 98px !important;
+  }
+  body.caesar-page-index .header-tools {
+    gap: 8px !important;
+  }
+}
+
+/* لوحة أرقام لمس للكميات والمبالغ */
+.numpad-card { border: 1px solid #cbd5e1; }
+.numpad-display {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 28px;
+  font-weight: 900;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.numpad-grid button,
+.numpad-secondary,
+.numpad-confirm,
+.numpad-close {
+  min-height: 58px;
+  border-radius: 8px;
+  font-size: 22px;
+  font-weight: 900;
+  touch-action: manipulation;
+}
+.numpad-grid button { background: #eff6ff; border: 1px solid #bfdbfe; color: #172554; }
+.numpad-grid button:hover { background: #dbeafe; }
+.numpad-secondary { background: #e2e8f0; color: #334155; }
+.numpad-confirm { background: #2563eb; color: white; }
+.numpad-close { min-height: 44px; min-width: 44px; background: #fee2e2; color: #b91c1c; }
+.numpad-input:focus, .qty-value:focus { outline: 3px solid #93c5fd; outline-offset: 2px; }
+@media (max-width: 520px) {
+  .numpad-card { padding: 12px; }
+  .numpad-grid button, .numpad-secondary, .numpad-confirm { min-height: 62px; }
+}
+
+/* وضوح السلة: مساحة مستقلة قابلة للتمرير دون قص محتوياتها */
+body.caesar-page-index .cart-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+body.caesar-page-index #cartItems {
+  flex: 1 1 auto !important;
+  min-height: 180px !important;
+  max-height: calc(100vh - 330px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: auto;
+  scrollbar-color: #64748b #e2e8f0;
+}
+body.caesar-page-index #cartItems::-webkit-scrollbar { width: 12px; }
+body.caesar-page-index #cartItems::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 8px; }
+body.caesar-page-index #cartItems::-webkit-scrollbar-thumb { background: #64748b; border: 2px solid #e2e8f0; border-radius: 8px; }
+body.caesar-page-index .cart-item-name,
+body.caesar-page-index .cart-item-name .truncate {
+  min-width: 0 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere !important;
+  color: #0f172a !important;
+}
+body.caesar-page-index .cart-item-name .block:not(.text-indigo-600) { color: #0f172a !important; }
+body.caesar-page-index .cart-item-total { color: #0f172a !important; font-size: 14px !important; font-weight: 900 !important; }
+body.caesar-page-index .qty-control { background: #ffffff !important; border-color: #94a3b8 !important; }
+body.caesar-page-index .qty-control button,
+body.caesar-page-index .qty-value { color: #0f172a !important; background: #ffffff !important; border-color: #cbd5e1 !important; }
+body.caesar-page-index .remove-cart-item { color: #ffffff !important; background: #dc2626 !important; border: 1px solid #b91c1c !important; font-weight: 900 !important; }
+body.caesar-page-index .primary-checkout { color: #ffffff !important; background: #1d4ed8 !important; }
+body.caesar-page-index .secondary-action { color: #334155 !important; background: #e2e8f0 !important; border-color: #94a3b8 !important; font-weight: 900 !important; }
+body.caesar-page-index .secondary-action.bg-red-600 { color: #ffffff !important; background: #dc2626 !important; border-color: #b91c1c !important; }
+body.caesar-page-index .cart-footer { flex: 0 0 auto !important; }
+@media (max-width: 860px) {
+  body.caesar-page-index #cartItems { max-height: none !important; }
+}
+
+/* إصلاح الحجب: السلة عمود مستقل، ومحتوياتها تتمرر قبل منطقة الأزرار */
+body.caesar-page-index .cart-panel {
+  height: calc(100vh - 108px) !important;
+  max-height: calc(100vh - 108px) !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+body.caesar-page-index .cart-head {
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+}
+body.caesar-page-index #cartItems {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  padding-bottom: 18px !important;
+}
+body.caesar-page-index .cart-footer {
+  position: static !important;
+  flex: 0 0 auto !important;
+  max-height: 40% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-bottom: 12px !important;
+}
+body.caesar-page-index .cart-footer::-webkit-scrollbar { width: 10px; }
+body.caesar-page-index .cart-footer::-webkit-scrollbar-thumb { background: #94a3b8; border: 2px solid #f1f5f9; border-radius: 8px; }
+@media (max-width: 860px) {
+  body.caesar-page-index .cart-panel { height: 66vh !important; max-height: 66vh !important; }
+}
+@media (max-width: 620px) {
+  body.caesar-page-index .cart-panel { height: 68vh !important; max-height: 68vh !important; }
+  body.caesar-page-index .cart-footer { max-height: 45% !important; }
+}
+
+/* تخطيط السلة النهائي: عمود جانبي كبير ومستقل عن المنتجات */
+@media (min-width: 861px) {
+  body.caesar-page-index #mainLayout {
+    grid-template-columns: minmax(500px, 39vw) minmax(0, 1fr) 220px !important;
+    grid-template-areas: 'cart products categories' !important;
+    align-items: stretch !important;
+    min-height: 0 !important;
+    height: calc(100vh - 108px) !important;
+    overflow: hidden !important;
+  }
+  body.caesar-page-index .cart-panel {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: auto !important;
+    min-width: 500px !important;
+    z-index: 10 !important;
+    position: relative !important;
+    isolation: isolate;
+  }
+  body.caesar-page-index #productsPanel {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    min-width: 0 !important;
+    z-index: 1 !important;
+  }
+  body.caesar-page-index #categoryPanel {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+    z-index: 1 !important;
+  }
+}
+body.caesar-page-index .cart-head,
+body.caesar-page-index .cart-footer { position: relative !important; z-index: 2 !important; }
+body.caesar-page-index #cartItems {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+body.caesar-page-index #cartItems > * { visibility: visible !important; opacity: 1 !important; }
+body.caesar-page-index .cart-item { width: 100% !important; min-height: 78px !important; }
+body.caesar-page-index .cart-item-name { font-size: 16px !important; }
+body.caesar-page-index .cart-item-total { font-size: 15px !important; }
+@media (max-width: 1180px) and (min-width: 861px) {
+  body.caesar-page-index #mainLayout { grid-template-columns: minmax(430px, 42vw) minmax(0, 1fr) 185px !important; }
+  body.caesar-page-index .cart-panel { min-width: 430px !important; }
+}
+
+/* تباين أزرار الكاشير قيصر: النص واضح على كل الخلفيات والحالات */
+body.caesar-page-index button.primary-checkout,
+body.caesar-page-index button.primary-checkout * { background: #2563eb !important; color: #ffffff !important; border-color: #1d4ed8 !important; text-shadow: none !important; }
+body.caesar-page-index button.secondary-action,
+body.caesar-page-index button.secondary-action * { background: #f1f5f9 !important; color: #1e293b !important; border: 1px solid #94a3b8 !important; text-shadow: none !important; }
+body.caesar-page-index button.secondary-action:hover { background: #e2e8f0 !important; color: #0f172a !important; }
+body.caesar-page-index button.remove-cart-item,
+body.caesar-page-index button.remove-cart-item * { background: #dc2626 !important; color: #ffffff !important; border-color: #b91c1c !important; font-weight: 900 !important; text-shadow: none !important; }
+body.caesar-page-index button.quick-pay-btn { background: #eff6ff !important; color: #1e3a8a !important; border-color: #93c5fd !important; }
+body.caesar-page-index button.quick-pay-btn:hover { background: #dbeafe !important; color: #172554 !important; }
+body.caesar-page-index button.quick-pay-btn * { color: #1e3a8a !important; }
+body.caesar-page-index button:disabled { color: #64748b !important; background: #e2e8f0 !important; border-color: #cbd5e1 !important; opacity: 1 !important; }
+
+
+/* الإصلاح النهائي لوضوح السلة: مساحة أكبر، محتويات أولوية، وأزرار ثابتة أسفلها */
+@media (min-width: 1181px) {
+  body.caesar-page-index #mainLayout {
+    grid-template-columns: minmax(560px, 43vw) minmax(0, 1fr) 205px !important;
+    gap: 18px !important;
+  }
+  body.caesar-page-index .cart-panel {
+    min-width: 560px !important;
+    border-width: 3px !important;
+    box-shadow: 0 20px 42px rgba(15, 23, 42, .18) !important;
+  }
+}
+@media (min-width: 861px) and (max-width: 1180px) {
+  body.caesar-page-index #mainLayout {
+    grid-template-columns: minmax(470px, 46vw) minmax(0, 1fr) 185px !important;
+    gap: 14px !important;
+  }
+  body.caesar-page-index .cart-panel { min-width: 470px !important; }
+}
+body.caesar-page-index #cartItems {
+  flex: 1 1 0 !important;
+  min-height: 260px !important;
+  padding: 18px !important;
+  background: #ffffff !important;
+  border-top: 2px solid #dbe5f0 !important;
+  border-bottom: 2px solid #dbe5f0 !important;
+}
+body.caesar-page-index .cart-item {
+  grid-template-columns: minmax(0, 1fr) auto minmax(104px, auto) auto !important;
+  min-height: 88px !important;
+  padding: 15px !important;
+  gap: 14px !important;
+  background: #f8fbff !important;
+  border: 2px solid #cbd5e1 !important;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, .06) !important;
+}
+body.caesar-page-index .cart-item-name { font-size: 17px !important; line-height: 1.55 !important; }
+body.caesar-page-index .cart-item-total { font-size: 16px !important; }
+body.caesar-page-index .cart-footer {
+  max-height: 46% !important;
+  padding: 14px !important;
+  background: #ffffff !important;
+  border-top: 3px solid #94a3b8 !important;
+}
+body.caesar-page-index .cart-footer .cart-summary { border: 2px solid #1d4ed8 !important; }
+body.caesar-page-index .cart-footer .grid.grid-cols-3 { gap: 10px !important; }
+body.caesar-page-index .cart-footer .secondary-action,
+body.caesar-page-index .cart-footer #printLastOrderButton,
+body.caesar-page-index .cart-footer #checkoutButton,
+body.caesar-page-index .cart-footer #saveDineInButton { position: relative; z-index: 3; }
+body.caesar-page-index .cart-footer .secondary-action { min-height: 50px !important; font-size: 15px !important; }
+body.caesar-page-index .cart-footer #printLastOrderButton { min-height: 56px !important; font-size: 17px !important; }
+@media (max-width: 860px) {
+  body.caesar-page-index .cart-panel { min-width: 0 !important; }
+  body.caesar-page-index #cartItems { min-height: 260px !important; }
+  body.caesar-page-index .cart-footer { max-height: 48% !important; }
+}
+
+
+/* الإصدار المحسّن 2026-08: عمودان متوازنان ومنطقة دفع واضحة */
+@media (min-width: 861px) {
+  body.caesar-page-index #mainLayout {
+    display: grid !important;
+    grid-template-columns: minmax(390px, 42vw) minmax(0, 1fr) !important;
+    grid-template-areas: 'cart catalog' !important;
+    gap: 16px !important;
+    height: calc(100vh - 108px) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    direction: ltr !important;
+  }
+  body.caesar-page-index #catalogPanel {
+    grid-area: catalog !important;
+    display: flex !important;
+    flex-direction: row !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    gap: 14px !important;
+    overflow: hidden !important;
+    direction: rtl !important;
+  }
+  body.caesar-page-index #categoryPanel {
+    flex: 0 0 210px !important;
+    width: 210px !important;
+    min-width: 210px !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    grid-area: unset !important;
+  }
+  body.caesar-page-index #productsPanel {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    grid-area: unset !important;
+  }
+  body.caesar-page-index .cart-panel {
+    grid-area: cart !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    max-height: none !important;
+    position: relative !important;
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
+}
+body.caesar-page-index #catalogPanel,
+body.caesar-page-index #productsPanel,
+body.caesar-page-index #categoryPanel { scrollbar-color: #94a3b8 #eef2f7; }
+body.caesar-page-index #productsGrid { grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)) !important; }
+body.caesar-page-index .product-card {
+  min-height: 198px !important;
+  border-radius: 14px !important;
+  border-width: 1px !important;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease !important;
+}
+body.caesar-page-index .product-card .product-image { height: 108px !important; border-radius: 11px !important; }
+body.caesar-page-index .product-card .product-name { font-size: 16px !important; }
+body.caesar-page-index .product-card .q-product-price { font-size: 15px !important; }
+body.caesar-page-index .cart-panel { border-radius: 16px !important; border-width: 1px !important; }
+body.caesar-page-index .cart-head { padding: 16px !important; }
+body.caesar-page-index .cart-head h3 { font-size: 20px !important; }
+body.caesar-page-index #cartItems { padding: 14px !important; }
+body.caesar-page-index .cart-item { grid-template-columns: minmax(0,1fr) auto minmax(94px,auto) auto !important; min-height: 82px !important; padding: 12px !important; gap: 10px !important; }
+body.caesar-page-index .cart-item-name { font-size: 15px !important; }
+body.caesar-page-index .cart-footer { max-height: 48% !important; padding: 12px !important; }
+body.caesar-page-index .cart-summary { background: linear-gradient(135deg,#0f766e,#047857) !important; border-color: #065f46 !important; }
+body.caesar-page-index #totalDisplay { font-size: 32px !important; }
+body.caesar-page-index .primary-checkout { background: linear-gradient(135deg,#16a34a,#15803d) !important; border-color:#166534 !important; }
+body.caesar-page-index .quick-pay-btn { min-height: 80px !important; border-radius: 12px !important; }
+@media (min-width: 861px) and (max-width: 1120px) {
+  body.caesar-page-index #mainLayout { grid-template-columns: minmax(360px, 40vw) minmax(0, 1fr) !important; }
+  body.caesar-page-index #categoryPanel { flex-basis: 175px !important; min-width: 175px !important; }
+  body.caesar-page-index #productsGrid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important; }
+}
+@media (max-width: 860px) {
+  body.caesar-page-index #mainLayout { display: flex !important; flex-direction: column !important; overflow-y: auto !important; }
+  body.caesar-page-index #catalogPanel { display: flex !important; flex-direction: column !important; flex: 0 0 auto !important; overflow: visible !important; }
+  body.caesar-page-index #categoryPanel { width: 100% !important; min-width: 0 !important; max-height: 145px !important; }
+  body.caesar-page-index #productsPanel { width: 100% !important; height: auto !important; overflow: visible !important; }
+  body.caesar-page-index .cart-panel { height: 68vh !important; max-height: 68vh !important; width: 100% !important; }
+}

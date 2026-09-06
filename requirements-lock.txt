@@ -1,0 +1,19 @@
+# Python 3.12 runtime dependencies for CAESAR AlCAESAR POS
+# هذه القائمة مُتحقَّق منها فعليًا مقابل محتوى Lib/site-packages المرفق —
+# أي حزمة هون فعليًا مثبتة ومستخدمة، وأي حزمة غير مذكورة هون (كانت هيك lxml
+# سابقًا) غير موجودة أصلًا بالبيئة المحمولة ولا يستدعيها الكود.
+Flask==3.1.3
+Pillow==12.3.0
+reportlab==4.4.3
+arabic-reshaper==3.0.0
+python-bidi==0.6.7
+# اعتماديات فرعية لـ Flask (تُثبَّت تلقائيًا معه، مذكورة هون للمرجعية فقط):
+blinker
+click
+itsdangerous
+jinja2
+markupsafe
+colorama
+charset-normalizer
+# qrcode مضمّنة يدويًا (vendored) تحت app/vendor/qrcode — لا تُثبَّت عبر pip.
+

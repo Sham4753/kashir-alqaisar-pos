@@ -1,0 +1,1 @@
+"""CAESAR POS application package."""

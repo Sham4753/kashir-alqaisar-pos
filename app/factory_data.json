@@ -1,0 +1,35 @@
+{
+  "menu": {},
+  "orders": [],
+  "orders_archive": [],
+  "order_counter": 0,
+  "shifts": [],
+  "audit_log": [],
+  "debts": [],
+  "customers": [],
+  "employees": [],
+  "materials": [],
+  "inventory": [],
+  "suppliers": [],
+  "expenses": [],
+  "offers": [],
+  "modifiers": [],
+  "gift_cards": [],
+  "sync_queue": [],
+  "tables": [],
+  "settings": {
+    "restaurant": {},
+    "users": [],
+    "currency": "SYP",
+    "usd_rate": 0,
+    "eur_rate": 0,
+    "commercial": {
+      "setup_completed": false
+    },
+    "lock": {
+      "enabled": false,
+      "timeout_minutes": 15
+    },
+    "printer": {}
+  }
+}

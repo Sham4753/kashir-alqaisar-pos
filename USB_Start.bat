@@ -1,11 +1,12 @@
 @echo off
-setlocal
+setlocal EnableExtensions DisableDelayedExpansion
 cd /d "%~dp0"
-if not exist "%~dp0POS_Source_Clean\Start.bat" (
-    echo تعذر العثور على POS_Source_Clean\Start.bat.
-    echo تأكد من فك ضغط المشروع كاملًا.
-    pause
-    exit /b 1
+if not exist "%~dp0USB_Start.vbs" (
+  echo [CAESAR] USB_Start.vbs is missing. The package was not extracted completely.
+  pause
+  exit /b 1
 )
-call "%~dp0POS_Source_Clean\Start.bat"
+rem Delegate immediately to the hidden Windows Script Host launcher.
+start "" /b wscript.exe "%~dp0USB_Start.vbs"
 endlocal
+exit /b 0

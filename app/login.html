@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - كاشير قيصر قيصر</title>
+    <link rel="stylesheet" href="tailwind.css">
+    <link rel="stylesheet" href="design-system.css">
+    <script defer src="design-system.js"></script>
+    <script defer src="currency-manager.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-80 text-center">
+        <img src="caesar_icon.png" alt="CAESAR POS" class="mx-auto mb-3 w-20 h-20 object-contain rounded-2xl shadow" loading="eager">
+        <div class="text-xl font-black text-slate-900 mb-1">CAESAR POS</div>
+        <h1 class="text-lg font-bold text-gray-800 mb-1">هاي الصفحة للمدير بس</h1>
+        <p class="text-sm text-gray-500 mb-5">سجّل دخول بحساب مدير للمتابعة</p>
+        <input type="text" id="username" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 mb-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="اسم المستخدم">
+        <input type="password" id="password" onkeydown="if(event.key==='Enter') doLogin()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 mb-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="كلمة المرور">
+        <div id="err" class="hidden text-red-600 text-sm mb-2"> اسم المستخدم أو كلمة المرور غير صحيحة</div>
+        <button onclick="doLogin()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition mb-2"> دخول</button>
+        <a href="index.html" class="block text-sm text-gray-400 hover:text-gray-600 mt-2">↩ رجوع لشاشة الكاشير قيصر</a>
+    </div>
+
+    <script>
+        function getNextPage() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('next') || 'settings.html';
+        }
+        async function doLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (data.ok && data.role === 'manager') {
+                    window.location.href = '/' + getNextPage();
+                } else if (data.ok) {
+                    document.getElementById('err').textContent = ' هاي الصفحة تحتاج صلاحية مدير، حسابك كاشير قيصر';
+                    document.getElementById('err').classList.remove('hidden');
+                } else {
+                    document.getElementById('err').textContent = ' اسم المستخدم أو كلمة المرور غير صحيحة';
+                    document.getElementById('err').classList.remove('hidden');
+                }
+            } catch (e) {
+                document.getElementById('err').textContent = ' خطأ بالاتصال';
+                document.getElementById('err').classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

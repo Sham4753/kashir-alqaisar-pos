@@ -1,8 +1,0 @@
-# Python 3.12 runtime dependencies for Kashir AlQaisar POS
-Flask==3.1.3
-Pillow==12.3.0
-reportlab==5.0.0
-arabic-reshaper==3.0.1
-python-bidi==0.6.11
-lxml==6.1.1
-# qrcode is vendored under app/vendor/qrcode for Offline runtime.
