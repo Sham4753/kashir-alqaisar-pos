@@ -5,6 +5,7 @@ import threading
 import time
 import os
 import sys
+import traceback
 import webview
 
 from app import server
@@ -12,6 +13,40 @@ from app import server
 HOST = "127.0.0.1"
 PORT = int(server.os.environ.get("CAESAR_PORT", "8080"))
 URL = f"http://{HOST}:{PORT}/"
+
+# مع --windowed لا توجد نافذة Console، فأي استثناء غير معالج كان يختفي بصمت
+# ويظهر للمستخدم كـ"شاشة سوداء" أو إغلاق فوري للبرنامج دون أي رسالة. الحل:
+# 1) كل الأخطاء تُكتب دائماً إلى ملف سجل بجانب الملف التنفيذي.
+# 2) أي استثناء غير متوقع يُعرض كصندوق رسالة Windows حتى لو لم توجد Console.
+def _app_dir() -> str:
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+LOG_PATH = os.path.join(_app_dir(), "caesar_desktop_error.log")
+
+
+def _log_error(message: str) -> None:
+    try:
+        with open(LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(time.strftime("[%Y-%m-%d %H:%M:%S] ") + message + "\n")
+    except OSError:
+        pass
+
+
+def _show_fatal_error(title: str, message: str) -> None:
+    _log_error(f"{title}: {message}")
+    if os.name == "nt":
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, message, title, 0x10)  # MB_ICONERROR
+            return
+        except Exception:
+            pass
+    # لا نملك واجهة رسائل على غير ويندوز أو إن فشل MessageBox؛ نطبع للـ stderr
+    # كحل أخير (يظهر فقط إذا كانت هناك Console).
+    print(f"{title}: {message}", file=sys.stderr)
 
 
 def wait_for_server(timeout: float = 15.0) -> bool:
@@ -25,8 +60,18 @@ def wait_for_server(timeout: float = 15.0) -> bool:
     return False
 
 
+_SERVER_ERROR: list[BaseException] = []
+
+
 def run_server() -> None:
-    server.start_flask()
+    # خيط Flask يعمل كـ daemon؛ أي استثناء فيه لا يوقف العملية الرئيسية ولا
+    # يظهر لأحد - فقط يسقط الخيط بصمت وتبقى wait_for_server() تنتظر حتى تنتهي
+    # المهلة. نلتقط الخطأ الحقيقي هنا لعرضه بدل رسالة "لم يبدأ الخادم" العامة.
+    try:
+        server.start_flask()
+    except BaseException as exc:  # noqa: BLE001 - نريد كل الأخطاء هنا تحديدًا
+        _SERVER_ERROR.append(exc)
+        _log_error("Flask server thread crashed:\n" + traceback.format_exc())
 
 
 def main() -> None:
@@ -38,7 +83,24 @@ def main() -> None:
     worker = threading.Thread(target=run_server, name="caesar-flask", daemon=True)
     worker.start()
     if not wait_for_server():
-        raise RuntimeError("CAESAR local server did not start on 127.0.0.1:8080")
+        if _SERVER_ERROR:
+            detail = "".join(
+                traceback.format_exception(
+                    type(_SERVER_ERROR[0]), _SERVER_ERROR[0], _SERVER_ERROR[0].__traceback__
+                )
+            )
+        else:
+            detail = (
+                "لم يبدأ الخادم المحلي خلال 15 ثانية دون أي استثناء واضح.\n"
+                "الأسباب الشائعة: المنفذ 8080 مستخدم من برنامج آخر، أو ملفات\n"
+                "app/ لم تُنسخ بشكل صحيح مع الحزمة (راجع --add-data)."
+            )
+        _show_fatal_error(
+            "CAESAR POS - فشل تشغيل الخادم المحلي",
+            "تعذّر تشغيل خادم النظام على 127.0.0.1:8080.\n\n" + detail
+            + f"\n\nراجع ملف السجل: {LOG_PATH}",
+        )
+        sys.exit(1)
     webview.create_window(
         "CAESAR POS",
         URL,
@@ -64,4 +126,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except BaseException:  # noqa: BLE001 - آخر خط دفاع قبل الشاشة السوداء
+        _show_fatal_error(
+            "CAESAR POS - خطأ غير متوقع",
+            "حدث خطأ أدى لإغلاق البرنامج.\n\n" + traceback.format_exc()
+            + f"\n\nراجع ملف السجل: {LOG_PATH}",
+        )
+        sys.exit(1)

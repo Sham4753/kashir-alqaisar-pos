@@ -158,6 +158,9 @@
     </div>
 
     <script>
+function esc(value){return String(value??'').replace(/[&<>\"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]));}
+function jsArg(value){return JSON.stringify(String(value??''));}
+
         function toggleSection(id) {
             const el = document.getElementById(id);
             const icon = document.getElementById(id + '-icon');
@@ -322,12 +325,12 @@
                 return `
                 <div class="flex items-center justify-between p-3 rounded-lg border ${isLow ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'}">
                     <div>
-                        <div class="font-bold ${isLow ? 'text-red-700' : 'text-gray-800'}">${isOut ? ' ' : (isLow ? ' ' : '')}${item.name}</div>
-                        <div class="text-sm ${isLow ? 'text-red-500' : 'text-gray-500'}">${item.stock} ${item.unit || ''}</div>
+                        <div class="font-bold ${isLow ? 'text-red-700' : 'text-gray-800'}">${isOut ? ' ' : (isLow ? ' ' : '')}${esc(item.name)}</div>
+                        <div class="text-sm ${isLow ? 'text-red-500' : 'text-gray-500'}">${item.stock} ${esc(item.unit || '')}</div>
                     </div>
                     <div class="flex gap-1">
-                        <button onclick="adjustStock(${item.id}, '${item.name}', ${item.stock})" class="bg-blue-50 text-blue-600 px-2 py-1.5 rounded-lg text-xs hover:bg-blue-100"> تصحيح</button>
-                        <button onclick="setThreshold(${item.id}, '${item.name}', ${item.low_stock_threshold || 0})" class="bg-orange-50 text-orange-600 px-2 py-1.5 rounded-lg text-xs hover:bg-orange-100"> حد التنبيه</button>
+                        <button onclick="adjustStock(${item.id}, jsArg(item.name), ${item.stock})" class="bg-blue-50 text-blue-600 px-2 py-1.5 rounded-lg text-xs hover:bg-blue-100"> تصحيح</button>
+                        <button onclick="setThreshold(${item.id}, jsArg(item.name), ${item.low_stock_threshold || 0})" class="bg-orange-50 text-orange-600 px-2 py-1.5 rounded-lg text-xs hover:bg-orange-100"> حد التنبيه</button>
                     </div>
                 </div>`;
             }).join('');
@@ -368,7 +371,7 @@
             const val = sel.value;
             sel.innerHTML = '<option value="">▼ اختر المادة...</option>';
             materials.forEach(m => {
-                sel.innerHTML += `<option value="${m.id}">${m.name} - ${m.quantity} ${m.unit} - ${formatPrice(m.price)}</option>`;
+                sel.innerHTML += `<option value="${m.id}">${esc(m.name)} - ${m.quantity} ${esc(m.unit)} - ${formatPrice(m.price)}</option>`;
             });
             if (val) sel.value = val;
         }
@@ -387,8 +390,8 @@
                     total += m.price || 0;
                     return `
                     <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-200">
-                        <div><span class="font-bold">${m.name}</span><div class="text-xs text-gray-500">${(suppliers.find(s => s.id === m.supplier_id)?.name) || 'بدون مورد'}${m.invoice_no ? ' · فاتورة ' + m.invoice_no : ''}</div></div>
-                        <span class="text-gray-600">${m.quantity} ${m.unit}</span>
+                        <div><span class="font-bold">${esc(m.name)}</span><div class="text-xs text-gray-500">${esc((suppliers.find(s => s.id === m.supplier_id)?.name) || 'بدون مورد')}${m.invoice_no ? ' · فاتورة ' + esc(m.invoice_no) : ''}</div></div>
+                        <span class="text-gray-600">${m.quantity} ${esc(m.unit)}</span>
                         <div class="text-left"><span class="text-red-500 font-bold">${formatPrice(m.price||0)}</span><div class="text-xs text-gray-500">مدفوع ${formatPrice(m.paid_amount ?? m.price ?? 0)}</div></div>
                     </div>`;
                 }).join('');

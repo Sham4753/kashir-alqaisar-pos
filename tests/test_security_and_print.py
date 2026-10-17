@@ -1,4 +1,5 @@
 import json
+import os
 import sqlite3
 import sys
 import tempfile
@@ -9,6 +10,7 @@ from unittest.mock import patch
 
 APP_DIR = Path(__file__).resolve().parents[1] / 'app'
 sys.path.insert(0, str(APP_DIR))
+os.environ.setdefault('CAESAR_LICENSE_SECRET', 'test-only-secret-for-caesar-pos-tests-2026-32chars')
 import server  # noqa: E402
 
 
@@ -119,18 +121,105 @@ class SecurityAndPrintTests(unittest.TestCase):
         self.assertEqual(manager_unlock.status_code, 200)
         self.assertEqual(manager_unlock.get_json()['role'], 'manager')
 
-    def test_silent_print_submits_to_windows_spooler_without_browser_print(self):
-        with patch.object(server.sys, 'platform', 'win32'), patch.object(
-            server.subprocess, 'run', return_value=SimpleNamespace(returncode=0, stdout='', stderr='')
-        ) as run:
+    def test_silent_print_submits_arabic_raster_to_windows_spooler_without_browser_print(self):
+        captured = {}
+        def fake_raw(name, payload, document_name='CAESAR Raw Command'):
+            captured['name'], captured['payload'], captured['document'] = name, payload, document_name
+            return {'ok': True, 'status': 'submitted', 'job_id': 'raw-001'}
+        with patch.object(server.sys, 'platform', 'win32'), patch.object(server, 'submit_raw_windows_bytes', side_effect=fake_raw):
             result = server.submit_silent_windows_print('Thermal 80', 'فاتورة اختبار', 'CAESAR Receipt TEST')
         self.assertTrue(result['ok'])
         self.assertEqual(result['status'], 'submitted')
         self.assertTrue(result['job_id'])
-        self.assertTrue(run.called)
+        self.assertTrue(captured['payload'].startswith(b'\x1b\x40\x1d\x76\x30'))
+        self.assertIn(b'\x1d\x56\x00', captured['payload'])
         index_content = (APP_DIR / 'index.html').read_text(encoding='utf-8')
         self.assertNotIn('window.print', index_content)
         self.assertNotIn('window.open', index_content)
+
+    def test_printer_preserves_explicit_orientation_and_roll_defaults_to_portrait(self):
+        self.login('manager', 'manager-pass')
+        data = server.load()
+        data['settings']['printer'] = {'paper_orientation': 'portrait', 'printer_name': 'Thermal 80'}
+        server.save(data)
+        self.assertEqual(self.client.get('/api/printer/settings').get_json()['paper_orientation'], 'portrait')
+        saved = self.client.post('/api/printer/settings', json={'paper_orientation': 'portrait', 'printer_name': 'Thermal 80'})
+        self.assertEqual(saved.status_code, 200)
+        self.assertEqual(server.load()['settings']['printer']['paper_orientation'], 'portrait')
+
+    def test_receipt_design_blocks_and_logo_are_present_in_thermal_output(self):
+        from PIL import Image
+        from io import BytesIO
+        import base64
+        logo = Image.new('RGB', (24, 12), (0, 0, 0))
+        buf = BytesIO(); logo.save(buf, format='PNG')
+        logo_data = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode('ascii')
+        data = server.load()
+        data['settings']['restaurant'] = {'name': 'مطعم الاختبار'}
+        data['settings']['printer'] = {
+            'paper_width': 80, 'font_size': 'medium', 'logo_data': logo_data,
+            'logo_size': 'medium', 'logo_alignment': 'center', 'receipt_header': 'إيصال مبيعات',
+            'footer_text': 'شكرًا لزيارتكم', 'receipt_show_cashier': True,
+            'receipt_show_order_type': True, 'receipt_layout': ['logo','header','details','items','totals','footer'],
+            'cut_enabled': True, 'feed_before_cut': 3, 'cut_mode': 'full',
+        }
+        order = {'id': 'AR-1', 'timestamp': '2026-09-09 21:00', 'items': [{'name': 'شاورما عربي', 'quantity': 2}], 'total': 25000, 'payment': 'نقدي', 'type': 'سفري', 'cashier_name': 'أحمد'}
+        text = server.thermal_receipt_text(data, order)
+        plain = server.render_escpos_raster_payload_for_printer(text, data['settings']['printer'])
+        no_logo = server.render_escpos_raster_payload_for_printer(text, {**data['settings']['printer'], 'logo_data': ''})
+        self.assertIn('شاورما عربي', text)
+        self.assertIn('شكرًا لزيارتكم', text)
+        self.assertGreater(len(plain), len(no_logo))
+        self.assertNotIn('شاورما'.encode('utf-8'), plain)
+        self.assertIn(b'\x1d\x56\x00', plain)
+
+    def test_print_test_uses_raster_path_not_raw_utf8(self):
+        self.login('manager', 'manager-pass')
+        data = server.load(); data['settings']['printer'] = {'printer_name': 'Thermal 80', 'paper_width': 80, 'connection_mode': 'windows'}; server.save(data)
+        captured = {}
+        def fake_submit(name, text, font_size, width, document, config):
+            captured['text'], captured['payload'] = text, server.render_escpos_raster_payload_for_printer(text, {**config, 'paper_width': width, 'font_size': font_size})
+            return {'ok': True, 'status': 'submitted', 'message': 'تم الاختبار'}
+        with patch.object(server.sys, 'platform', 'win32'), patch.object(server, 'submit_silent_thermal_print', side_effect=fake_submit):
+            response = self.client.post('/api/printer/test', json={'paper_width': 80, 'receipt_header': 'اختبار عربي'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()['ok'])
+        self.assertIn('تمت الطباعة العربية بنجاح', captured['text'])
+        self.assertNotIn('تمت'.encode('utf-8'), captured['payload'])
+        self.assertIn(b'\x1d\x56\x00', captured['payload'])
+
+    def test_arabic_raster_payload_contains_cut_command_and_uses_wide_paper(self):
+        payload = server.render_escpos_raster_payload(
+            'إيصال مبيعات\nتمت الطباعة العربية بنجاح',
+            {'paper_width': 80, 'font_size': 'medium', 'cut_enabled': True, 'feed_before_cut': 3, 'cut_mode': 'full'},
+        )
+        self.assertTrue(payload.startswith(b'\x1b\x40\x1d\x76\x30'))
+        self.assertIn(b'\x1d\x56\x00', payload)
+        self.assertGreater(len(payload), 100)
+
+    def test_bidi_control_marks_are_removed_before_font_rendering(self):
+        source = (APP_DIR / 'server.py').read_text(encoding='utf-8')
+        self.assertIn("get_display(arabic_reshaper.reshape(value)).replace('\\u200e', '').replace('\\u200f', '')", source)
+
+    def test_feature_settings_are_visible_and_persist_for_manager(self):
+        self.login('manager', 'manager-pass')
+        features = self.client.get('/api/settings/features')
+        self.assertEqual(features.status_code, 200)
+        self.assertTrue(features.get_json()['kitchen'])
+        saved = self.client.post('/api/settings/features', json={'kitchen': False, 'tables': True, 'delivery': True, 'customers': True, 'mobile': True, 'reports': True})
+        self.assertEqual(saved.status_code, 200)
+        self.assertFalse(self.client.get('/api/settings/features').get_json()['kitchen'])
+        settings_html = (APP_DIR / 'settings.html').read_text(encoding='utf-8')
+        self.assertIn('featureKitchen', settings_html)
+        self.assertIn('saveFeatures', settings_html)
+
+    def test_network_print_does_not_require_windows_printer_name(self):
+        data = server.load()
+        data['settings']['printer'] = {'connection_mode': 'network', 'network_host': '192.0.2.10', 'network_port': 9100, 'auto_print_receipt': True, 'printer_name': ''}
+        server.save(data)
+        with patch.object(server.sys, 'platform', 'win32'), patch.object(server, 'submit_network_raw_print', return_value={'ok': True, 'status': 'submitted', 'message': 'تم الإرسال'}):
+            result = server.queue_thermal_print(server.load(), {'id': 'NET-1', 'items': [], 'total': 0}, 'receipt', wait=True)
+        self.assertEqual(result['status'], 'submitted')
 
     def test_cashier_retries_a_failed_receipt_without_manager_permission(self):
         self.login('cashier', 'cashier-pass')
@@ -138,14 +227,14 @@ class SecurityAndPrintTests(unittest.TestCase):
         data['settings']['printer'] = {'auto_print_receipt': True, 'auto_print_kitchen': False, 'printer_name': 'Thermal 80'}
         server.save(data)
         failed = {'ok': False, 'status': 'failed', 'message': 'الطابعة غير متاحة'}
-        with patch.object(server.sys, 'platform', 'win32'), patch.object(server, 'submit_silent_windows_print', return_value=failed):
+        with patch.object(server.sys, 'platform', 'win32'), patch.object(server, 'submit_silent_thermal_print', return_value=failed):
             first = self.client.post('/api/orders', json={
                 'items': [{'product_id': 1, 'quantity': 1}], 'payment': 'نقدي', 'type': 'سفري', 'kitchen_release': 'now'
             })
         self.assertEqual(first.status_code, 200)
         order_id = first.get_json()['id']
         submitted = {'ok': True, 'status': 'submitted', 'message': 'تم إرسال الإيصال إلى طابور الطباعة المحلي', 'job_id': 'job-001'}
-        with patch.object(server.sys, 'platform', 'win32'), patch.object(server, 'submit_silent_windows_print', return_value=submitted):
+        with patch.object(server.sys, 'platform', 'win32'), patch.object(server, 'submit_silent_thermal_print', return_value=submitted):
             retry = self.client.post(f'/api/printer/orders/{order_id}/retry', json={'type': 'receipt'})
         self.assertEqual(retry.status_code, 200)
         self.assertTrue(retry.get_json()['ok'])

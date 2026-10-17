@@ -10,8 +10,8 @@ $ErrorActionPreference = 'Stop'
 $appPath = [System.IO.Path]::GetFullPath($AppDir)
 $rootPath = Split-Path -Path $appPath -Parent
 $exeCandidates = @(
-    (Join-Path -Path $rootPath -ChildPath 'CAESAR_POS.exe'),
-    (Join-Path -Path $rootPath -ChildPath 'dist\CAESAR_POS.exe'),
+    # launch.vbs starts Start.bat hidden and therefore avoids a console flash.
+    # It also guarantees that the current source files are used.
     (Join-Path -Path $rootPath -ChildPath 'launch.vbs')
 )
 $target = $exeCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1

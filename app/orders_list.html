@@ -34,9 +34,9 @@
             <h2 class="text-lg font-bold text-gray-700"> بحث وفلترة</h2>
             <input type="text" id="searchBox" oninput="renderOrders()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder=" بحث برقم الطلب، المنتج، أو النوع...">
             <div class="flex gap-2">
-                <input type="date" id="dateFrom" onchange="renderOrders()" class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                <input type="date" id="dateFrom" onchange="loadOrders(true)" class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
                 <span class="self-center">إلى</span>
-                <input type="date" id="dateTo" onchange="renderOrders()" class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                <input type="date" id="dateTo" onchange="loadOrders(true)" class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
             </div>
             <select id="typeFilter" onchange="renderOrders()" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
                 <option value=""> كل الأنواع</option>
@@ -54,6 +54,9 @@
                 <button onclick="exportOrdersCSV()" class="bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm"> Excel</button>
             </div>
             <div id="ordersList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+            <div class="flex justify-center">
+                <button id="loadMoreOrders" onclick="loadOrders(false)" class="hidden bg-slate-100 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-200 text-sm font-bold">تحميل طلبات إضافية</button>
+            </div>
             <div class="border-t border-gray-200 pt-3 space-y-1">
                 <div id="totalAmount" class="text-center font-bold text-green-600 text-lg"></div>
                 <div id="totalCount" class="text-center text-gray-600"></div>
@@ -65,6 +68,9 @@
     </div>
 
     <script>
+function esc(value){return String(value??'').replace(/[&<>\"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]));}
+function jsArg(value){return JSON.stringify(String(value??''));}
+
         let allOrders = [];
         let currentCurrency = 'SYP', usdRate = 0, eurRate = 0;
 
@@ -82,15 +88,30 @@
             return p.toLocaleString() + ' ل.س';
         }
 
-        async function loadOrders() {
+        const ORDERS_PAGE_SIZE = 100;
+        let ordersOffset = 0, ordersHasMore = false, ordersLoading = false;
+        async function loadOrders(reset = true) {
+            if (ordersLoading) return;
+            ordersLoading = true;
             await loadCurrency();
             try {
-                const r = await fetch('/api/orders');
-                allOrders = await r.json();
-                // ترتيب من الأحدث للأقدم
-                allOrders.reverse();
+                const from = document.getElementById('dateFrom').value;
+                const to = document.getElementById('dateTo').value;
+                const params = new URLSearchParams({limit: String(ORDERS_PAGE_SIZE), offset: String(reset ? 0 : ordersOffset)});
+                if (from) params.set('from', from);
+                if (to) params.set('to', to);
+                if (!from && !to) params.set('scope', 'today');
+                const r = await fetch('/api/orders?' + params.toString());
+                const payload = await r.json();
+                if (!r.ok || !payload || !Array.isArray(payload.orders)) throw new Error(payload.error || 'تعذر تحميل الطلبات');
+                allOrders = reset ? payload.orders : allOrders.concat(payload.orders);
+                ordersOffset = allOrders.length;
+                ordersHasMore = !!payload.has_more;
+                allOrders.sort((a, b) => String(b.timestamp || b.date || '').localeCompare(String(a.timestamp || a.date || '')));
+                document.getElementById('loadMoreOrders').classList.toggle('hidden', !ordersHasMore);
                 renderOrders();
             } catch(e) { console.error(e); }
+            finally { ordersLoading = false; }
         }
 
         let lastFilteredOrders = [];
@@ -130,8 +151,8 @@
                     if (!o.voided) totalAmount += o.total || 0;
                     const items = (o.items || []).map((item, itemIdx) => `
                         <div class="text-sm text-gray-600 flex justify-between items-center">
-                            <span>• ${item.name} ×${item.quantity || 1}</span>
-                            ${!o.voided ? `<button onclick="editOrderItem('${o.id}', ${itemIdx})" class="text-xs text-blue-500 hover:text-blue-700"></button>` : ''}
+                            <span>• ${esc(item.name)} ×${item.quantity || 1}</span>
+                            ${!o.voided ? `<button onclick="editOrderItem(jsArg(o.id), ${itemIdx})" class="text-xs text-blue-500 hover:text-blue-700"></button>` : ''}
                         </div>`
                     ).join('');
 
@@ -150,18 +171,18 @@
                         <div class="flex justify-between items-start mb-2">
                             <div>
                                 <span class="font-bold text-lg">#${i + 1}</span>
-                                <span class="${typeClass} px-2 py-1 rounded text-xs font-bold mr-2">${typeIcon} ${o.type}</span>
+                                <span class="${typeClass} px-2 py-1 rounded text-xs font-bold mr-2">${typeIcon} ${esc(o.type)}</span>
                                 ${o.voided ? '<span class="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold mr-2"> ملغى</span>' : ''}
                                 ${o.edited ? '<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-bold mr-2"> معدّل</span>' : ''}
                             </div>
                             <span class="font-bold ${o.voided ? 'text-gray-400 line-through' : 'text-green-600'}">${formatPrice(o.total || 0)}</span>
                         </div>
-                        <div class="text-xs text-gray-500 mb-2"> ${(o.date || o.timestamp || '').substring(0, 16)} <span dir="ltr" style="unicode-bidi:isolate;">${o.id || ''}</span></div>
+                        <div class="text-xs text-gray-500 mb-2"> ${esc((o.date || o.timestamp || '').substring(0, 16))} <span dir="ltr" style="unicode-bidi:isolate;">${esc(o.id || '')}</span></div>
                         ${items}
-                        ${o.note ? `<div class="text-xs text-gray-400 mt-2"> ${o.note}</div>` : ''}
+                        ${o.note ? `<div class="text-xs text-gray-400 mt-2"> ${esc(o.note)}</div>` : ''}
                         ${o.voided
-                            ? `<div class="text-xs text-red-500 mt-2">سبب الإلغاء: ${o.void_reason || 'بدون سبب'}</div>`
-                            : `<button onclick="voidOrder('${o.id}')" class="mt-2 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100"> إلغاء الطلب</button>`}
+                            ? `<div class="text-xs text-red-500 mt-2">سبب الإلغاء: ${esc(o.void_reason || 'بدون سبب')}</div>`
+                            : `<button onclick="voidOrder(jsArg(o.id))" class="mt-2 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100"> إلغاء الطلب</button>`}
                     </div>`;
                 }).join('');
             }
@@ -187,7 +208,7 @@
             const order = lastFilteredOrders.find(o => String(o.id) === String(orderId));
             if (!order) return;
             const item = order.items[itemIdx];
-            const val = prompt(`تعديل كمية "${item.name}" (الحالية: ${item.quantity || 1}) - أدخل الكمية الجديدة (0 للحذف):`, item.quantity || 1);
+            const val = prompt(`تعديل كمية "${esc(item.name)}" (الحالية: ${item.quantity || 1}) - أدخل الكمية الجديدة (0 للحذف):`, item.quantity || 1);
             if (val === null) return;
             const newQty = parseInt(val);
             if (isNaN(newQty) || newQty < 0) return showToast(' كمية غير صحيحة');

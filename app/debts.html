@@ -88,6 +88,9 @@
     </div>
 
     <script>
+function esc(value){return String(value??'').replace(/[&<>\"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]));}
+function jsArg(value){return JSON.stringify(String(value??''));}
+
         let debts = [];
         let currentEditId = null;
         let currentCurrency = 'SYP', usdRate = 0, eurRate = 0;
@@ -121,7 +124,7 @@
             debts.forEach(d => {
                 const remaining = d.amount - (d.paid || 0);
                 const status = remaining <= 0 ? '' : '⬅';
-                sel.innerHTML += `<option value="${d.id}">${status} ${d.name} - ${d.amount} (متبقي ${remaining})</option>`;
+                sel.innerHTML += `<option value="${d.id}">${status} ${esc(d.name)} - ${d.amount} (متبقي ${remaining})</option>`;
             });
             if (val) sel.value = val;
         }
@@ -153,14 +156,14 @@
                     return `
                     <div class="bg-gray-50 rounded-lg border p-3 ${isPaid ? 'border-green-200 bg-green-50' : 'border-gray-200'}">
                         <div class="flex justify-between items-center">
-                            <span class="font-bold">${d.name} ${isPaid ? '' : ''}</span>
+                            <span class="font-bold">${esc(d.name)} ${isPaid ? '' : ''}</span>
                             <span class="text-red-500 font-bold">${formatPrice(d.amount)}</span>
                         </div>
                         <div class="flex justify-between text-sm mt-1">
                             <span class="text-green-600">مدفوع: ${formatPrice(d.paid||0)}</span>
                             <span class="${isPaid ? 'text-green-600' : 'text-orange-500'}">متبقي: ${formatPrice(remaining)}</span>
                         </div>
-                        ${d.note ? `<div class="text-xs text-gray-400 mt-1"> ${d.note}</div>` : ''}
+                        ${d.note ? `<div class="text-xs text-gray-400 mt-1"> ${esc(d.note)}</div>` : ''}
                     </div>`;
                 }).join('');
             }
