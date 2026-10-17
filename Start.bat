@@ -5,20 +5,13 @@ set "ROOT=%~dp0"
 set "APP=%~dp0app"
 set "LOG=%APP%\server_error.log"
 
-REM Prefer the packaged native EXE when it exists. This prevents duplicate
-REM server/browser launches when the user starts the system from Start or USB.
-if exist "%ROOT%CAESAR_POS.exe" (
-  start "CAESAR POS" "%ROOT%CAESAR_POS.exe"
-  exit /b 0
-)
-if exist "%ROOT%dist\CAESAR_POS.exe" (
-  start "CAESAR POS" "%ROOT%dist\CAESAR_POS.exe"
-  exit /b 0
-)
+REM Use the current source and pythonw.exe so patched app files are always used.
+REM The bundled EXE may be an older build and can also flash a console window.
 
 if not exist "%ROOT%python.exe" goto :missing
 if not exist "%ROOT%python312.dll" goto :missing
 if not exist "%ROOT%python312._pth" goto :missing
+if not exist "%ROOT%python312.zip" goto :missing_stdlib
 if not exist "%ROOT%Lib\site-packages\flask\__init__.py" goto :missing
 if not exist "%APP%\server.py" goto :missing
 if not exist "%APP%\index.html" goto :missing
@@ -28,9 +21,9 @@ for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8080" ^| findstr "LISTENING
 
 REM تشغيل الخادم من المصدر الحالي مع تسجيل أي خطأ في app\server_error.log.
 if exist "%LOG%" del /q "%LOG%" >nul 2>&1
-start "" /b cmd /d /c ""%ROOT%python.exe" "%APP%\server.py" > "%LOG%" 2>&1"
+start "" /b "%ROOT%pythonw.exe" "%APP%\server.py" > "%LOG%" 2>&1
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$deadline=(Get-Date).AddSeconds(12); do { $c=Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue; if($c){exit 0}; Start-Sleep -Milliseconds 250 } while((Get-Date) -lt $deadline); exit 1" >nul 2>&1
+powershell.exe -WindowStyle Hidden -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$deadline=(Get-Date).AddSeconds(12); do { $c=Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue; if($c){exit 0}; Start-Sleep -Milliseconds 250 } while((Get-Date) -lt $deadline); exit 1" >nul 2>&1
 if not errorlevel 1 goto :open
 
 echo.
@@ -67,7 +60,16 @@ exit /b 1
 :missing
 echo.
 echo [CAESAR] ملفات Windows المطلوبة ناقصة من الحزمة.
-echo يجب فك ضغط الأرشيف كاملًا، والتأكد من وجود python.exe وLib وapp داخل هذا المجلد:
+echo يجب فك ضغط الأرشيف كاملًا، والتأكد من وجود python.exe وpython312.zip وLib وapp داخل هذا المجلد:
+echo %ROOT%
+pause
+exit /b 1
+
+:missing_stdlib
+echo.
+echo [CAESAR] مكتبة Python القياسية مفقودة: python312.zip
+echo أعد تنزيل حزمة CAESAR الكاملة ولا تنسخ ملفات التشغيل بشكل منفصل.
+echo المجلد المتوقع:
 echo %ROOT%
 pause
 exit /b 1

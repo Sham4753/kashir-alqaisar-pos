@@ -1,0 +1,112 @@
+{
+  "format": 1,
+  "python": "3.12",
+  "source": "Lib/site-packages",
+  "packages": [
+    {
+      "distribution": "Flask",
+      "import": "flask",
+      "version": "3.1.3"
+    },
+    {
+      "distribution": "Werkzeug",
+      "import": "werkzeug",
+      "version": "3.1.8"
+    },
+    {
+      "distribution": "Jinja2",
+      "import": "jinja2",
+      "version": "3.1.6"
+    },
+    {
+      "distribution": "MarkupSafe",
+      "import": "markupsafe",
+      "version": "3.0.3"
+    },
+    {
+      "distribution": "itsdangerous",
+      "import": "itsdangerous",
+      "version": "2.2.0"
+    },
+    {
+      "distribution": "click",
+      "import": "click",
+      "version": "8.4.2"
+    },
+    {
+      "distribution": "blinker",
+      "import": "blinker",
+      "version": "1.9.0"
+    },
+    {
+      "distribution": "Pillow",
+      "import": "PIL",
+      "version": "12.3.0"
+    },
+    {
+      "distribution": "reportlab",
+      "import": "reportlab",
+      "version": "4.4.3"
+    },
+    {
+      "distribution": "arabic-reshaper",
+      "import": "arabic_reshaper",
+      "version": "bundled"
+    },
+    {
+      "distribution": "python-bidi",
+      "import": "bidi",
+      "version": "bundled"
+    },
+    {
+      "distribution": "pywebview",
+      "import": "webview",
+      "version": "6.2.1"
+    },
+    {
+      "distribution": "pyinstaller",
+      "import": "PyInstaller",
+      "version": "6.22.2"
+    },
+    {
+      "distribution": "altgraph",
+      "import": "altgraph",
+      "version": "0.17.5"
+    },
+    {
+      "distribution": "pyinstaller-hooks-contrib",
+      "import": "_pyinstaller_hooks_contrib",
+      "version": "bundled"
+    },
+    {
+      "distribution": "cffi",
+      "import": "cffi",
+      "version": "2.1.1"
+    },
+    {
+      "distribution": "pycparser",
+      "import": "pycparser",
+      "version": "3.0"
+    },
+    {
+      "distribution": "pythonnet",
+      "import": "pythonnet",
+      "version": "3.1.0"
+    },
+    {
+      "distribution": "clr-loader",
+      "import": "clr_loader",
+      "version": "bundled"
+    },
+    {
+      "distribution": "proxy-tools",
+      "import": "proxy_tools",
+      "version": "bundled"
+    },
+    {
+      "distribution": "pywin32-ctypes",
+      "import": "win32ctypes",
+      "version": "bundled"
+    }
+  ]
+}

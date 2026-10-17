@@ -12,8 +12,13 @@
   const escapeRegex = value => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   function money(value, options = {}) {
-    const amount = Number(value || 0);
-    const currency = safeCurrency(options.currency || config.currency);
+    let amount = Number(value || 0);
+    let currency = safeCurrency(options.currency || config.currency);
+    if (currency !== 'SYP') {
+      const rate = Number(currency === 'USD' ? config.usd_rate : config.eur_rate);
+      if (Number.isFinite(rate) && rate > 0) amount /= rate;
+      else currency = 'SYP'; // لا تسمِّ مبلغ الليرة دولاراً/يورو إذا لم يتوفر سعر صرف صالح.
+    }
     const decimals = currency === 'SYP' ? 0 : 2;
     const number = new Intl.NumberFormat('ar-SY', {
       minimumFractionDigits: options.minimumFractionDigits ?? 0,

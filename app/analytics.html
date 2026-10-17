@@ -227,7 +227,7 @@
                 const r = await fetch('/api/analytics/categories');
                 const cats = await r.json();
                 const sel = document.getElementById('catSelect');
-                cats.forEach(c => { sel.innerHTML += `<option value="${c}"> ${c}</option>`; });
+                cats.forEach(c => { const option = document.createElement('option'); option.value = c; option.textContent = ' ' + c; sel.appendChild(option); });
             } catch(e) {}
             // تاريخ اليوم
             const today = new Date().toISOString().split('T')[0];
@@ -266,7 +266,7 @@
             try {
                 const r = await fetch('/api/analytics/products?category=' + encodeURIComponent(cat));
                 const prods = await r.json();
-                prods.forEach(p => { sel.innerHTML += `<option value="${p}">${p}</option>`; });
+                prods.forEach(p => { const option = document.createElement('option'); option.value = p; option.textContent = p; sel.appendChild(option); });
             } catch(e) {}
         }
 
@@ -397,12 +397,12 @@
                     let datesHtml = '';
                     if (p.dates && Object.keys(p.dates).length > 0) {
                         datesHtml = '<div class="text-xs text-gray-400 mr-4 mt-1">' +
-                            Object.entries(p.dates).map(([d, q]) => `${d}: ${q}`).join(' | ') +
+                            Object.entries(p.dates).map(([d, q]) => `${escapeHtml(d)}: ${q}`).join(' | ') +
                             '</div>';
                     }
                     return `<div class="bg-gray-50 p-2 rounded border">
                         <div class="flex justify-between">
-                            <span class="font-bold">${p.name}</span>
+                            <span class="font-bold">${escapeHtml(p.name)}</span>
                             <span>${p.quantity} (${formatPrice(p.total||0)})</span>
                         </div>
                         ${datesHtml}
@@ -444,12 +444,12 @@
                 let html = withCost.map(p => {
                     const color = p.margin_pct >= 30 ? 'border-emerald-300 bg-emerald-50' : (p.margin_pct >= 10 ? 'border-orange-300 bg-orange-50' : 'border-red-300 bg-red-50');
                     return `<div class="p-2 rounded border ${color}">
-                        <div class="flex justify-between font-bold"><span>${p.name}</span><span>${p.margin_pct}%</span></div>
+                        <div class="flex justify-between font-bold"><span>${escapeHtml(p.name)}</span><span>${p.margin_pct}%</span></div>
                         <div class="text-xs text-gray-500">سعر: ${formatPrice(p.price)} | تكلفة: ${formatPrice(p.cost)} | ربح: ${formatPrice(p.profit)}</div>
                     </div>`;
                 }).join('');
                 if (withoutCost.length > 0) {
-                    html += `<div class="text-xs text-gray-400 mt-2 pt-2 border-t">بدون وصفة/تكلفة معروفة: ${withoutCost.map(p => p.name).join('، ')}</div>`;
+                    html += `<div class="text-xs text-gray-400 mt-2 pt-2 border-t">بدون وصفة/تكلفة معروفة: ${withoutCost.map(p => escapeHtml(p.name)).join('، ')}</div>`;
                 }
                 box.innerHTML = html || '<p class="text-gray-400 text-center py-4 text-sm">ما في منتجات لها وصفة محددة بعد</p>';
             } catch (e) {

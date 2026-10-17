@@ -93,60 +93,12 @@
     return response;
   };
 
-  function setupSettingsTabs() {
-    if (!body.classList.contains('caesar-page-settings')) return;
-    const container = document.querySelector('.container');
-    if (!container || container.querySelector('.q-settings-layout')) return;
-    const cards = Array.from(container.children).filter((node) => node.classList.contains('bg-white'));
-    if (!cards.length) return;
-    const layout = document.createElement('div');
-    layout.className = 'q-settings-layout';
-    const tabs = document.createElement('nav');
-    tabs.className = 'q-settings-tabs';
-    tabs.setAttribute('aria-label', 'أقسام الإعدادات');
-    const title = document.createElement('div');
-    title.className = 'q-settings-tabs-title';
-    title.textContent = 'لوحة الإعدادات';
-    tabs.append(title);
-    const content = document.createElement('div');
-    content.className = 'q-settings-content';
-    cards.forEach((card, index) => {
-      const heading = card.querySelector('h2');
-      const tab = document.createElement('button');
-      tab.type = 'button';
-      tab.className = 'q-settings-tab';
-      tab.setAttribute('aria-controls', `q-settings-card-${index}`);
-      const number = document.createElement('span');
-      number.className = 'q-settings-tab-index';
-      number.textContent = String(index + 1).padStart(2, '0');
-      const label = document.createElement('span');
-      label.textContent = String(heading?.textContent || `قسم ${index + 1}`).replace(/[\\u200B\\uFE0F]/g, '').trim();
-      tab.append(number, label);
-      card.id = card.id || `q-settings-card-${index}`;
-      card.classList.remove('q-settings-active');
-      content.append(card);
-      tabs.append(tab);
-      tab.addEventListener('click', () => {
-        tabs.querySelectorAll('.q-settings-tab').forEach((item) => item.classList.remove('active'));
-        content.querySelectorAll('.bg-white').forEach((item) => item.classList.remove('q-settings-active'));
-        tab.classList.add('active');
-        card.classList.add('q-settings-active');
-        tab.setAttribute('aria-selected', 'true');
-      });
-      if (index === 0) tab.click();
-    });
-    const header = container.querySelector(':scope > .flex.items-center.justify-between');
-    if (header) header.after(layout); else container.prepend(layout);
-    layout.append(tabs, content);
-  }
-
   document.addEventListener('DOMContentLoaded', () => {
     if (!document.querySelector('.q-theme-toggle')) document.body.appendChild(themeButton);
     applyLineIcons();
     cleanNativeOptionIcons();
     cleanResidualInterfacePictographs();
     watchDynamicIcons();
-    setupSettingsTabs();
     loadRestaurantIdentity();
     enforceNavigationPrivileges();
   });

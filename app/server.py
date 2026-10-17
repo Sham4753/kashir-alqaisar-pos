@@ -1,7 +1,12 @@
-import os, sys, json, shutil, threading, urllib.request, hashlib, hmac, base64, secrets, tempfile, subprocess, socket, uuid, re, traceback, time, platform, sqlite3, queue
+import os, sys, json, shutil, threading, hashlib, hmac, base64, secrets, tempfile, subprocess, socket, uuid, re, traceback, time, platform, sqlite3, queue, math
 from datetime import datetime, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import zipfile
+import binascii
 from xml.sax.saxutils import escape as xml_escape
+from PIL import Image, ImageDraw, ImageFont
+import arabic_reshaper
+from bidi.algorithm import get_display
 # ضمان العثور على ملفات التطبيق عند تشغيل Python المضمّن بوضع isolated على Windows.
 APP_SOURCE_PATH = os.path.dirname(os.path.abspath(__file__))
 if APP_SOURCE_PATH not in sys.path:
@@ -41,29 +46,13 @@ except ImportError:
     qrcode = None
     SvgPathImage = None
 
-# ========== إعدادات التحديث ==========
-GITHUB_USER = "CAESAR"
-GITHUB_REPO = "caesar-updates"
-GITHUB_BRANCH = "main"
-BASE_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/{GITHUB_BRANCH}"
 CURRENT_VERSION = "4.0.0"
 
 # Stable HMAC contract shared with the owner-only generate_license.py utility.
 #
-# ترتيب تحميل مفتاح الترخيص (من الأولى إلى الأخيرة، وأول مصدر يُقرأ بنجاح هو
-# المستخدم فعلياً للتوليد/التحقق):
-#   1) ملف .license_secret بجانب الملف التنفيذي (يسمح بتخصيص السر تجارياً لكل
-#      عميل/موزّع بدون إعادة بناء الكود).
-#   2) متغيّر البيئة CAESAR_LICENSE_SECRET (سلوك قديم متوافق).
-#   3) المفتاح الافتراضي المدمج بالكود كخط دفاع أخير.
-#
-# أي عطل بقراءة الملف (غير موجود، صلاحيات، تشفير تالف...) يُتجاهل بصمت ويسقط
-# تلقائياً للمصدر التالي - النظام لا يتوقف أبداً بسبب ملف ترخيص مفقود أو تالف.
+# ترتيب تحميل مفتاح الترخيص: ملف مورّد محلي أو متغير بيئة فقط. لا يوجد سر
+# افتراضي داخل الخادم؛ غياب السر يجعل التحقق يفشل بدلاً من قبول مفتاح منشور.
 _LICENSE_SECRET_FILENAMES = ('.license_secret', 'license.secret')
-_LICENSE_SECRET_DEFAULT = 'caesar-pos-commercial-license-v4-2026'
-# مفاتيح احتياطية مدمجة: أي ترخيص صادر سابقاً بأحد هذه الأسرار يبقى صالحاً حتى
-# لو تغيّر السر الأساسي (ملف أو متغير بيئة) لاحقاً - يمنع توقف عمل عملاء حاليين.
-LICENSE_SECRET_FALLBACKS = (_LICENSE_SECRET_DEFAULT,)
 
 
 def _license_secret_search_dirs():
@@ -77,8 +66,7 @@ def _license_secret_search_dirs():
 
 
 def load_license_secret():
-    """يحمّل سر HMAC الديناميكي من ملف .license_secret إن وُجد، وإلا يسقط
-    لمتغيّر البيئة، وإلا للمفتاح المدمج الافتراضي. لا يرفع أي استثناء أبداً."""
+    """يحمّل سر HMAC من ملف مورّد أو متغير بيئة، وإلا يعيد فراغًا."""
     for directory in _license_secret_search_dirs():
         for filename in _LICENSE_SECRET_FILENAMES:
             try:
@@ -90,7 +78,7 @@ def load_license_secret():
                         return value
             except OSError:
                 continue
-    return os.environ.get('CAESAR_LICENSE_SECRET', _LICENSE_SECRET_DEFAULT)
+    return os.environ.get('CAESAR_LICENSE_SECRET', '').strip()
 
 
 LICENSE_SECRET = load_license_secret().encode('utf-8')
@@ -136,22 +124,12 @@ def load_shipped_license():
                 continue
     return None
 
-# قائمة ملفات الواجهة القابلة للتحديث عن بعد (بدون الحاجة لإعادة بناء exe).
-# ملاحظة مهمة: server.py نفسه مو بهاي القائمة عمداً - هو مبني جوا الـ exe بواسطة Nuitka،
-# فتحديثه عن بعد مستحيل تقنياً بدون إعادة بناء exe جديد ونقله يدوياً لكل جهاز.
-UPDATABLE_FILES = [
-    "index.html", "menu_manager.html", "debts.html", "employees.html",
-    "raw_materials.html", "analytics.html", "orders_list.html",
-    "settings.html", "printer_settings.html", "kitchen.html", "tables.html", "customers.html", "qr_menu.html", "manager_ops.html", "expenses.html", "mobile.html", "setup.html", "tailwind.css"
-]
-
-
 def version_tuple(v):
     """تحويل رقم الإصدار إلى tuple للمقارنة الصحيحة"""
     return tuple(int(x) for x in v.strip().split('.'))
 
 def check_for_updates():
-    """هذا الإصدار تجاري أوفلاين بالكامل؛ لا يتصل بخدمات خارجية."""
+    """يعيد حالة الإصدار المحلية فقط؛ لا ينفذ أي اتصال خارجي."""
     return {"ok": True, "offline": True, "current": CURRENT_VERSION, "latest": CURRENT_VERSION, "updated_files": [], "error": None}
 # ========== مسارات ==========
 # تحديد مسار التشغيل
@@ -203,6 +181,10 @@ BACKUP_DIR = os.path.join(VAULT_DIR, 'backups')
 FLASH_BACKUP = os.path.join(VAULT_DIR, 'data_backup.json')
 FACTORY_FILE = os.path.join(BASE_DIR, 'factory_data.json')
 
+# Structured order storage is maintained alongside the legacy JSON snapshot during
+# the migration window. The operational database remains inside VAULT_DIR.
+STRUCTURED_SCHEMA_VERSION = 1
+
 FEATURE_DEFAULTS = {
     'kitchen': True,
     'tables': True,
@@ -233,22 +215,224 @@ if not os.path.exists(DATA_FILE):
             json.dump({"menu": {}, "orders": [], "shifts": [], "log": [], "settings": {"currency": "SYP"}}, f, ensure_ascii=False, indent=2)
 
 
+def _structured_table_sql(table_name, items_table_name):
+    return f"""
+    CREATE TABLE IF NOT EXISTS {table_name} (
+        id TEXT PRIMARY KEY,
+        timestamp TEXT NOT NULL,
+        status TEXT,
+        voided INTEGER NOT NULL DEFAULT 0,
+        total REAL NOT NULL DEFAULT 0,
+        subtotal REAL,
+        discount_amount REAL,
+        payment TEXT,
+        cash_amount REAL,
+        card_amount REAL,
+        customer TEXT,
+        table_no TEXT,
+        order_type TEXT,
+        cashier_name TEXT,
+        note TEXT,
+        payload TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_{table_name}_timestamp ON {table_name}(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_{table_name}_status_ts ON {table_name}(status, timestamp);
+    CREATE TABLE IF NOT EXISTS {items_table_name} (
+        order_id TEXT NOT NULL REFERENCES {table_name}(id) ON DELETE CASCADE,
+        item_index INTEGER NOT NULL,
+        name TEXT,
+        qty REAL NOT NULL DEFAULT 0,
+        price REAL NOT NULL DEFAULT 0,
+        modifiers TEXT,
+        payload TEXT,
+        PRIMARY KEY (order_id, item_index)
+    );
+    CREATE INDEX IF NOT EXISTS idx_{items_table_name}_order ON {items_table_name}(order_id);
+    """
+
+
+def _ensure_structured_schema(conn):
+    conn.executescript(_structured_table_sql('orders', 'order_items'))
+    conn.execute('CREATE TABLE IF NOT EXISTS migration_state (name TEXT PRIMARY KEY, version INTEGER NOT NULL, completed_at TEXT NOT NULL, source_count INTEGER NOT NULL)')
+
+
 def db_connect():
     """يفتح قاعدة SQLite التشغيلية مع WAL وقيود سلامة مناسبة للتزامن."""
-    conn = sqlite3.connect(os.path.join(VAULT_DIR, 'caesar.sqlite3'), timeout=15, isolation_level=None)
+    # اشتقاق المسار من VAULT_DIR يمنع بقاء الاتصال على قاعدة النسخة الأصلية
+    # عند تبديل خزنة التشغيل (والاختبارات المعزولة) بعد استيراد الوحدة.
+    database_file = os.path.join(VAULT_DIR, 'caesar.sqlite3')
+    conn = sqlite3.connect(database_file, timeout=15, isolation_level=None)
     conn.row_factory = sqlite3.Row
     conn.execute('PRAGMA journal_mode=WAL')
     conn.execute('PRAGMA foreign_keys=ON')
     conn.execute('PRAGMA busy_timeout=15000')
     conn.execute('CREATE TABLE IF NOT EXISTS app_state (id INTEGER PRIMARY KEY CHECK (id = 1), payload TEXT NOT NULL, updated_at TEXT NOT NULL)')
+    _ensure_structured_schema(conn)
     return conn
 
 
+def _order_row_values(order):
+    stamp = str(order.get('timestamp') or order.get('date') or '')
+    return (
+        str(order.get('id') or uuid.uuid4().hex), stamp,
+        str(order.get('status') or order.get('kitchen_status') or ''),
+        1 if order.get('voided') else 0,
+        float(order.get('total', 0) or 0),
+        float(order.get('subtotal', 0) or 0) if order.get('subtotal') is not None else None,
+        float(order.get('discount_amount', 0) or 0) if order.get('discount_amount') is not None else None,
+        str(order.get('payment') or ''),
+        float(order.get('cash_amount', 0) or 0) if order.get('cash_amount') is not None else None,
+        float(order.get('card_amount', 0) or 0) if order.get('card_amount') is not None else None,
+        str(order.get('customer') or ''), str(order.get('table') or order.get('table_no') or ''),
+        str(order.get('type') or ''), str(order.get('cashier_name') or ''),
+        str(order.get('note') or ''), json.dumps(order, ensure_ascii=False, separators=(',', ':')),
+        datetime.now().isoformat()
+    )
+
+
+def _write_order_rows(conn, orders, orders_table='orders', items_table='order_items', prune=True):
+    seen = set()
+    for order in orders:
+        if not isinstance(order, dict):
+            continue
+        order_id = str(order.get('id') or uuid.uuid4().hex)
+        order['id'] = order_id
+        seen.add(order_id)
+        conn.execute(f"""INSERT INTO {orders_table}
+            (id, timestamp, status, voided, total, subtotal, discount_amount, payment,
+             cash_amount, card_amount, customer, table_no, order_type, cashier_name, note, payload, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET timestamp=excluded.timestamp, status=excluded.status,
+              voided=excluded.voided, total=excluded.total, subtotal=excluded.subtotal,
+              discount_amount=excluded.discount_amount, payment=excluded.payment,
+              cash_amount=excluded.cash_amount, card_amount=excluded.card_amount,
+              customer=excluded.customer, table_no=excluded.table_no, order_type=excluded.order_type,
+              cashier_name=excluded.cashier_name, note=excluded.note, payload=excluded.payload,
+              updated_at=excluded.updated_at""", _order_row_values(order))
+        conn.execute(f'DELETE FROM {items_table} WHERE order_id=?', (order_id,))
+        for index, item in enumerate(order.get('items', []) or []):
+            if not isinstance(item, dict):
+                continue
+            conn.execute(f"""INSERT INTO {items_table}
+                (order_id, item_index, name, qty, price, modifiers, payload)
+                VALUES (?, ?, ?, ?, ?, ?, ?)""", (
+                    order_id, index, str(item.get('name') or ''),
+                    float(item.get('quantity', item.get('qty', 0)) or 0),
+                    float(item.get('price', 0) or 0),
+                    json.dumps(item.get('modifiers', ''), ensure_ascii=False),
+                    json.dumps(item, ensure_ascii=False, separators=(',', ':'))))
+    if prune and seen:
+        marks = ','.join('?' for _ in seen)
+        conn.execute(f'DELETE FROM {orders_table} WHERE id NOT IN ({marks})', tuple(seen))
+        conn.execute(f'DELETE FROM {items_table} WHERE order_id NOT IN ({marks})', tuple(seen))
+    elif prune:
+        conn.execute(f'DELETE FROM {items_table}')
+        conn.execute(f'DELETE FROM {orders_table}')
+    return len(seen)
+
+
+def _compact_state_snapshot(data):
+    """يفصل الأرشيف التاريخي عن لقطات JSON لتقليل كلفة كل حفظ.
+    تبقى الفواتير الحية والبيانات التشغيلية، بينما مصدر الأرشيف الساخن هو SQLite."""
+    snapshot = dict(data)
+    snapshot['orders_archive'] = []
+    snapshot.pop('_pending_order_sync_ids', None)
+    return snapshot
+
+
+def _hydrate_structured_archive(conn, data):
+    """يعيد الفواتير الساخنة من SQLite إلى الذاكرة دون كتابتها إلى JSON."""
+    live_ids = {str(order.get('id')) for order in data.get('orders', []) if isinstance(order, dict) and order.get('id')}
+    rows = conn.execute('SELECT id, payload FROM orders ORDER BY timestamp, id').fetchall()
+    archive = []
+    for row in rows:
+        if str(row['id']) in live_ids:
+            continue
+        try:
+            order = json.loads(row['payload'])
+        except (TypeError, ValueError):
+            continue
+        if isinstance(order, dict):
+            archive.append(order)
+    data['orders_archive'] = archive
+    return data
+
+
+def migrate_orders_to_structured(conn, payload):
+    """يرحّل كل الفواتير إلى جداول مؤقتة ثم يستبدلها بعد تطابق العدد.
+    العملية قابلة للإعادة ولا تحذف data.json أو app_state عند الفشل."""
+    orders = [o for o in payload.get('orders', []) + payload.get('orders_archive', []) if isinstance(o, dict)]
+    # SQLite يجعل id مفتاحاً أساسياً؛ أصلح التكرار قبل الإدراج حتى لا تسقط
+    # عملية الاستعادة/الترقية كلها بسبب فاتورتين قديمتين تحملان الرقم نفسه.
+    seen_ids = set()
+    for order in orders:
+        order_id = str(order.get('id') or uuid.uuid4().hex)
+        if order_id in seen_ids:
+            order['duplicate_id_repaired_from'] = str(order.get('id') or '')
+            order_id = f'{order_id}-DUP-{uuid.uuid4().hex[:8].upper()}'
+            order['id'] = order_id
+        seen_ids.add(order_id)
+    existing = conn.execute('SELECT version FROM migration_state WHERE name=?', ('orders',)).fetchone()
+    if existing and int(existing['version']) >= STRUCTURED_SCHEMA_VERSION:
+        return False
+    conn.executescript('DROP TABLE IF EXISTS order_items_migration; DROP TABLE IF EXISTS orders_migration;')
+    conn.executescript(_structured_table_sql('orders_migration', 'order_items_migration'))
+    conn.execute('BEGIN IMMEDIATE')
+    try:
+        conn.execute('DELETE FROM order_items_migration')
+        conn.execute('DELETE FROM orders_migration')
+        count = _write_order_rows(conn, orders, 'orders_migration', 'order_items_migration')
+        if count != len({str(o.get('id')) for o in orders if o.get('id') is not None}):
+            raise RuntimeError('structured migration count mismatch')
+        conn.execute('DELETE FROM order_items')
+        conn.execute('DELETE FROM orders')
+        conn.execute('INSERT INTO orders SELECT * FROM orders_migration')
+        conn.execute('INSERT INTO order_items SELECT * FROM order_items_migration')
+        conn.execute('DROP TABLE order_items_migration')
+        conn.execute('DROP TABLE orders_migration')
+        conn.execute('INSERT OR REPLACE INTO migration_state(name, version, completed_at, source_count) VALUES(?, ?, ?, ?)',
+                     ('orders', STRUCTURED_SCHEMA_VERSION, datetime.now().isoformat(), count))
+        conn.execute('COMMIT')
+        return True
+    except Exception:
+        conn.execute('ROLLBACK')
+        raise
+
+
+def sync_structured_orders(conn, payload):
+    """مزامنة تفاضلية خلال فترة الانتقال دون إعادة كتابة كامل الأرشيف."""
+    orders = [o for o in payload.get('orders', []) + payload.get('orders_archive', []) if isinstance(o, dict)]
+    current = {}
+    for order in orders:
+        order_id = str(order.get('id') or uuid.uuid4().hex)
+        order['id'] = order_id
+        current[order_id] = order
+    existing_rows = conn.execute('SELECT id, payload FROM orders').fetchall()
+    existing = {str(row['id']): row['payload'] for row in existing_rows}
+    changed = []
+    for order_id, order in current.items():
+        payload_text = json.dumps(order, ensure_ascii=False, separators=(',', ':'))
+        if existing.get(order_id) != payload_text:
+            changed.append(order)
+    deleted = set(existing) - set(current)
+    conn.execute('BEGIN IMMEDIATE')
+    try:
+        if changed:
+            _write_order_rows(conn, changed, prune=False)
+        if deleted:
+            marks = ','.join('?' for _ in deleted)
+            conn.execute(f'DELETE FROM orders WHERE id IN ({marks})', tuple(deleted))
+        conn.execute('COMMIT')
+    except Exception:
+        conn.execute('ROLLBACK')
+        raise
+
+
 def init_database():
-    """ينشئ SQLite مرة واحدة ويرحّل data.json القديم دون حذف النسخة الأصلية."""
+    """ينشئ SQLite ويرحّل data.json القديم دون حذف النسخة الأصلية."""
     conn = db_connect()
     try:
-        conn.execute('CREATE TABLE IF NOT EXISTS app_state (id INTEGER PRIMARY KEY CHECK (id = 1), payload TEXT NOT NULL, updated_at TEXT NOT NULL)')
         if conn.execute('SELECT 1 FROM app_state WHERE id=1').fetchone() is None:
             try:
                 with open(DATA_FILE, 'r', encoding='utf-8') as handle:
@@ -259,6 +443,14 @@ def init_database():
             conn.execute('INSERT INTO app_state(id, payload, updated_at) VALUES(1, ?, ?)',
                          (json.dumps(payload, ensure_ascii=False), datetime.now().isoformat()))
             conn.execute('COMMIT')
+        row = conn.execute('SELECT payload FROM app_state WHERE id=1').fetchone()
+        payload = json.loads(row['payload']) if row else {}
+        migrate_orders_to_structured(conn, payload)
+        compact_payload = _compact_state_snapshot(payload)
+        conn.execute('BEGIN IMMEDIATE')
+        conn.execute('UPDATE app_state SET payload=?, updated_at=? WHERE id=1',
+                     (json.dumps(compact_payload, ensure_ascii=False, separators=(',', ':')), datetime.now().isoformat()))
+        conn.execute('COMMIT')
     finally:
         conn.close()
 
@@ -274,7 +466,7 @@ os.makedirs(COLD_ARCHIVE_DIR, exist_ok=True)
 # يُنقل تلقائيًا لملفات شهرية باردة بمجلد archive_cold/ حتى لا يتضخم ملف البيانات
 # الأساسي عبر السنين ويُبطئ كل عملية قراءة/كتابة (معادل عملي لـ VACUUM بقواعد
 # البيانات التقليدية). لا شيء يُحذف نهائياً — فقط يُنقل، ويبقى قابلاً للاسترجاع.
-ARCHIVE_RETENTION_DAYS = 120
+ARCHIVE_RETENTION_DAYS = 30
 HELD_ORDER_MAX_AGE_HOURS = 48
 # استقرار طويل الأمد: بدون هذا الحد، طلب معلّق يُنسى (جهاز أُغلق قبل الاسترجاع،
 # نهاية وردية بلا استرجاع...) يبقى للأبد بـ data.json وقد يتراكم بمئات السجلات
@@ -313,6 +505,19 @@ _log_handler = RotatingFileHandler(
 # ملف السجل بحد أقصى 2 ميجابايت، وآخر 5 نسخ محفوظة (10 ميجا كحد أقصى إجمالي) — لا يتراكم بلا حدود أبداً.
 _log_handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(message)s'))
 error_logger.addHandler(_log_handler)
+# In a PyInstaller OneFolder deployment, mirror the same traceback beside the
+# executable so the operator can retrieve it without knowing the vault path.
+# This is intentionally best-effort: a read-only install must not stop the POS.
+try:
+    _runtime_log_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _runtime_log_handler = RotatingFileHandler(
+        os.path.join(_runtime_log_dir, 'caesar_server_error.log'),
+        maxBytes=2 * 1024 * 1024, backupCount=3, encoding='utf-8'
+    )
+    _runtime_log_handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(message)s'))
+    error_logger.addHandler(_runtime_log_handler)
+except (OSError, ValueError):
+    pass
 # إسكات لوغ Werkzeug الافتراضي (سطر لكل طلب) عن الطرفية — سجل الأخطاء الحقيقية فقط هو المهم هنا.
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
@@ -336,6 +541,8 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='Lax',
     SESSION_COOKIE_SECURE=False,
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+    # Reject oversized JSON/multipart bodies before application handlers parse them.
+    MAX_CONTENT_LENGTH=2 * 1024 * 1024,
 )
 
 
@@ -345,9 +552,11 @@ def handle_unexpected_error(error):
     (بما فيها تتبّع الاستدعاء الكامل) بملف logs/error.log، ويستمر الخادم
     بالعمل طبيعياً لبقية الطلبات — بدل صفحة خطأ خام أو توقف صامت لا يترك أثراً."""
     from werkzeug.exceptions import HTTPException
-    if isinstance(error, HTTPException):
+    if isinstance(error, HTTPException) and error.code != 500:
         # أخطاء HTTP العادية (404 صفحة غير موجودة، 405 طريقة غير مسموحة...) ليست أعطالاً
         # حقيقية بالكود، فلا داعي لتسجيلها بسجل الأخطاء — نمررها بردّها الافتراضي فقط.
+        # أما InternalServerError (500) فيجب أن يمر عبر مسار التسجيل أدناه؛ وإلا
+        # سيعرض Werkzeug صفحة عامة ويخفي السبب الحقيقي عن سجل CAESAR.
         return error
     error_logger.error(
         'خطأ غير متوقع | %s %s | من: %s\n%s',
@@ -360,6 +569,43 @@ def handle_unexpected_error(error):
 DATA_LOCK = threading.RLock()
 PASSWORD_ITERATIONS = 260_000
 MAX_ORDER_QTY = 100
+LOGIN_MAX_FAILURES = 5
+LOGIN_BASE_LOCK_SECONDS = 60
+LOGIN_MAX_LOCK_SECONDS = 15 * 60
+
+
+def _login_throttle_key(username, ip_address):
+    # Keep usernames/IPs out of the persisted operational data while ensuring
+    # independent throttling for each account and source address.
+    raw = f'{str(username or "").strip().lower()}\x00{str(ip_address or "unknown")}'
+    return hashlib.sha256(raw.encode('utf-8')).hexdigest()
+
+
+def login_throttle_remaining(data, username, ip_address):
+    row = data.setdefault('_login_throttle', {}).get(_login_throttle_key(username, ip_address), {})
+    try:
+        return max(0, int(float(row.get('locked_until', 0)) - time.time()))
+    except (TypeError, ValueError):
+        return 0
+
+
+def record_login_failure(data, username, ip_address):
+    key = _login_throttle_key(username, ip_address)
+    table = data.setdefault('_login_throttle', {})
+    row = table.setdefault(key, {'failures': 0, 'locked_until': 0})
+    row['failures'] = int(row.get('failures', 0) or 0) + 1
+    if row['failures'] >= LOGIN_MAX_FAILURES:
+        exponent = row['failures'] - LOGIN_MAX_FAILURES
+        row['locked_until'] = time.time() + min(LOGIN_MAX_LOCK_SECONDS, LOGIN_BASE_LOCK_SECONDS * (2 ** exponent))
+    save(data)
+
+
+def clear_login_failures(data, username, ip_address):
+    key = _login_throttle_key(username, ip_address)
+    table = data.setdefault('_login_throttle', {})
+    if key in table:
+        table.pop(key, None)
+        save(data)
 
 def migrate_legacy_users(data):
     """يحوّل المستخدمين الموجودين في النسخ القديمة إلى settings.users مع تشفير كلمة المرور."""
@@ -405,6 +651,34 @@ def ensure_inventory(data):
         })
     data['inventory'] = inventory
     return True
+
+
+def migrate_printer_settings(data):
+    """يكمل إعدادات الطباعة الناقصة في النسخ القديمة بعد ترحيل SQLite.
+
+    بعض النسخ القديمة خزّنت اسم الطابعة فقط، بينما لم تكن أعلام الطباعة
+    التلقائية موجودة أصلًا. تركها مفقودة يجعل ``bool(None)`` يعطّل الطباعة
+    بصمت. نضيف القيم الافتراضية فقط عند غياب المفتاح، ونحافظ على ``False``
+    الذي اختاره المدير صراحةً.
+    """
+    settings = data.setdefault('settings', {})
+    printer = settings.setdefault('printer', {})
+    changed = False
+    defaults = {
+        'connection_mode': 'windows',
+        'printer_transport': 'auto',
+        'printer_family': 'auto',
+        'printer_timeout': 5,
+        'printer_retry_count': 1,
+        'network_port': 9100,
+        'auto_print_receipt': True,
+        'auto_print_kitchen': True,
+    }
+    for key, value in defaults.items():
+        if key not in printer:
+            printer[key] = value
+            changed = True
+    return changed
 
 
 def atomic_write_json(path, data):
@@ -471,6 +745,7 @@ def compact_old_archive(data, retention_days=ARCHIVE_RETENTION_DAYS):
         existing_ids = {str(o.get('id')) for o in existing}
         merged = existing + [o for o in orders if str(o.get('id')) not in existing_ids]
         atomic_write_json(path, merged)
+    data.setdefault('_pending_order_sync_ids', []).extend(str(o.get('id')) for o in to_move if o.get('id'))
     data['orders_archive'] = keep
     return True
 
@@ -513,68 +788,151 @@ def find_order_anywhere(data, order_id):
 
 
 def load():
-    with DATA_LOCK:
-        conn = db_connect()
+    """تحميل الحالة مع إبقاء json.loads خارج DATA_LOCK دون قراءة قديمة.
+
+    تُقرأ الحمولة الخام وإصدارها تحت القفل، ثم تُفك خارج القفل. بعد ذلك يعاد
+    أخذ القفل والتحقق من الإصدار؛ إذا سبقتنا كتابة متزامنة تعاد الدورة، وإذا
+    تطابق الإصدار تُطبّق الصيانة والحفظ داخل القفل نفسه لمنع clobber لبيانات أحدث.
+    """
+    while True:
+        with DATA_LOCK:
+            conn = db_connect()
+            try:
+                row = conn.execute('SELECT payload, updated_at FROM app_state WHERE id=1').fetchone()
+                if row:
+                    raw_payload = row['payload']
+                    snapshot_version = row['updated_at']
+                else:
+                    try:
+                        with open(DATA_FILE, 'r', encoding='utf-8') as handle:
+                            raw_payload = handle.read()
+                    except OSError:
+                        raw_payload = '{}'
+                    snapshot_version = None
+            finally:
+                conn.close()
+
         try:
-            row = conn.execute('SELECT payload FROM app_state WHERE id=1').fetchone()
-            if row:
-                data = json.loads(row['payload'])
-            else:
-                try:
-                    with open(DATA_FILE, 'r', encoding='utf-8') as handle:
-                        data = json.load(handle)
-                except (OSError, ValueError):
-                    data = {}
-                conn.execute('BEGIN IMMEDIATE')
-                conn.execute('INSERT INTO app_state(id, payload, updated_at) VALUES(1, ?, ?)',
-                             (json.dumps(data, ensure_ascii=False), datetime.now().isoformat()))
-                conn.execute('COMMIT')
-        finally:
-            conn.close()
-        changed = ensure_ids(data)
-        if migrate_legacy_users(data):
-            changed = True
-        if ensure_inventory(data):
-            changed = True
-        maint = data.setdefault('_maintenance', {})
-        today = datetime.now().strftime('%Y-%m-%d')
-        if maint.get('last_compaction') != today:
-            # شبكة أمان يومية: تنقل فواتير الأرشيف القديمة لملفات باردة حتى لو
-            # لم يُستخدم زر 'تصفير العداد' إطلاقاً — تُفحص مرة واحدة كحد أقصى
-            # باليوم (وليس بكل طلب) حتى لا تُبطئ المسار الحرج للتطبيق.
-            if compact_old_archive(data):
+            data = json.loads(raw_payload)
+        except (TypeError, ValueError):
+            data = {}
+
+        with DATA_LOCK:
+            conn = db_connect()
+            try:
+                current = conn.execute('SELECT updated_at FROM app_state WHERE id=1').fetchone()
+                current_version = current['updated_at'] if current else None
+                if snapshot_version is not None and current_version != snapshot_version:
+                    continue
+                if snapshot_version is None and current is not None:
+                    continue
+                if snapshot_version is None:
+                    conn.execute('BEGIN IMMEDIATE')
+                    conn.execute('INSERT OR IGNORE INTO app_state(id, payload, updated_at) VALUES(1, ?, ?)',
+                                 (json.dumps(data, ensure_ascii=False), datetime.now().isoformat()))
+                    conn.execute('COMMIT')
+                _hydrate_structured_archive(conn, data)
+            finally:
+                conn.close()
+
+            changed = ensure_ids(data)
+            if migrate_legacy_users(data):
                 changed = True
-            if prune_stale_held_orders(data):
+            if ensure_inventory(data):
                 changed = True
-            maint['last_compaction'] = today
-            changed = True
-        if changed:
-            _save_database(data)
-        return data
+            if migrate_printer_settings(data):
+                changed = True
+            maint = data.setdefault('_maintenance', {})
+            today = datetime.now().strftime('%Y-%m-%d')
+            if maint.get('last_compaction') != today:
+                # شبكة أمان يومية: تنقل فواتير الأرشيف القديمة لملفات باردة حتى لو
+                # لم يُستخدم زر 'تصفير العداد' إطلاقاً — تُفحص مرة واحدة كحد أقصى
+                # باليوم (وليس بكل طلب) حتى لا تُبطئ المسار الحرج للتطبيق.
+                if compact_old_archive(data):
+                    changed = True
+                if prune_stale_held_orders(data):
+                    changed = True
+                maint['last_compaction'] = today
+                changed = True
+            if changed:
+                _save_database(data)
+            return data
 
 
-def _save_database(data):
-    payload = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
+def load_snapshot_only():
+    """يقرأ الحالة المختصرة من SQLite مع fallback آمن لملف JSON القديم.
+
+    هذا مهم عند أول تشغيل/الترقية وقبل أن تُنشئ ``load()`` صف الحالة في
+    SQLite، كما يحافظ على عزل اختبارات النسخ القديمة التي تجهّز DATA_FILE
+    مباشرةً.
+    """
+    conn = db_connect()
+    try:
+        row = conn.execute('SELECT payload FROM app_state WHERE id=1').fetchone()
+        raw = row['payload'] if row else None
+    finally:
+        conn.close()
+    if raw is None and os.path.exists(DATA_FILE):
+        try:
+            raw = Path(DATA_FILE).read_text(encoding='utf-8')
+        except OSError:
+            raw = '{}'
+    raw = raw or '{}'
+    try:
+        return json.loads(raw)
+    except (TypeError, ValueError):
+        return {}
+
+
+def _save_database(data, changed_order_ids=None):
+    pending_ids = data.pop('_pending_order_sync_ids', [])
+    changed_order_ids = {str(value) for value in list(changed_order_ids or []) + list(pending_ids) if value}
+    payload = json.dumps(_compact_state_snapshot(data), ensure_ascii=False, separators=(',', ':'))
     conn = db_connect()
     try:
         conn.execute('BEGIN IMMEDIATE')
         conn.execute('UPDATE app_state SET payload=?, updated_at=? WHERE id=1',
                      (payload, datetime.now().isoformat()))
+        # Keep the legacy-compatible snapshot and structured orders in one
+        # transaction. The incremental helper is called inline so a checkout
+        # does not rewrite the entire historical order archive.
+        order_map = {}
+        if changed_order_ids:
+            remaining = set(changed_order_ids)
+            for order in data.get('orders', []) + data.get('orders_archive', []):
+                if not isinstance(order, dict) or not order.get('id'):
+                    continue
+                order_id = str(order['id'])
+                if order_id in remaining:
+                    order_map[order_id] = order
+                    remaining.remove(order_id)
+                    if not remaining:
+                        break
+        changed = [order_map[order_id] for order_id in changed_order_ids if order_id in order_map]
+        if changed:
+            _write_order_rows(conn, changed, prune=False)
+        deleted = changed_order_ids - set(order_map)
+        if deleted:
+            marks = ','.join('?' for _ in deleted)
+            conn.execute(f'DELETE FROM orders WHERE id IN ({marks})', tuple(deleted))
         conn.execute('COMMIT')
     except Exception:
-        conn.execute('ROLLBACK')
+        try:
+            conn.execute('ROLLBACK')
+        except sqlite3.Error:
+            pass
         raise
     finally:
         conn.close()
 
 
-def save(data):
+def save(data, changed_order_ids=None):
     with DATA_LOCK:
-        _save_database(data)
+        _save_database(data, changed_order_ids)
         try:
-            atomic_write_json(FLASH_BACKUP, data)
+            atomic_write_json(FLASH_BACKUP, _compact_state_snapshot(data))
         except OSError:
-            pass
+            error_logger.error('فشلت النسخة الاحتياطية الفورية (FLASH_BACKUP) إلى %s', FLASH_BACKUP, exc_info=True)
 
 
 _last_backup_at = 0.0
@@ -624,6 +982,22 @@ def ensure_ids(data):
                 item['id'] = next_id
                 next_id += 1
                 changed = True
+    # إصلاح نسخ قديمة أُنشئت بعد تصفير العداد: لا نسمح بمعرّفين متساويين
+    # لأن SQLite والأرشيف والتقارير تتعامل مع رقم الفاتورة كمعرّف فريد.
+    seen_order_ids = set()
+    for bucket in ('orders', 'orders_archive'):
+        for order in data.get(bucket, []):
+            if not isinstance(order, dict):
+                continue
+            original = str(order.get('id') or '')
+            if not original:
+                order['id'] = uuid.uuid4().hex
+                changed = True
+            elif original in seen_order_ids:
+                order['id'] = f'{original}-DUP-{uuid.uuid4().hex[:8].upper()}'
+                order['duplicate_id_repaired_from'] = original
+                changed = True
+            seen_order_ids.add(str(order['id']))
     return changed
 
 def hash_password(pw):
@@ -658,28 +1032,73 @@ def currency_snapshot(data, payload=None):
     currency = payload.get('currency') or settings.get('currency', 'SYP')
     if currency not in ('SYP', 'USD', 'EUR'):
         currency = 'SYP'
+    raw_rate = payload.get('exchange_rate') or (1 if currency == 'SYP' else settings.get('usd_rate' if currency == 'USD' else 'eur_rate', 0)) or 0
     try:
-        rate = float(payload.get('exchange_rate') or (1 if currency == 'SYP' else settings.get('usd_rate' if currency == 'USD' else 'eur_rate', 0)) or 0)
+        rate = float(raw_rate)
+        if not math.isfinite(rate) or rate < 0:
+            rate = 0
     except (TypeError, ValueError):
         rate = 0
     return {'currency': currency, 'exchange_rate': rate}
 
+
+def amount_in_base(data, amount, currency='SYP', exchange_rate=None):
+    """تحويل مبلغ مدخل إلى الليرة السورية؛ سعر الصرف هو عدد الليرات لكل وحدة أجنبية."""
+    try:
+        value = Decimal(str(amount))
+        if not value.is_finite():
+            return None
+        code = currency if currency in ('SYP', 'USD', 'EUR') else 'SYP'
+        if code == 'SYP':
+            return float(value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+        snap = currency_snapshot(data, {'currency': code, 'exchange_rate': exchange_rate})
+        rate = Decimal(str(snap['exchange_rate']))
+        if not rate.is_finite() or rate <= 0:
+            return None
+        return float((value * rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+
+
+def expense_amount_base(data, expense):
+    """قيمة المصروف بالليرة، مع دعم السجلات القديمة التي لم تخزن المبلغ المحول."""
+    if 'amount_base' in expense and expense.get('amount_base') is not None:
+        return round_money(expense.get('amount_base'))
+    # مشتريات المواد ورواتب/سلف الموظفين كانت تحفظ دائماً بعملة الأساس.
+    if expense.get('material_id') is not None or expense.get('employee_id') is not None:
+        return round_money(expense.get('amount', 0))
+    return amount_in_base(data, expense.get('amount', 0), expense.get('currency', 'SYP'), expense.get('exchange_rate'))
+
 def next_order_id(data):
-    """يولّد رقم فاتورة جديد، ويصفّر العداد تلقائياً + يؤرشف طلبات الأمس أول ما يبدأ يوم جديد.
-    يُستخدم من كل مكان بالكود بيُنشئ طلب (POST /api/orders و تسديد الديون) لضمان عدم تعارض الأرقام."""
+    """يولّد رقم فاتورة لا يتكرر بعد الأرشفة أو إعادة التشغيل."""
     today = datetime.now().strftime('%Y-%m-%d')
     last_date = data.get('settings', {}).get('last_order_date')
     if last_date != today:
         if data.get('orders'):
             shift_id = last_date or today
+            data.setdefault('_pending_order_sync_ids', []).extend(str(o.get('id')) for o in data['orders'] if o.get('id'))
             for o in data['orders']:
                 o['shift_id'] = shift_id
             data.setdefault('orders_archive', []).extend(data['orders'])
             data['orders'] = []
-        data['order_counter'] = 0
         data.setdefault('settings', {})['last_order_date'] = today
-    data['order_counter'] = data.get('order_counter', 0) + 1
-    return f"ORD-{data['order_counter']:04d}"
+    used_numbers = set()
+    used_ids = set()
+    for row in data.get('orders', []) + data.get('orders_archive', []):
+        if not isinstance(row, dict):
+            continue
+        order_id = str(row.get('id', ''))
+        used_ids.add(order_id)
+        if order_id.startswith('ORD-'):
+            try:
+                used_numbers.add(int(order_id[4:]))
+            except ValueError:
+                pass
+    counter = max(int(data.get('order_counter', 0) or 0), max(used_numbers, default=0)) + 1
+    while f"ORD-{counter:04d}" in used_ids:
+        counter += 1
+    data['order_counter'] = counter
+    return f"ORD-{counter:04d}"
 
 def commercial_setup_complete(data=None):
     """يحافظ على توافق النسخ القديمة ويكشف فقط قوالب البيع غير المهيأة."""
@@ -719,19 +1138,14 @@ def license_key_for(machine_id, number=None, secret=None):
 
 
 def verify_license(machine_id, number, key):
-    """يتحقق من الترخيص بالسر الحالي أولاً، ثم بالمفاتيح الاحتياطية المدمجة إن
-    لزم - يضمن بقاء تراخيص العملاء القدامى صالحة حتى بعد تدوير السر الأساسي."""
+    """يتحقق من الترخيص بالسر المورّد المحمّل فقط، ويفشل مغلقًا عند غيابه."""
+    if not LICENSE_SECRET:
+        return False
     expected_number = license_number_for(machine_id)
     if not hmac.compare_digest(str(number or '').strip().upper(), expected_number):
         return False
     submitted_key = str(key or '').strip().upper()
-    if hmac.compare_digest(submitted_key, license_key_for(machine_id, expected_number)):
-        return True
-    for fallback_secret in LICENSE_SECRET_FALLBACKS:
-        candidate = license_key_for(machine_id, expected_number, secret=fallback_secret.encode('utf-8'))
-        if hmac.compare_digest(submitted_key, candidate):
-            return True
-    return False
+    return hmac.compare_digest(submitted_key, license_key_for(machine_id, expected_number))
 
 
 def installation_license_valid(data):
@@ -981,6 +1395,31 @@ def compute_product_cost(data, product):
         total_cost += avg * (ing.get('qty', 0) or 0)
     return total_cost
 
+
+def compute_product_cost_as_of(data, product, sold_at):
+    """تكلفة استدراكية للفواتير القديمة من مشتريات مؤرخة حتى تاريخ البيع فقط.
+
+    لا تُخمّن عند غياب تاريخ شراء أو تاريخ بيع؛ عندئذٍ تصنّف التكلفة غير معروفة
+    بدلاً من إدخال مشتريات مستقبلية في ربح فترة سابقة.
+    """
+    recipe = product.get('recipe', []) if product else []
+    sold_date = str(sold_at or '')[:10]
+    if not recipe or len(sold_date) != 10:
+        return None
+    total_cost = 0.0
+    for ingredient in recipe:
+        name = ingredient.get('material', '')
+        rows = [row for row in data.get('materials', []) if row.get('name') == name]
+        if not rows or any(len(str(row.get('date') or row.get('timestamp') or '')[:10]) != 10 for row in rows):
+            return None
+        eligible = [row for row in rows if str(row.get('date') or row.get('timestamp'))[:10] <= sold_date]
+        total_qty = sum(float(row.get('quantity', 0) or 0) for row in eligible)
+        total_paid = sum(float(row.get('price', 0) or 0) for row in eligible)
+        if total_qty <= 0:
+            return None
+        total_cost += (total_paid / total_qty) * float(ingredient.get('qty', 0) or 0)
+    return total_cost
+
 @app.route('/api/product/<int:pid>/cost', methods=['GET'])
 def get_product_cost(pid):
     """تكلفة وهامش ربح منتج واحد."""
@@ -1040,11 +1479,36 @@ def consume_inventory_for_order(data, items, order_id=''):
                                       reference_type='order', reference_id=order_id,
                                       note='استهلاك وصفة عند بيع: ' + str(name))
 
+def round_money(value):
+    try:
+        amount = Decimal(str(value if value is not None else 0))
+        if not amount.is_finite():
+            return 0.0
+        return float(amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+    except (InvalidOperation, TypeError, ValueError):
+        return 0.0
+
+
+def sum_money(values):
+    total = Decimal('0')
+    try:
+        for value in values:
+            amount = Decimal(str(value if value is not None else 0))
+            if amount.is_finite():
+                total += amount
+        return float(total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+    except (InvalidOperation, TypeError, ValueError):
+        return round_money(float(total))
+
+
 def as_money(value, default=None):
     try:
-        amount = round(float(value), 2)
-        return amount if amount >= 0 else default
-    except (TypeError, ValueError):
+        amount = Decimal(str(value))
+        if not amount.is_finite():
+            return default
+        amount = amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        return float(amount) if amount >= 0 else default
+    except (InvalidOperation, TypeError, ValueError):
         return default
 
 
@@ -1121,13 +1585,15 @@ def approved_order_items(data, raw_items):
             if name in catalog and name not in modifier_names:
                 modifier_names.append(name)
         modifiers = [catalog[name] for name in modifier_names]
-        modifier_total = round(sum(row['price'] for row in modifiers), 2)
+        modifier_total = sum_money(row['price'] for row in modifiers)
         station = str(product.get('kitchen_station', 'main') or 'main')
         if station not in KITCHEN_STATION_LABELS:
             station = 'main'
+        unit_cost = compute_product_cost(data, product)
         approved.append({'product_id': product.get('id'), 'name': str(product.get('name', '')).strip(),
                          'base_price': base_price, 'modifier_total': modifier_total,
-                         'price': round(base_price + modifier_total, 2), 'quantity': qty,
+                         'price': sum_money((base_price, modifier_total)), 'quantity': qty,
+                         'unit_cost_snapshot': round(float(unit_cost), 4) if unit_cost is not None else None,
                          'modifiers': modifiers, 'kitchen_station': station})
     return approved, None
 
@@ -1142,7 +1608,7 @@ def normalize_payment(total, payload):
         return {'payment': payment, 'cash_amount': 0, 'card_amount': total}, None
     cash = as_money(payload.get('cash_amount'))
     card = as_money(payload.get('card_amount'))
-    if cash is None or card is None or abs((cash + card) - total) > 0.01:
+    if cash is None or card is None or round_money(cash + card) != round_money(total):
         return None, 'مبالغ الدفع المختلط يجب أن تساوي إجمالي الفاتورة'
     return {'payment': payment, 'cash_amount': cash, 'card_amount': card}, None
 
@@ -1197,6 +1663,35 @@ def verify_manager_approval(data, payload, action, amount=0, reference_id=''):
     return record, None
 
 
+def _structured_orders_page(date_from='', date_to='', limit=None, offset=0):
+    """يقرأ صفحة الفواتير مباشرة من SQLite دون تحميل الأرشيف إلى الذاكرة."""
+    clauses, params = [], []
+    if date_from:
+        clauses.append('substr(timestamp, 1, 10) >= ?'); params.append(date_from)
+    if date_to:
+        clauses.append('substr(timestamp, 1, 10) <= ?'); params.append(date_to)
+    where = (' WHERE ' + ' AND '.join(clauses)) if clauses else ''
+    conn = db_connect()
+    try:
+        total = conn.execute(f'SELECT COUNT(*) FROM orders{where}', tuple(params)).fetchone()[0]
+        query = f'SELECT payload FROM orders{where} ORDER BY timestamp DESC, id DESC'
+        query_params = list(params)
+        if limit is not None:
+            query += ' LIMIT ? OFFSET ?'; query_params.extend([limit, offset])
+        rows = conn.execute(query, tuple(query_params)).fetchall()
+        result = []
+        for row in rows:
+            try:
+                value = json.loads(row['payload'])
+            except (TypeError, ValueError):
+                continue
+            if isinstance(value, dict):
+                result.append(value)
+        return result, total
+    finally:
+        conn.close()
+
+
 @app.route('/api/settings/manager-approvals', methods=['GET', 'POST'])
 def manager_approval_settings():
     if not has_role('manager'):
@@ -1220,22 +1715,45 @@ def manager_approval_settings():
 
 @app.route('/api/orders', methods=['GET', 'POST'])
 def orders():
+    if request.method == 'GET':
+        date_from = request.args.get('from', '').strip()
+        date_to = request.args.get('to', '').strip()
+        scope = request.args.get('scope', '').strip().lower()
+        if scope == 'today':
+            today = datetime.now().strftime('%Y-%m-%d')
+            date_from = date_to = today
+        elif scope not in {'', 'today'}:
+            return jsonify({'ok': False, 'error': 'نطاق طلبات غير صالح'}), 400
+        limit_raw = request.args.get('limit', '').strip()
+        offset_raw = request.args.get('offset', '0').strip()
+        try:
+            limit = max(1, min(int(limit_raw), 200)) if limit_raw else None
+            offset = max(0, int(offset_raw or 0))
+        except ValueError:
+            return jsonify({'ok': False, 'error': 'limit أو offset غير صالح'}), 400
+        page, total = _structured_orders_page(date_from, date_to, limit, offset)
+        if limit is not None:
+            return jsonify({'orders': page, 'total': total, 'offset': offset,
+                            'limit': limit, 'has_more': offset + len(page) < total,
+                            'scope': scope or 'all', 'from': date_from or None, 'to': date_to or None})
+        return jsonify(page)
+
     data = load()
     if request.method == 'POST':
         payload = request.get_json(silent=True) or {}
         items, item_error = approved_order_items(data, payload.get('items'))
         if item_error:
             return jsonify({'ok': False, 'error': item_error}), 400
-        subtotal = round(sum(item['price'] * item['quantity'] for item in items), 2)
+        subtotal = sum_money(item['price'] * item['quantity'] for item in items)
         discount_pct = as_money(payload.get('discount_pct', 0), 0)
         discount_amount = as_money(payload.get('discount_amount', 0), 0)
         if discount_pct is None or discount_pct > 100 or discount_amount is None:
             return jsonify({'ok': False, 'error': 'قيمة الخصم غير صالحة'}), 400
-        after_percent = round(subtotal * (1 - discount_pct / 100), 2)
+        after_percent = round_money(subtotal * (1 - discount_pct / 100))
         if discount_amount > after_percent:
             return jsonify({'ok': False, 'error': 'الخصم أكبر من إجمالي الفاتورة'}), 400
-        total = round(after_percent - discount_amount, 2)
-        total_discount = round(subtotal - total, 2)
+        total = round_money(after_percent - discount_amount)
+        total_discount = round_money(subtotal - total)
         approval_record = None
         needs_approval, approval_policy = manager_approval_required(data, discount_pct, total_discount)
         if needs_approval:
@@ -1254,6 +1772,7 @@ def orders():
         o = {
             'id': next_order_id(data), 'timestamp': datetime.now().isoformat(), 'items': items,
             'subtotal': subtotal, 'discount_pct': discount_pct, 'discount_amount': discount_amount,
+            'discount_total': total_discount,
             'total': total, 'type': order_type, 'note': str(payload.get('note', ''))[:500],
             'customer': str(payload.get('customer', ''))[:120], 'table': str(payload.get('table', ''))[:60],
             'cashier_name': session.get('username', 'غير محدد'),
@@ -1270,28 +1789,47 @@ def orders():
         if payment_data.get('cash_amount', 0):
             record_cash_movement(data, 'in', payment_data['cash_amount'], 'مبيعات كاشير قيصر',
                                  channel='cash', reference_type='order', reference_id=o['id'],
-                                 note='فاتورة ' + str(o['id']), currency=o['currency'], exchange_rate=o['exchange_rate'])
+                                 note='فاتورة ' + str(o['id']))
         if payment_data.get('card_amount', 0):
             record_cash_movement(data, 'in', payment_data['card_amount'], 'مبيعات كاشير قيصر',
                                  channel='card', reference_type='order', reference_id=o['id'],
-                                 note='فاتورة ' + str(o['id']), currency=o['currency'], exchange_rate=o['exchange_rate'])
+                                 note='فاتورة ' + str(o['id']))
         consume_inventory_for_order(data, o['items'], o['id'])
         receipt_print = queue_thermal_print(data, o, 'receipt')
-        kitchen_print = queue_thermal_print(data, o, 'kitchen') if kitchen_release == 'now' else {
+        kitchen_print = queue_thermal_print(data, o, 'kitchen', wait=True) if kitchen_release == 'now' else {
             'ok': True, 'status': 'deferred', 'message': 'تذكرة المطبخ مؤجلة حتى إطلاق الطلب'}
         o['print_status'] = {'receipt': receipt_print, 'kitchen': kitchen_print}
         drawer_result = maybe_auto_open_cash_drawer(data, o, payment_data.get('cash_amount', 0))
         if drawer_result:
             o['cash_drawer_status'] = drawer_result
-        save(data); backup()
+        save(data, [o['id']]); backup()
         return jsonify({'ok': True, 'id': o['id'], 'total': total, 'print': {'receipt': receipt_print, 'kitchen': kitchen_print}, 'drawer': drawer_result})
     all_orders = data.get('orders', []) + data.get('orders_archive', [])
     date_from = request.args.get('from', '').strip()
     date_to = request.args.get('to', '').strip()
+    scope = request.args.get('scope', '').strip().lower()
+    if scope == 'today':
+        today = datetime.now().strftime('%Y-%m-%d')
+        date_from = date_to = today
+    elif scope not in {'', 'today'}:
+        return jsonify({'ok': False, 'error': 'نطاق طلبات غير صالح'}), 400
     if date_from:
         all_orders = [o for o in all_orders if o.get('timestamp', o.get('date', ''))[:10] >= date_from]
     if date_to:
         all_orders = [o for o in all_orders if o.get('timestamp', o.get('date', ''))[:10] <= date_to]
+    limit_raw = request.args.get('limit', '').strip()
+    offset_raw = request.args.get('offset', '0').strip()
+    if limit_raw:
+        try:
+            limit = max(1, min(int(limit_raw), 200))
+            offset = max(0, int(offset_raw or 0))
+        except ValueError:
+            return jsonify({'ok': False, 'error': 'limit أو offset غير صالح'}), 400
+        total = len(all_orders)
+        page = all_orders[offset:offset + limit]
+        return jsonify({'orders': page, 'total': total, 'offset': offset,
+                        'limit': limit, 'has_more': offset + len(page) < total,
+                        'scope': scope or 'all', 'from': date_from or None, 'to': date_to or None})
     return jsonify(all_orders)
 
 
@@ -1424,77 +1962,124 @@ def void_order(order_id):
                 if o.get('cash_amount', 0):
                     record_cash_movement(data, 'out', o.get('cash_amount'), 'استرجاع فاتورة ملغاة',
                                          channel='cash', reference_type='void_order', reference_id=o.get('id'),
-                                         note='إلغاء فاتورة ' + str(o.get('id')), currency=o.get('currency'), exchange_rate=o.get('exchange_rate'))
+                                         note='إلغاء فاتورة ' + str(o.get('id')))
                 if o.get('card_amount', 0):
                     record_cash_movement(data, 'out', o.get('card_amount'), 'استرجاع فاتورة ملغاة',
                                          channel='card', reference_type='void_order', reference_id=o.get('id'),
-                                         note='إلغاء فاتورة ' + str(o.get('id')), currency=o.get('currency'), exchange_rate=o.get('exchange_rate'))
+                                         note='إلغاء فاتورة ' + str(o.get('id')))
                 save(data); backup()
                 return jsonify({"ok": True})
     return jsonify({"ok": False, "error": "الطلب غير موجود"}), 404
 
 @app.route('/api/orders/<order_id>/edit-items', methods=['POST'])
 def edit_order_items(order_id):
-    """تعديل أصناف طلب قائم (حذف صنف، أو تغيير كميته) بدل إلغاء الطلب كامل.
-    محمي بنفس حماية كلمة مرور الإلغاء. يضبط المخزون تلقائياً بالفرق بين القديم والجديد،
-    ويعيد حساب الإجمالي، ويسجّل تاريخ التعديل والسبب بالطلب نفسه (بدون ما يمسح الأثر الأصلي)."""
+    """يعدّل أصناف الفاتورة بأسعار المنيو، ويضبط الخصم والتحصيل والمخزون بسجلات عكسية."""
     data = load()
-    ok, err = check_manager_password(data, request.json)
+    payload = request.get_json(silent=True) or {}
+    ok, err = check_manager_password(data, payload)
     if not ok:
         return err
-    new_items = request.json.get('items') if request.json else None
-    reason = request.json.get('reason', '') if request.json else ''
-    if new_items is None:
-        return jsonify({"ok": False, "error": "ما في قائمة أصناف جديدة"}), 400
+    new_items_raw = payload.get('items')
+    reason = str(payload.get('reason', '') or '')[:240]
+    if not isinstance(new_items_raw, list) or not new_items_raw:
+        return jsonify({'ok': False, 'error': 'يجب أن تبقى الفاتورة محتوية على صنف واحد صالح على الأقل'}), 400
 
-    for lst_name in ('orders', 'orders_archive'):
-        for o in data.get(lst_name, []):
-            if str(o.get('id')) == str(order_id):
-                if o.get('voided'):
-                    return jsonify({"ok": False, "error": "الطلب ملغى، ما فيك تعدّله"}), 400
+    for list_name in ('orders', 'orders_archive'):
+        for order in data.get(list_name, []):
+            if str(order.get('id')) != str(order_id):
+                continue
+            if order.get('voided'):
+                return jsonify({'ok': False, 'error': 'الطلب ملغى، ما فيك تعدّله'}), 400
+            items, item_error = approved_order_items(data, new_items_raw)
+            if item_error:
+                return jsonify({'ok': False, 'error': item_error}), 400
 
-                item_recipes = build_item_recipes(data)
-                old_items = o.get('items', [])
-                old_qty_by_name = {}
-                for i in old_items:
-                    old_qty_by_name[i.get('name', '')] = old_qty_by_name.get(i.get('name', ''), 0) + i.get('quantity', i.get('qty', 1))
-                new_qty_by_name = {}
-                for i in new_items:
-                    new_qty_by_name[i.get('name', '')] = new_qty_by_name.get(i.get('name', ''), 0) + i.get('quantity', i.get('qty', 1))
+            subtotal = sum_money(item['price'] * item['quantity'] for item in items)
+            discount_pct = as_money(order.get('discount_pct', 0), 0)
+            fixed_discount = as_money(order.get('discount_amount', 0), 0)
+            if discount_pct is None or discount_pct > 100 or fixed_discount is None:
+                return jsonify({'ok': False, 'error': 'بيانات الخصم القديمة غير صالحة؛ أصلحها قبل تعديل الفاتورة'}), 400
+            after_percent = round_money(subtotal * (1 - discount_pct / 100))
+            if fixed_discount > after_percent:
+                return jsonify({'ok': False, 'error': 'الخصم المحفوظ أكبر من إجمالي الأصناف الجديدة'}), 400
+            new_total = round_money(after_percent - fixed_discount)
+            total_discount = round_money(subtotal - new_total)
 
-                # ضبط المخزون بالفرق (نقص الكمية = رجّع للمخزون، زيادة الكمية = خصم إضافي)
-                all_names = set(old_qty_by_name) | set(new_qty_by_name)
-                for name in all_names:
-                    diff = old_qty_by_name.get(name, 0) - new_qty_by_name.get(name, 0)  # موجب = نقص بالطلب
-                    recipe = item_recipes.get(name)
-                    if not recipe or diff == 0:
-                        continue
-                    for ing in recipe:
-                        qty_change = (ing.get('qty', 0) or 0) * diff
-                        if qty_change > 0:
-                            sync_inventory_add(data, ing.get('material', ''), '', qty_change)
-                        else:
-                            sync_inventory_consume(data, ing.get('material', ''), -qty_change)
+            old_total = round_money(order.get('total', 0))
+            payment = order.get('payment', 'نقدي')
+            if 'cash_amount' in order or 'card_amount' in order:
+                old_cash = round_money(order.get('cash_amount', 0))
+                old_card = round_money(order.get('card_amount', 0))
+            elif payment == 'بطاقة':
+                old_cash, old_card = 0.0, old_total
+            elif payment == 'مختلط':
+                return jsonify({'ok': False, 'error': 'لا يمكن تعديل فاتورة مختلطة قديمة بلا تقسيمة نقد/بطاقة محفوظة'}), 400
+            else:
+                old_cash, old_card = old_total, 0.0
+            if round_money(old_cash + old_card) != old_total:
+                return jsonify({'ok': False, 'error': 'تقسيمة الدفع الحالية لا تطابق إجمالي الفاتورة؛ سوّها قبل التعديل'}), 409
+            if payment == 'نقدي':
+                new_cash, new_card = new_total, 0.0
+            elif payment == 'بطاقة':
+                new_cash, new_card = 0.0, new_total
+            elif payment == 'مختلط':
+                if old_total <= 0:
+                    return jsonify({'ok': False, 'error': 'لا يمكن تحديد توزيع الدفع الجديد لفاتورة مختلطة بإجمالي صفري'}), 409
+                cash_ratio = old_cash / old_total
+                new_cash = round_money(new_total * cash_ratio)
+                new_card = round_money(new_total - new_cash)
+            else:
+                return jsonify({'ok': False, 'error': 'طريقة الدفع المسجلة غير صالحة'}), 400
 
-                # سجل تعديل (بدون فقدان الطلب الأصلي - للمراجعة لاحقاً)
-                edit_history = o.setdefault('edit_history', [])
-                edit_history.append({
-                    "date": datetime.now().isoformat(), "reason": reason,
-                    "old_items": old_items, "old_total": o.get('total', 0)
-                })
-                o['items'] = new_items
-                new_total = sum((i.get('price', 0) or 0) * i.get('quantity', i.get('qty', 1)) for i in new_items)
-                o['total'] = new_total
-                # لو طريقة الدفع كانت واحدة (نقدي أو بطاقة بالكامل)، عدّل المبلغ تلقائياً معها
-                if o.get('payment') == 'نقدي':
-                    o['cash_amount'] = new_total
-                elif o.get('payment') == 'بطاقة':
-                    o['card_amount'] = new_total
-                # لو "مختلط"، نسيب المبالغ متل ما هي - يحتاج مراجعة يدوية من المدير لأنه ما فينا نخمّن التقسيم الجديد
-                o['edited'] = True
-                save(data); backup()
-                return jsonify({"ok": True, "new_total": new_total})
-    return jsonify({"ok": False, "error": "الطلب غير موجود"}), 404
+            def item_key(item):
+                pid = item.get('product_id', item.get('id'))
+                return ('id', str(pid)) if pid not in (None, '') else ('name', str(item.get('name', '')).strip())
+
+            old_qty, new_qty = {}, {}
+            for item in order.get('items', []):
+                key = item_key(item)
+                old_qty[key] = old_qty.get(key, 0) + (item.get('quantity', item.get('qty', 1)) or 0)
+            for item in items:
+                key = item_key(item)
+                new_qty[key] = new_qty.get(key, 0) + item['quantity']
+            recipes = build_item_recipes(data)
+            for key in set(old_qty) | set(new_qty):
+                difference = old_qty.get(key, 0) - new_qty.get(key, 0)
+                recipe = recipes.get(int(key[1])) if key[0] == 'id' and key[1].isdigit() else recipes.get(key[1])
+                if not recipe or not difference:
+                    continue
+                for ingredient in recipe:
+                    quantity_change = (ingredient.get('qty', 0) or 0) * difference
+                    material = ingredient.get('material', '')
+                    if quantity_change > 0:
+                        sync_inventory_add(data, material, '', quantity_change)
+                    elif quantity_change < 0:
+                        sync_inventory_consume(data, material, -quantity_change)
+                    if quantity_change:
+                        record_inventory_movement(data, material, quantity_change, 'order_edit_adjustment',
+                                                  reference_type='order_edit', reference_id=order_id,
+                                                  note='تسوية مخزون بعد تعديل فاتورة ' + str(order_id))
+
+            edit_history = order.setdefault('edit_history', [])
+            edit_history.append({'date': datetime.now().isoformat(), 'reason': reason,
+                                 'old_items': order.get('items', []), 'old_subtotal': order.get('subtotal'),
+                                 'old_total': old_total, 'old_cash_amount': old_cash, 'old_card_amount': old_card})
+            order.update({'items': items, 'subtotal': subtotal, 'discount_pct': discount_pct,
+                          'discount_amount': fixed_discount, 'discount_total': total_discount,
+                          'total': new_total, 'cash_amount': new_cash, 'card_amount': new_card,
+                          'edited': True, 'last_edit_reason': reason, 'last_edited_at': datetime.now().isoformat()})
+
+            # فروق التحصيل تسجل كسطور جديدة ولا تمحو أثر القبض الأصلي.
+            for channel, old_amount, new_amount in (('cash', old_cash, new_cash), ('card', old_card, new_card)):
+                delta = round_money(new_amount - old_amount)
+                if delta:
+                    record_cash_movement(data, 'in' if delta > 0 else 'out', abs(delta), 'تسوية تعديل فاتورة',
+                                         channel=channel, reference_type='order_edit', reference_id=order_id,
+                                         note='فرق تحصيل بعد تعديل الفاتورة', currency='SYP', exchange_rate=1,
+                                         base_amount=abs(delta))
+            save(data, [order_id]); backup()
+            return jsonify({'ok': True, 'new_total': new_total, 'cash_amount': new_cash, 'card_amount': new_card})
+    return jsonify({'ok': False, 'error': 'الطلب غير موجود'}), 404
 
 
 def close_shift():
@@ -1601,7 +2186,15 @@ def start_flask():
     # طلب بطيء بقية النظام - وهذا آمن هنا لأن كل قراءة/كتابة لـ data.json تمر
     # عبر load()/save()/backup() المحميّة بالكامل بـ DATA_LOCK (threading.RLock)،
     # فلا يوجد أي تعارض أو تلف بيانات محتمل بين الخيوط.
-    app.run(host=host, port=port, debug=False, threaded=True)
+    try:
+        from waitress import serve
+    except ImportError:
+        # تطوير/تشغيل قديم بلا dependency؛ يبقى fallback واضحًا بدل فشل الإقلاع.
+        print(' WARNING: waitress غير مثبت؛ سيتم استخدام خادم Flask الاحتياطي')
+        app.run(host=host, port=port, debug=False, threaded=True)
+    else:
+        print(' HTTP server: Waitress (8 threads)')
+        serve(app, host=host, port=port, threads=8)
 
 
 
@@ -1693,7 +2286,7 @@ def pay_debt(did):
                 'total': amount,
                 'type': 'تسديد دين',
                 'note': d.get('note', ''),
-                'payment': method,
+                'payment': method, 'accounting_type': 'debt_payment', 'debt_id': did,
                 'cash_amount': amount if method == 'نقدي' else 0,
                 'card_amount': amount if method == 'بطاقة' else 0,
                 'cashier_name': session.get('username', 'غير محدد'),
@@ -1702,7 +2295,12 @@ def pay_debt(did):
                 'timestamp': datetime.now().isoformat()
             }
             data.setdefault('orders', []).append(payment_order)
-            save(data); backup()
+            record_cash_movement(data, 'in', amount, 'تحصيل دين',
+                                 channel='card' if method == 'بطاقة' else 'cash',
+                                 reference_type='debt_payment', reference_id=payment_order['id'],
+                                 note='تسديد دين: ' + str(d.get('name', '')),
+                                 base_amount=amount)
+            save(data, [payment_order['id']]); backup()
             return jsonify({"ok": True, "paid": d['paid'], "remaining": d['amount'] - d['paid']})
     return jsonify({"ok": False}), 404
 
@@ -1723,15 +2321,27 @@ def archive_orders():
     shift_id = datetime.now().strftime('%Y%m%d_%H%M')
     for o in data.get('orders', []):
         o['shift_id'] = shift_id
+    moved_order_ids = [str(o.get('id')) for o in data['orders'] if o.get('id')]
     data['orders_archive'].extend(data['orders'])
     data['orders'] = []
+    data.setdefault('_pending_order_sync_ids', []).extend(moved_order_ids)
     compact_old_archive(data)
-    # تصفير عداد الطلبات
+    # يمكن تصفير عداد الوردية للعرض، لكن next_order_id يعيد البناء من كل
+    # الفواتير الحية والمؤرشفة، لذلك لا يؤدي ذلك إلى إعادة استخدام رقم قديم.
     data['order_counter'] = 0
     data.setdefault('settings', {})['last_order_date'] = datetime.now().strftime('%Y-%m-%d')
     save(data)
     backup()
-    return jsonify({"ok": True, "shift_id": shift_id, "next_id": "ORD-0001"})
+    used_numbers = []
+    for row in data.get('orders_archive', []):
+        value = str(row.get('id', '')) if isinstance(row, dict) else ''
+        if value.startswith('ORD-'):
+            try:
+                used_numbers.append(int(value[4:]))
+            except ValueError:
+                pass
+    next_number = max(used_numbers, default=0) + 1
+    return jsonify({"ok": True, "shift_id": shift_id, "next_id": f"ORD-{next_number:04d}"})
 
 
 @app.route('/api/shifts/reset-counter', methods=['POST'])
@@ -1745,6 +2355,7 @@ def reset_counter_after_close():
         return response
     body = response.get_json() if hasattr(response, 'get_json') else {}
     body['counter'] = 0
+    body['paper_cut'] = cut_paper_to_printer(load().get('settings', {}).get('printer', {}))
     return jsonify(body)
 
 
@@ -1764,13 +2375,22 @@ def expenses_api():
     if amount <= 0 or not payload.get('note'):
         return jsonify({'ok': False, 'error': 'الوصف والمبلغ مطلوبان'}), 400
     snap = currency_snapshot(data, payload)
+    base_amount = amount_in_base(data, amount, snap['currency'], snap['exchange_rate'])
+    if amount <= 0 or base_amount is None:
+        return jsonify({'ok': False, 'error': 'مبلغ المصروف أو سعر الصرف غير صالح'}), 400
     rows = data.setdefault('expenses', [])
     expense = {'id': max([x.get('id', 0) for x in rows if isinstance(x, dict)], default=0) + 1,
-               'amount': amount, 'currency': snap['currency'], 'exchange_rate': snap['exchange_rate'],
+               'amount': amount, 'amount_base': base_amount, 'currency': snap['currency'], 'exchange_rate': snap['exchange_rate'],
                'category': payload.get('category', 'عام'), 'note': str(payload.get('note'))[:200],
                'payment': payload.get('payment', 'نقدي'), 'date': payload.get('date') or datetime.now().isoformat(),
                'created_by': session.get('username', 'نظام محلي')}
-    rows.append(expense); save(data); backup()
+    rows.append(expense)
+    record_cash_movement(data, 'out', amount, 'مصروف تشغيلي',
+                         channel='card' if expense['payment'] == 'بطاقة' else 'cash',
+                         reference_type='expense', reference_id=expense['id'],
+                         note=expense['note'], currency=expense['currency'], exchange_rate=expense['exchange_rate'],
+                         base_amount=base_amount)
+    save(data); backup()
     return jsonify({'ok': True, 'expense': expense})
 
 @app.route('/api/expenses/<int:eid>', methods=['DELETE'])
@@ -1779,6 +2399,12 @@ def delete_expense(eid):
     target = next((x for x in rows if x.get('id') == eid and not x.get('material_id')), None)
     if not target: return jsonify({'ok': False, 'error': 'المصروف غير موجود'}), 404
     target['voided'] = True; target['voided_at'] = datetime.now().isoformat(); target['voided_by'] = session.get('username', 'نظام محلي')
+    record_cash_movement(data, 'in', target.get('amount', 0), 'عكس مصروف ملغى',
+                         channel='card' if target.get('payment') == 'بطاقة' else 'cash',
+                         reference_type='expense_void', reference_id=eid,
+                         note='عكس المصروف: ' + str(target.get('note', '')),
+                         currency=target.get('currency'), exchange_rate=target.get('exchange_rate'),
+                         base_amount=expense_amount_base(data, target))
     save(data); backup(); return jsonify({'ok': True})
 
 @app.route('/api/employees', methods=['GET'])
@@ -1804,7 +2430,7 @@ def add_employee():
     if advance:
         advance_amount = positive_amount(advance, 0) or 0
         data.setdefault('expenses', []).append({
-            'employee_id': new_id, 'amount': advance_amount, 'currency': currency_snapshot(data, {}).get('currency', 'SYP'),
+            'employee_id': new_id, 'amount': advance_amount, 'amount_base': advance_amount, 'currency': 'SYP', 'exchange_rate': 1,
             'date': datetime.now().isoformat(), 'note': f"سلفة موظف: {request.json.get('name')}", 'category': 'سلفة موظف',
             'payment': 'نقدي', 'created_by': session.get('username', 'نظام محلي')
         })
@@ -1840,7 +2466,7 @@ def pay_salary(eid):
         return jsonify({'ok': False, 'error': 'مبلغ الراتب يجب أن يكون أكبر من صفر'}), 400
     timestamp = datetime.now().isoformat()
     data.setdefault('expenses', []).append({
-        'employee_id': eid, 'amount': amount, 'currency': currency_snapshot(data, {}).get('currency', 'SYP'),
+        'employee_id': eid, 'amount': amount, 'amount_base': amount, 'currency': 'SYP', 'exchange_rate': 1,
         'date': timestamp, 'note': f"دفع راتب: {emp['name']}", 'category': 'رواتب', 'payment': 'نقدي',
         'created_by': session.get('username', 'نظام محلي')
     })
@@ -1860,7 +2486,7 @@ def add_employee_advance(eid):
         return jsonify({'ok': False, 'error': 'مبلغ السلفة يجب أن يكون أكبر من صفر'}), 400
     emp['advance'] = round(float(emp.get('advance', 0) or 0) + amount, 2)
     timestamp = datetime.now().isoformat()
-    data.setdefault('expenses', []).append({'employee_id': eid, 'amount': amount, 'currency': currency_snapshot(data, {}).get('currency', 'SYP'), 'date': timestamp, 'note': f"سلفة موظف: {emp.get('name', '')}", 'category': 'سلفة موظف', 'payment': 'نقدي', 'created_by': session.get('username', 'نظام محلي')})
+    data.setdefault('expenses', []).append({'employee_id': eid, 'amount': amount, 'amount_base': amount, 'currency': 'SYP', 'exchange_rate': 1, 'date': timestamp, 'note': f"سلفة موظف: {emp.get('name', '')}", 'category': 'سلفة موظف', 'payment': 'نقدي', 'created_by': session.get('username', 'نظام محلي')})
     record_cash_movement(data, 'out', amount, 'سلفة موظف', reference_type='employee_advance', reference_id=eid, note=f"سلفة موظف: {emp.get('name', '')}")
     save(data); backup(); return jsonify({'ok': True, 'amount': amount, 'advance_total': emp['advance']})
 
@@ -1965,22 +2591,76 @@ def record_inventory_movement(data, material_name, quantity, movement_type, *, u
     return movement
 
 
-def record_cash_movement(data, direction, amount, category, *, channel='cash', reference_type='', reference_id='', supplier_id=None, note='', currency=None, exchange_rate=None):
+def record_cash_movement(data, direction, amount, category, *, channel='cash', reference_type='', reference_id='', supplier_id=None, note='', currency=None, exchange_rate=None, base_amount=None):
     """سجل تدفق نقدي مستقل عن مصروف الربح والخسارة لمنع عدّ شراء المورد مرتين."""
     amount = positive_amount(amount)
-    if direction not in {'in', 'out'} or amount is None or channel not in {'cash', 'card'}:
+    base_amount = positive_amount(base_amount if base_amount is not None else amount)
+    if direction not in {'in', 'out'} or amount is None or base_amount is None or channel not in {'cash', 'card'}:
         return None
-    snap = currency_snapshot(data, {'currency': currency} if currency else {})
+    snap = currency_snapshot(data, {'currency': currency} if currency else {'currency': 'SYP', 'exchange_rate': 1})
     movements = data.setdefault('cash_movements', [])
     movement = {
         'id': max([int(row.get('id', 0) or 0) for row in movements if isinstance(row, dict)] or [0]) + 1,
         'timestamp': datetime.now().isoformat(), 'direction': direction, 'channel': channel, 'amount': amount,
+        'amount_base': round_money(base_amount),
         'currency': snap['currency'], 'exchange_rate': exchange_rate if exchange_rate is not None else snap['exchange_rate'],
         'category': category, 'reference_type': reference_type, 'reference_id': str(reference_id or ''),
         'supplier_id': supplier_id, 'note': str(note or '')[:240], 'created_by': session.get('username', 'نظام محلي')
     }
     movements.append(movement)
     return movement
+
+
+def cash_movement_amount_base(data, movement):
+    if movement.get('amount_base') is not None:
+        return round_money(movement.get('amount_base'))
+    # السجلات اليدوية القديمة فقط كانت تحفظ amount بعملة أجنبية؛ بقية الحركات قيمها بعملة الأساس.
+    if movement.get('reference_type') in {'expense', 'expense_void'}:
+        return amount_in_base(data, movement.get('amount', 0), movement.get('currency', 'SYP'), movement.get('exchange_rate')) or 0
+    return round_money(movement.get('amount', 0))
+
+
+def normalized_cash_movement(data, movement):
+    row = dict(movement)
+    is_foreign_expense = movement.get('reference_type') in {'expense', 'expense_void'}
+    row['original_amount'] = movement.get('original_amount', movement.get('amount', 0) if is_foreign_expense else cash_movement_amount_base(data, movement))
+    row['original_currency'] = movement.get('original_currency', movement.get('currency', 'SYP') if is_foreign_expense else 'SYP')
+    row['amount'] = cash_movement_amount_base(data, movement)
+    row['amount_base'] = row['amount']
+    row['currency'] = 'SYP'
+    row['exchange_rate'] = 1
+    return row
+
+
+def financial_cash_movements(data, period=None, date_from='', date_to=''):
+    movements = list(data.get('cash_movements', []))
+    if not movements:
+        movements = list(data.get('cashbook', []))
+    seen_debt_receipts = {(str(m.get('reference_id')), m.get('reference_type')) for m in movements}
+    # أضف تحصيلات الديون التاريخية التي كانت تحفظ كطلب فقط، بما فيها الأرشيف البارد عند نطاق التقرير.
+    cold_from, cold_to = date_from, date_to
+    now = datetime.now()
+    if not cold_from and not cold_to and period == 'daily':
+        cold_from = cold_to = now.strftime('%Y-%m-%d')
+    elif not cold_from and not cold_to and period == 'monthly':
+        cold_from, cold_to = now.strftime('%Y-%m-01'), now.strftime('%Y-%m-%d')
+    elif not cold_from and not cold_to and period == 'yearly':
+        cold_from, cold_to = now.strftime('%Y-01-01'), now.strftime('%Y-%m-%d')
+    legacy_orders = data.get('orders', []) + data.get('orders_archive', []) + load_cold_orders(cold_from, cold_to)
+    for order in legacy_orders:
+        if order.get('type') != 'تسديد دين' and order.get('accounting_type') != 'debt_payment':
+            continue
+        order_id = str(order.get('id', ''))
+        if (order_id, 'debt_payment') in seen_debt_receipts:
+            continue
+        timestamp = order.get('timestamp', order.get('date', ''))
+        for channel, amount in (('cash', order.get('cash_amount', order.get('total', 0) if order.get('payment') != 'بطاقة' else 0)),
+                                ('card', order.get('card_amount', order.get('total', 0) if order.get('payment') == 'بطاقة' else 0))):
+            if amount:
+                movements.append({'timestamp': timestamp, 'direction': 'in', 'channel': channel,
+                                  'amount': amount, 'amount_base': amount, 'reference_type': 'legacy_debt_payment',
+                                  'reference_id': order_id, 'category': 'تحصيل دين'})
+    return movements
 
 
 def supplier_payment_rows(data, supplier_id):
@@ -2089,7 +2769,7 @@ def supplier_payments(sid):
         return jsonify({'ok': False, 'error': 'مبلغ وطريقة دفع صحيحتان مطلوبان'}), 400
     summary = next((row for row in supplier_summary(data) if row.get('id') == sid), None)
     due = float(summary.get('due_total', 0) or 0) if summary else 0
-    if amount > due + 0.01:
+    if amount > round_money(due):
         return jsonify({'ok': False, 'error': 'دفعة المورد أكبر من الرصيد المستحق'}), 400
     payments = data.setdefault('supplier_payments', [])
     payment = {
@@ -2105,7 +2785,7 @@ def supplier_payments(sid):
                          reference_type='supplier_payment', reference_id=payment['id'], supplier_id=sid,
                          note='دفعة للمورد: ' + supplier.get('name', ''))
     save(data); backup()
-    return jsonify({'ok': True, 'payment': payment, 'remaining_due': max(0, round(due - amount, 2))}), 201
+    return jsonify({'ok': True, 'payment': payment, 'remaining_due': max(0, round_money(due - amount))}), 201
 
 
 @app.route('/api/inventory/movements', methods=['GET'])
@@ -2124,18 +2804,15 @@ def cashbook_summary_api():
     data = load()
     date_from = str(request.args.get('from', '') or '').strip()
     date_to = str(request.args.get('to', '') or '').strip()
-    rows = list(data.get('cash_movements', []))
-    if date_from:
-        rows = [row for row in rows if row.get('timestamp', '')[:10] >= date_from]
-    if date_to:
-        rows = [row for row in rows if row.get('timestamp', '')[:10] <= date_to]
-    cash_in = round(sum(float(row.get('amount', 0) or 0) for row in rows if row.get('channel') == 'cash' and row.get('direction') == 'in'), 2)
-    cash_out = round(sum(float(row.get('amount', 0) or 0) for row in rows if row.get('channel') == 'cash' and row.get('direction') == 'out'), 2)
-    card_in = round(sum(float(row.get('amount', 0) or 0) for row in rows if row.get('channel') == 'card' and row.get('direction') == 'in'), 2)
-    card_out = round(sum(float(row.get('amount', 0) or 0) for row in rows if row.get('channel') == 'card' and row.get('direction') == 'out'), 2)
+    rows = [row for row in financial_cash_movements(data, date_from=date_from, date_to=date_to) if (not date_from or row.get('timestamp', '')[:10] >= date_from)
+            and (not date_to or row.get('timestamp', '')[:10] <= date_to)]
+    cash_in = sum_money(cash_movement_amount_base(data, row) for row in rows if row.get('channel') == 'cash' and row.get('direction') == 'in')
+    cash_out = sum_money(cash_movement_amount_base(data, row) for row in rows if row.get('channel') == 'cash' and row.get('direction') == 'out')
+    card_in = sum_money(cash_movement_amount_base(data, row) for row in rows if row.get('channel') == 'card' and row.get('direction') == 'in')
+    card_out = sum_money(cash_movement_amount_base(data, row) for row in rows if row.get('channel') == 'card' and row.get('direction') == 'out')
     return jsonify({'ok': True, 'cash_in': cash_in, 'cash_out': cash_out, 'cash_balance': round(cash_in - cash_out, 2),
                     'card_in': card_in, 'card_out': card_out, 'card_balance': round(card_in - card_out, 2),
-                    'movements': sorted(rows, key=lambda row: row.get('timestamp', ''), reverse=True)[:100]})
+                    'movements': [normalized_cash_movement(data, row) for row in sorted(rows, key=lambda row: row.get('timestamp', ''), reverse=True)[:100]]})
 
 
 @app.route('/api/materials', methods=['GET'])
@@ -2200,8 +2877,9 @@ def add_material():
     }
     materials.append(material)
     data.setdefault('expenses', []).append({
-        'material_id': new_id, 'amount': price, 'date': material['date'], 'note': f"شراء مادة: {name}",
-        'supplier_id': supplier_id, 'paid_amount': paid_amount, 'payment': payment_method, 'invoice_no': material['invoice_no'],
+        'material_id': new_id, 'amount': price, 'amount_base': price, 'date': material['date'], 'note': f"شراء مادة: {name}",
+        'supplier_id': supplier_id, 'paid_amount': paid_amount, 'paid_amount_base': paid_amount,
+        'payment': payment_method, 'invoice_no': material['invoice_no'],
         'created_by': session.get('username', 'نظام محلي')
     })
     sync_inventory_add(data, name, unit, quantity)
@@ -2218,59 +2896,38 @@ def add_material():
 
 @app.route('/api/materials/<int:mid>', methods=['PUT'])
 def update_material(mid):
-    if not has_role('manager'):
-        return permission_error()
-    data = load()
-    for m in data.get('materials', []):
-        if m['id'] == mid:
-            old_qty = m.get('quantity', 0)
-            old_name = m.get('name', '')
-            m['name'] = request.json.get('name', m['name'])
-            m['quantity'] = request.json.get('quantity', m['quantity'])
-            m['unit'] = request.json.get('unit', m['unit'])
-            m['price'] = request.json.get('price', m['price'])
-            # مزامنة المصروف المرتبط بهذه المادة
-            for e in data.get('expenses', []):
-                if e.get('material_id') == mid:
-                    e['amount'] = m['price']
-            # مزامنة رصيد المخزون: تراجع عن الكمية القديمة وأضف الجديدة (كانت هذي العملية معطّلة بالكامل سابقاً)
-            sync_inventory_consume(data, old_name, old_qty)
-            sync_inventory_add(data, m['name'], m['unit'], m['quantity'])
-            save(data); backup()
-            return jsonify({"ok": True})
-    return jsonify({"ok": False}), 404
+    if not has_role('manager'): return permission_error()
+    data=load(); target=next((m for m in data.get('materials',[]) if m.get('id')==mid),None)
+    if not target: return jsonify({"ok":False,"error":"المادة غير موجودة"}),404
+    payload=request.get_json(silent=True) or {}; old_name=str(target.get('name','')); old_qty=float(target.get('quantity',0) or 0)
+    old_price=float(target.get('price',0) or 0); old_paid=float(target.get('paid_amount',old_price) or 0)
+    name=str(payload.get('name',old_name) or '').strip()[:120]; unit=str(payload.get('unit',target.get('unit','')) or '').strip()[:30]
+    quantity=positive_amount(payload.get('quantity',old_qty)); price=positive_amount(payload.get('price',old_price))
+    if not name or not unit or quantity is None or price is None or price < old_paid:
+        return jsonify({'ok':False,'error':'بيانات المادة غير صالحة؛ لا يمكن جعل قيمة الشراء أقل من المدفوع'}),400
+    target.update({'name':name,'quantity':quantity,'unit':unit,'price':price,'paid_amount':round(old_paid,2)})
+    for e in data.get('expenses',[]):
+        if e.get('material_id')==mid and not e.get('voided'):
+            e.update({'amount':price,'amount_base':price,'paid_amount':round(old_paid,2),'paid_amount_base':round(old_paid,2),'note':f'شراء مادة: {name}'})
+    if old_name != name or old_qty != float(quantity):
+        sync_inventory_consume(data,old_name,old_qty); sync_inventory_add(data,name,unit,quantity)
+        delta=round(float(quantity)-old_qty,4)
+        if delta: record_inventory_movement(data,name,delta,'adjustment',unit=unit,reference_type='material_edit',reference_id=mid,note='تسوية كمية مادة خام بعد التعديل')
+    save(data); backup(); return jsonify({"ok":True,"material":target,"due_amount":round(price-old_paid,2)})
 
 @app.route('/api/materials/<int:mid>', methods=['DELETE'])
 def delete_material(mid):
-    """حذف مادة - يرجع مبلغها للجرد (يحذف المصروف المرتبط) ويرجع كمّيتها من رصيد المخزون"""
-    data = load()
-    target = next((m for m in data.get('materials', []) if m['id'] == mid), None)
-    if target:
-        sync_inventory_consume(data, target.get('name', ''), target.get('quantity', 0))
-    data['materials'] = [m for m in data.get('materials', []) if m['id'] != mid]
-    data['expenses'] = [e for e in data.get('expenses', []) if e.get('material_id') != mid]
-    save(data); backup()
-    return jsonify({"ok": True})
-
-
-def inventory_alerts(data):
-    """يعيد المواد النافدة أو الواقعة تحت حد التنبيه مع حالة مفهومة للواجهة."""
-    alerts = []
-    for item in data.get('inventory', []):
-        stock = item.get('stock', 0) or 0
-        threshold = item.get('low_stock_threshold', 0) or 0
-        status = 'out' if stock <= 0 else ('low' if threshold > 0 and stock <= threshold else 'ok')
-        item['status'] = status
-        item['low'] = status in ('out', 'low')
-        if status != 'ok':
-            alerts.append({
-                'id': item.get('id'), 'name': item.get('name', ''),
-                'stock': stock, 'unit': item.get('unit', ''),
-                'threshold': threshold, 'status': status
-            })
-    return alerts
-
-
+    if not has_role('manager'): return permission_error()
+    data=load(); target=next((m for m in data.get('materials',[]) if m.get('id')==mid),None)
+    if not target: return jsonify({"ok":False,"error":"المادة غير موجودة"}),404
+    name=str(target.get('name','')); quantity=float(target.get('quantity',0) or 0); paid=float(target.get('paid_amount',target.get('price',0)) or 0)
+    sync_inventory_consume(data,name,quantity)
+    if quantity: record_inventory_movement(data,name,-quantity,'void',unit=target.get('unit',''),reference_type='material_void',reference_id=mid,note='عكس شراء مادة ملغى')
+    for e in data.setdefault('expenses',[]):
+        if e.get('material_id')==mid and not e.get('voided'):
+            e['voided']=True; e['voided_at']=datetime.now().isoformat(); e['voided_by']=session.get('username','نظام محلي')
+    if paid: record_cash_movement(data,'in',paid,'عكس شراء مواد خام ملغى',channel='card' if target.get('payment')=='بطاقة' else 'cash',reference_type='material_void',reference_id=mid,note='عكس شراء: '+name)
+    data['materials']=[m for m in data.get('materials',[]) if m.get('id')!=mid]; save(data); backup(); return jsonify({"ok":True,"voided":True})
 @app.route('/api/inventory', methods=['GET'])
 def get_inventory():
     """رصيد المخزون الحالي لكل مادة خام مع حالة النفاد أو الانخفاض."""
@@ -2350,6 +3007,7 @@ def analytics_products():
 def get_analytics():
     """الجرد المطور - يدعم يومي/شهري/سنوي بالإضافة لتقرير تفصيلي بنطاق تاريخ + قسم + منتج محدد"""
     data = load()
+    now = datetime.now()
     period = request.args.get('period', 'daily')
     category_filter = request.args.get('category', '').strip()
     product_filter = request.args.get('product', '').strip()
@@ -2375,12 +3033,29 @@ def get_analytics():
         odate = o.get('timestamp', '')[:10]
         for i in o.get('items', []):
             name = i.get('name', '')
-            qty = i.get('quantity', i.get('qty', 1))
-            price = i.get('price', 0)
-            entry = item_sales.setdefault(name, {'quantity': 0, 'total': 0, 'dates': {}})
+            qty = i.get('quantity', i.get('qty', 1)) or 0
+            price = i.get('price', 0) or 0
+            order_subtotal = o.get('subtotal')
+            if order_subtotal is None:
+                order_subtotal = sum_money((row.get('price', 0) or 0) * (row.get('quantity', row.get('qty', 1)) or 0) for row in o.get('items', []))
+            order_total = round_money(o.get('total', 0))
+            net_factor = order_total / order_subtotal if order_subtotal else 0
+            item_total = qty * price * net_factor
+            entry = item_sales.setdefault(name, {'quantity': 0, 'total': 0, 'cost_total': 0, 'uncosted': False, 'dates': {}})
             entry['quantity'] += qty
-            entry['total'] += qty * price
+            entry['total'] += item_total
             entry['dates'][odate] = entry['dates'].get(odate, 0) + qty
+            product = next((row for products in data.get('menu', {}).values() for row in products
+                            if str(row.get('id')) == str(i.get('product_id', i.get('id')))), None)
+            if product is None:
+                matches = [row for products in data.get('menu', {}).values() for row in products if row.get('name') == name]
+                product = matches[0] if len(matches) == 1 else None
+            unit_cost = i.get('unit_cost_snapshot') if 'unit_cost_snapshot' in i else compute_product_cost_as_of(
+                data, product, o.get('timestamp') or o.get('date'))
+            if unit_cost is None:
+                entry['uncosted'] = True
+            else:
+                entry['cost_total'] += float(unit_cost) * qty
 
     # تضييق النتائج حسب فلتر القسم/المنتج المختار بالتقرير التفصيلي
     filtered_items = item_sales
@@ -2398,41 +3073,49 @@ def get_analytics():
         for n, e in filtered_items.items()
     ]
 
-    # عندما يكون هناك فلتر قسم/منتج، المبيعات والطلبات تُحسب على مستوى الصنف المطابق فقط
-    # (مو إجمالي الطلب كامل، لأنه ممكن يحوي أصناف من أقسام تانية)
-    if category_filter or product_filter:
-        total_sales = sum(e['total'] for e in filtered_items.values())
-        total_orders = sum(
-            1 for o in orders
-            if any(i.get('name', '') in filtered_items for i in o.get('items', []))
-        )
-    else:
-        total_sales = sum(o.get('total', 0) for o in orders)
-        total_orders = len(orders)
+    # عند اختيار منتج/قسم توزع الخصومات على أصناف الطلب بنسبة قيمة كل صنف.
+    def order_matches_filter(order):
+        return not (category_filter or product_filter) or any(
+            item.get('name', '') in filtered_items for item in order.get('items', []))
+
+    def selected_order_total(order):
+        if not (category_filter or product_filter):
+            return round_money(order.get('total', 0))
+        gross = sum((item.get('price', 0) or 0) * (item.get('quantity', item.get('qty', 1)) or 0)
+                    for item in order.get('items', []) if item.get('name', '') in filtered_items)
+        subtotal = order.get('subtotal')
+        if subtotal is None:
+            subtotal = sum_money((item.get('price', 0) or 0) * (item.get('quantity', item.get('qty', 1)) or 0)
+                                 for item in order.get('items', []))
+        return round_money(gross * round_money(order.get('total', 0)) / subtotal) if subtotal else 0.0
+
+    selected_orders = [order for order in orders if order_matches_filter(order)]
+    total_sales = sum_money(selected_order_total(order) for order in selected_orders)
+    total_orders = len(selected_orders)
 
     # 1. متوسط قيمة الطلب
     avg_order = total_sales / total_orders if total_orders > 0 else 0
 
     # 2. نسبة/عدد كل نوع طلب
     type_stats = {'سفري': 0, 'صالة': 0, 'ديليفري': 0}
-    for o in orders:
+    for o in selected_orders:
         t = o.get('type', 'سفري')
         type_stats[t] = type_stats.get(t, 0) + 1
     type_pct = {k: round(v/total_orders*100, 1) if total_orders > 0 else 0 for k, v in type_stats.items()}
 
     # 3. أداء الموظفين
     cashier_stats = {}
-    for o in orders:
+    for o in selected_orders:
         c = o.get('cashier_name', 'غير معروف')
         if c not in cashier_stats:
             cashier_stats[c] = {'orders': 0, 'sales': 0}
         cashier_stats[c]['orders'] += 1
-        cashier_stats[c]['sales'] += o.get('total', 0)
+        cashier_stats[c]['sales'] += selected_order_total(o)
 
     # 4. صافي الربح
     # المصاريف (سلف الموظفين + شراء المواد الخام) تُصفّى حسب نفس الفترة المختارة تماماً مثل المبيعات،
     # بدل حسابها كاملة دائماً بغض النظر عن الفترة (كان هذا يُنتج صافي ربح خاطئ لليومي/الشهري).
-    all_expenses = data.get('expenses', [])
+    all_expenses = [e for e in data.get('expenses', []) if isinstance(e, dict) and not e.get('voided')]
     if period == 'daily':
         period_expenses = [e for e in all_expenses if e.get('date', '').startswith(now.strftime('%Y-%m-%d'))]
     elif period == 'monthly':
@@ -2447,33 +3130,58 @@ def get_analytics():
             period_expenses = [e for e in period_expenses if e.get('date', '')[:10] <= date_to]
     else:
         period_expenses = all_expenses
-    total_expenses = sum(e.get('amount', 0) for e in period_expenses)
+    expense_base = {id(e): (expense_amount_base(data, e) or 0) for e in period_expenses}
+    total_expenses = sum_money(expense_base.values())
 
     # فصل مشتريات المواد عن المصروفات التشغيلية حتى لا تختلط تكلفة المخزون مع الربح التشغيلي.
     purchase_expenses = [e for e in period_expenses if e.get('material_id') is not None]
-    purchases_total = sum(e.get('amount', 0) or 0 for e in purchase_expenses)
-    purchases_paid = sum(e.get('paid_amount', e.get('amount', 0)) or 0 for e in purchase_expenses)
-    other_expenses = total_expenses - purchases_total
+    purchases_total = sum_money(expense_base[id(e)] for e in purchase_expenses)
+    purchases_paid = sum_money(e.get('paid_amount_base', e.get('paid_amount', e.get('amount', 0))) or 0 for e in purchase_expenses)
 
-    # الرواتب: راتب شهري ثابت، فلا تُخصم بالكامل من تحليل يوم واحد فقط.
+    # قيد الراتب المستحق شهرياً مرة واحدة: لا تُطرح معه دفعات/سلف الموظف المسجلة كمصروف نقدي مرة ثانية.
     single_day = period == 'daily' or (period == 'custom' and date_from and date_to and date_from == date_to)
-    total_salaries = 0 if single_day else sum(e.get('salary', 0) for e in data.get('employees', []))
+    salary_months = 0.0
+    if period == 'monthly':
+        salary_months = 1.0
+    elif period == 'yearly' or (period == 'custom' and date_from and date_to and not single_day):
+        try:
+            start_date = datetime(now.year, 1, 1).date() if period == 'yearly' else datetime.strptime(date_from, '%Y-%m-%d').date()
+            end_date = now.date() if period == 'yearly' else datetime.strptime(date_to, '%Y-%m-%d').date()
+            if end_date >= start_date:
+                cursor = start_date.replace(day=1)
+                while cursor <= end_date:
+                    next_month = datetime(cursor.year + (cursor.month == 12), 1 if cursor.month == 12 else cursor.month + 1, 1).date()
+                    month_end = next_month - timedelta(days=1)
+                    overlap_start, overlap_end = max(start_date, cursor), min(end_date, month_end)
+                    days_in_month = (month_end - cursor).days + 1
+                    salary_months += ((overlap_end - overlap_start).days + 1) / days_in_month
+                    cursor = next_month
+        except (TypeError, ValueError):
+            salary_months = 0.0
+    total_salaries = sum_money((e.get('salary', 0) or 0) * salary_months for e in data.get('employees', []))
+    payroll_cash_expenses = sum_money(expense_base[id(e)] for e in period_expenses if e.get('employee_id') is not None)
+    if not single_day:
+        total_salaries = max(total_salaries, payroll_cash_expenses)
+    other_expenses = total_expenses - purchases_total - (0 if single_day else payroll_cash_expenses)
 
     # تكلفة البضاعة المباعة: تعتمد على الوصفات ومتوسط سعر شراء المواد، وتُحسب فقط للأصناف ذات التكلفة المعروفة.
-    products_by_name = {p.get('name', ''): p for items in data.get('menu', {}).values() for p in items}
     cost_of_goods_sold = 0
     uncosted_products = []
     for name, entry in filtered_items.items():
-        product = products_by_name.get(name)
-        unit_cost = compute_product_cost(data, product) if product else None
-        if unit_cost is None:
+        cost_of_goods_sold += entry.get('cost_total', 0) or 0
+        if entry.get('uncosted'):
             uncosted_products.append(name)
-        else:
-            cost_of_goods_sold += unit_cost * (entry.get('quantity', 0) or 0)
     gross_profit = total_sales - cost_of_goods_sold
     gross_margin_pct = round((gross_profit / total_sales * 100), 1) if total_sales else 0
     operating_profit = gross_profit - other_expenses - total_salaries
-    cash_flow_after_purchases = total_sales - total_expenses - total_salaries
+    # التدفق النقدي ليس ربحًا على أساس الاستحقاق: شراء آجل لا يخرج نقدًا،
+    # والدفعة الجزئية لا يجوز طرح كامل فاتورة المورد. احسبه من دفتر الصندوق
+    # الفعلي ضمن نفس الفترة حتى تتطابق التحليلات مع النقد والبطاقات.
+    period_cash_movements = [m for m in financial_cash_movements(data, period, date_from, date_to)
+                             if _in_report_period(m.get('timestamp', ''), period, date_from, date_to)]
+    cash_flow_after_purchases = sum_money(
+        cash_movement_amount_base(data, m) * (1 if m.get('direction') == 'in' else -1)
+        for m in period_cash_movements)
     inventory_value = sum((item.get('stock', 0) or 0) * (material_avg_cost(data, item.get('name', '')) or 0) for item in data.get('inventory', []))
     supplier_rows = supplier_summary(data)
     supplier_due = sum(row.get('due_total', 0) or 0 for row in supplier_rows)
@@ -2486,17 +3194,27 @@ def get_analytics():
     # الطلبات القديمة قبل هذا التحديث ما فيها cash_amount/card_amount فبنرجع لتخمين من حقل payment النصي.
     total_cash = 0
     total_card = 0
-    for o in orders:
+    for o in selected_orders:
         if 'cash_amount' in o or 'card_amount' in o:
-            total_cash += o.get('cash_amount', 0) or 0
-            total_card += o.get('card_amount', 0) or 0
+            cash_amount = o.get('cash_amount', 0) or 0
+            card_amount = o.get('card_amount', 0) or 0
         else:
             pm = o.get('payment', '')
-            amt = o.get('total', 0)
-            if pm == 'بطاقة':
-                total_card += amt
-            else:
-                total_cash += amt
+            cash_amount = 0 if pm == 'بطاقة' else o.get('total', 0)
+            card_amount = o.get('total', 0) if pm == 'بطاقة' else 0
+        if category_filter or product_filter:
+            order_total = round_money(o.get('total', 0))
+            original_subtotal = o.get('subtotal')
+            if original_subtotal is None:
+                original_subtotal = sum_money((i.get('price', 0) or 0) * (i.get('quantity', i.get('qty', 1)) or 0) for i in o.get('items', []))
+            selected_gross = sum((i.get('price', 0) or 0) * (i.get('quantity', i.get('qty', 1)) or 0)
+                                 for i in o.get('items', [])
+                                 if i.get('name', '') in filtered_items)
+            selected_total = selected_gross * order_total / original_subtotal if original_subtotal else 0
+            tender_ratio = selected_total / order_total if order_total else 0
+            cash_amount, card_amount = round_money(cash_amount * tender_ratio), round_money(card_amount * tender_ratio)
+        total_cash += cash_amount
+        total_card += card_amount
 
     # تفاصيل الفواتير: تبقى على مستوى الفاتورة مع أصنافها، وتُرشّح عند اختيار قسم/منتج.
     order_details = []
@@ -2517,7 +3235,7 @@ def get_analytics():
         if original_subtotal is None:
             original_subtotal = sum((i.get('price', 0) or 0) * (i.get('quantity', i.get('qty', 1)) or 0) for i in o.get('items', []))
         original_total = o.get('total', 0) or 0
-        discount_amount = o.get('discount_amount')
+        discount_amount = o.get('discount_total')
         if discount_amount is None:
             discount_amount = max(0, (original_subtotal or 0) - original_total)
         filtered_subtotal = sum(i['total'] for i in detail_items)
@@ -2531,8 +3249,8 @@ def get_analytics():
             'date': o.get('timestamp') or o.get('date', ''),
             'type': o.get('type', 'سفري'),
             'payment': o.get('payment', '') or 'غير محدد',
-            'cash_amount': o.get('cash_amount', 0) or 0,
-            'card_amount': o.get('card_amount', 0) or 0,
+            'cash_amount': round_money((o.get('cash_amount', 0) or 0) * (detail_total / original_total)) if (category_filter or product_filter) and original_total else (o.get('cash_amount', 0) or 0),
+            'card_amount': round_money((o.get('card_amount', 0) or 0) * (detail_total / original_total)) if (category_filter or product_filter) and original_total else (o.get('card_amount', 0) or 0),
             'customer': o.get('customer', ''),
             'table': o.get('table', ''),
             'cashier_name': o.get('cashier_name', 'غير معروف'),
@@ -2601,10 +3319,12 @@ def _report_period_orders(data, period='daily', date_from='', date_to=''):
     else:
         eff_from = eff_to = ''  # 'custom' بلا تواريخ، أو فترة غير معروفة: كل شيء
 
-    orders = [o for o in data.get('orders', []) + data.get('orders_archive', []) if not o.get('voided')]
+    orders = [o for o in data.get('orders', []) + data.get('orders_archive', [])
+              if not o.get('voided') and o.get('type') != 'تسديد دين' and o.get('accounting_type') != 'debt_payment']
     needs_cold = (not eff_from) or (eff_from < retention_cutoff)
     if needs_cold:
-        cold = [o for o in load_cold_orders(eff_from, eff_to) if not o.get('voided')]
+        cold = [o for o in load_cold_orders(eff_from, eff_to) if not o.get('voided')
+                and o.get('type') != 'تسديد دين' and o.get('accounting_type') != 'debt_payment']
         if cold:
             live_ids = {str(o.get('id')) for o in orders}
             orders += [o for o in cold if str(o.get('id')) not in live_ids]
@@ -2657,7 +3377,8 @@ def financial_report_payload(data, period='daily', date_from='', date_to='', cas
         })
         total = float(order.get('total', 0) or 0)
         subtotal = float(order.get('subtotal', total) or total)
-        discount = float(order.get('discount_amount', max(0, subtotal - total)) or 0)
+        discount_value = order.get('discount_total')
+        discount = float(max(0, subtotal - total) if discount_value is None else (discount_value or 0))
         cash_amount = order.get('cash_amount')
         card_amount = order.get('card_amount')
         if cash_amount is None and card_amount is None:
@@ -2682,19 +3403,18 @@ def financial_report_payload(data, period='daily', date_from='', date_to='', cas
             row[key] = round(row[key], 2)
         cashier_summary.append(row)
     cashier_summary.sort(key=lambda row: (-row['sales'], row['cashier']))
-    modern_cashbook = data.get('cash_movements', [])
-    legacy_cashbook = data.get('cashbook', []) if not modern_cashbook else []
-    cashbook = [movement for movement in modern_cashbook + legacy_cashbook if _in_report_period(movement.get('timestamp'), period, date_from, date_to)]
-    cash_in = sum(float(m.get('amount', 0) or 0) for m in cashbook if m.get('channel') == 'cash' and m.get('direction') == 'in')
-    cash_out = sum(float(m.get('amount', 0) or 0) for m in cashbook if m.get('channel') == 'cash' and m.get('direction') == 'out')
-    card_in = sum(float(m.get('amount', 0) or 0) for m in cashbook if m.get('channel') == 'card' and m.get('direction') == 'in')
-    card_out = sum(float(m.get('amount', 0) or 0) for m in cashbook if m.get('channel') == 'card' and m.get('direction') == 'out')
+    cashbook = [movement for movement in financial_cash_movements(data, period, date_from, date_to)
+                if _in_report_period(movement.get('timestamp'), period, date_from, date_to)]
+    cash_in = sum_money(cash_movement_amount_base(data, m) for m in cashbook if m.get('channel') == 'cash' and m.get('direction') == 'in')
+    cash_out = sum_money(cash_movement_amount_base(data, m) for m in cashbook if m.get('channel') == 'cash' and m.get('direction') == 'out')
+    card_in = sum_money(cash_movement_amount_base(data, m) for m in cashbook if m.get('channel') == 'card' and m.get('direction') == 'in')
+    card_out = sum_money(cash_movement_amount_base(data, m) for m in cashbook if m.get('channel') == 'card' and m.get('direction') == 'out')
     return {
         'period': period, 'from': date_from, 'to': date_to, 'cashier_filter': cashier_filter,
         'cashier_summary': cashier_summary, 'orders': orders,
-        'cashbook': sorted(cashbook, key=lambda row: str(row.get('timestamp', '')), reverse=True),
+        'cashbook': [normalized_cash_movement(data, row) for row in sorted(cashbook, key=lambda row: str(row.get('timestamp', '')), reverse=True)],
         'summary': {
-            'sales': round(sum(float(order.get('total', 0) or 0) for order in orders), 2), 'orders': len(orders),
+            'sales': sum_money(float(order.get('total', 0) or 0) for order in orders), 'orders': len(orders),
             'cash_in': round(cash_in, 2), 'cash_out': round(cash_out, 2), 'cash_balance': round(cash_in - cash_out, 2),
             'card_in': round(card_in, 2), 'card_out': round(card_out, 2), 'card_balance': round(card_in - card_out, 2)
         }
@@ -2739,7 +3459,7 @@ def create_financial_xlsx(report):
     sheets = [
         ('الملخص المالي', [['تقرير مالي ومبيعات - كاشير قيصر قيصر'], ['الفترة', report['period']], ['من', report['from'] or '—'], ['إلى', report['to'] or '—'], [], ['البند', 'القيمة'], ['إجمالي المبيعات', summary['sales']], ['عدد الفواتير', summary['orders']], ['نقد داخل', summary['cash_in']], ['نقد خارج', summary['cash_out']], ['رصيد النقد', summary['cash_balance']], ['بطاقة داخل', summary['card_in']], ['بطاقة خارج', summary['card_out']], ['رصيد البطاقات', summary['card_balance']]]),
         ('مبيعات الكاشير قيصر', [['الكاشير قيصر', 'عدد الفواتير', 'المبيعات', 'النقد', 'البطاقات', 'الخصومات', 'متوسط الفاتورة', 'صالة', 'سفري', 'ديليفري']] + [[row['cashier'], row['orders'], row['sales'], row['cash'], row['card'], row['discounts'], row['average_order'], row['dine_in_orders'], row['takeaway_orders'], row['delivery_orders']] for row in report['cashier_summary']]),
-        ('الفواتير', [['رقم الفاتورة', 'التاريخ', 'الكاشير قيصر', 'النوع', 'الدفع', 'النقد', 'البطاقات', 'الخصم', 'الإجمالي', 'حالة الطباعة', 'الطاولة', 'الزبون', 'الأصناف']] + [[order.get('id', ''), order.get('timestamp') or order.get('date', ''), order.get('cashier_name', 'غير معروف'), order.get('type', 'سفري'), order.get('payment', ''), order.get('cash_amount', ''), order.get('card_amount', ''), order.get('discount_amount', ''), order.get('total', 0), order_print_status_label(order), order.get('table', ''), order.get('customer', ''), '، '.join(f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', []))] for order in report['orders']]),
+        ('الفواتير', [['رقم الفاتورة', 'التاريخ', 'الكاشير قيصر', 'النوع', 'الدفع', 'النقد', 'البطاقات', 'الخصم', 'الإجمالي', 'حالة الطباعة', 'الطاولة', 'الزبون', 'الأصناف']] + [[order.get('id', ''), order.get('timestamp') or order.get('date', ''), order.get('cashier_name', 'غير معروف'), order.get('type', 'سفري'), order.get('payment', ''), order.get('cash_amount', ''), order.get('card_amount', ''), order.get('discount_total', max(0, (order.get('subtotal') or 0) - (order.get('total') or 0))), order.get('total', 0), order_print_status_label(order), order.get('table', ''), order.get('customer', ''), '، '.join(f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', []))] for order in report['orders']]),
         ('دفتر الصندوق', [['التاريخ', 'الاتجاه', 'القناة', 'التصنيف', 'المبلغ', 'الكاشير قيصر/المستخدم', 'المرجع', 'الملاحظة']] + [[movement.get('timestamp', ''), movement.get('direction', ''), movement.get('channel', ''), movement.get('category', ''), movement.get('amount', 0), movement.get('created_by', ''), movement.get('reference_id', ''), movement.get('note', '')] for movement in report['cashbook']])
     ]
     buffer = BytesIO()
@@ -3112,17 +3832,37 @@ def list_windows_printers():
     (يعمل فقط عند التشغيل الفعلي على ويندوز، وليس أثناء التطوير بترمكس/لينكس)."""
     try:
         result = subprocess.run(
-            ['powershell', '-NoProfile', '-Command', 'Get-Printer | Select-Object -ExpandProperty Name'],
+            ['powershell', '-WindowStyle', 'Hidden', '-NoProfile', '-Command', 'Get-Printer | Select-Object -ExpandProperty Name'],
             capture_output=True, text=True, timeout=8
         )
         return [n.strip() for n in result.stdout.splitlines() if n.strip()]
     except Exception:
         return []
 
+def list_windows_printer_status():
+    """يعيد الحالة الحية من Win32_Printer، لا مجرد أسماء الطابعات المثبتة."""
+    if sys.platform != 'win32':
+        return []
+    command = "Get-CimInstance Win32_Printer | Select-Object Name,PrinterStatus,WorkOffline,DetectedErrorState,PrinterState,Status | ConvertTo-Json -Compress"
+    try:
+        result = subprocess.run(['powershell', '-WindowStyle', 'Hidden', '-NoProfile', '-Command', command], capture_output=True, text=True, timeout=8)
+        raw = json.loads(result.stdout or '[]')
+        rows = raw if isinstance(raw, list) else ([raw] if isinstance(raw, dict) else [])
+        output = []
+        for row in rows:
+            if not isinstance(row, dict) or not str(row.get('Name') or '').strip():
+                continue
+            status_code = int(row.get('PrinterStatus') or 0)
+            offline = bool(row.get('WorkOffline')) or str(row.get('Status') or '').lower() in {'offline', 'error'} or int(row.get('DetectedErrorState') or 0) not in {0, 1}
+            output.append({'name': str(row.get('Name')).strip(), 'status_code': status_code, 'work_offline': offline, 'error_state': row.get('DetectedErrorState'), 'printer_state': row.get('PrinterState'), 'status': 'offline' if offline else ('ready' if status_code in {0, 3, 4, 5, 6, 7, 8, 9, 10} else 'unknown')})
+        return output
+    except (OSError, ValueError, TypeError, subprocess.SubprocessError):
+        return []
+
 def get_default_windows_printer():
     try:
         result = subprocess.run(
-            ['powershell', '-NoProfile', '-Command',
+            ['powershell', '-WindowStyle', 'Hidden', '-NoProfile', '-Command',
              '(Get-CimInstance -Query "SELECT * FROM Win32_Printer WHERE Default=TRUE").Name'],
             capture_output=True, text=True, timeout=8
         )
@@ -3138,36 +3878,247 @@ def set_default_windows_printer(name):
     except Exception:
         return False
 
-def submit_network_raw_print(host, port, text):
+def render_escpos_raster_payload(text, paper_width=80, font_size='medium', logo_data='', logo_size='medium', logo_alignment='center', text_alignment='center', print_density=80, print_quality='normal'):
+    """يرسم العربية بخط Tajawal ثم يحولها إلى صورة ESC/POS أحادية اللون.
+
+    لا نرسل UTF-8 خامًا إلى الطابعة؛ أغلب طابعات ESC/POS لا تعرف UTF-8 العربي
+    وتطبع رموزًا. الرسم كصورة يتجاوز اختلاف code page ويدعم العربية RTL دائمًا.
+    """
+    # Standard printable dot widths: 58mm≈384, 80mm≈576, 112mm≈832 at
+    # 203dpi. The old code treated 112mm as 80mm, which clipped wide receipts.
+    try:
+        paper_width = int(paper_width or 80)
+    except (TypeError, ValueError):
+        paper_width = 80
+    width = {58: 384, 80: 576, 112: 832}.get(paper_width, 576)
+    # Keep enough pixels per glyph for Arabic diacritics and avoid collisions
+    # between adjacent raster rows on dense thermal heads.
+    scale = {'small': 18, 'medium': 23, 'large': 29}.get(str(font_size or 'medium'), 23)
+    font_candidates = (
+        os.path.join(BASE_DIR, 'fonts', 'Tajawal-Regular.ttf'),
+        os.path.join(BASE_DIR, 'fonts', 'Tajawal-Bold.ttf'),
+    )
+    font = ImageFont.load_default()
+    for font_path in font_candidates:
+        if os.path.exists(font_path):
+            try:
+                font = ImageFont.truetype(font_path, scale)
+                break
+            except (OSError, ValueError):
+                continue
+    probe = ImageDraw.Draw(Image.new('L', (width, 10), 255))
+    max_text_width = width - 24
+
+    def visual(value):
+        value = str(value or '')
+        try:
+            return get_display(arabic_reshaper.reshape(value)).replace('\u200e', '').replace('\u200f', '')
+        except Exception:
+            return value
+
+    def wrap(value):
+        """Wrap on words first, then split only an overlong token by glyph.
+
+        Character-only wrapping can separate Arabic words and produce visually
+        crowded lines. Measuring the shaped visual string also keeps RTL text
+        inside the printable area before it reaches the printer.
+        """
+        value = str(value or '').replace('\t', '    ')
+        if not value:
+            return ['']
+        result, current = [], ''
+        for word in value.split(' '):
+            candidate = word if not current else current + ' ' + word
+            if current and probe.textbbox((0, 0), visual(candidate), font=font)[2] > max_text_width:
+                result.append(current)
+                current = word
+            else:
+                current = candidate
+            if probe.textbbox((0, 0), visual(current), font=font)[2] <= max_text_width:
+                continue
+            # A single product name can itself be longer than the paper width.
+            chunk = ''
+            for char in current:
+                candidate_chunk = chunk + char
+                if chunk and probe.textbbox((0, 0), visual(candidate_chunk), font=font)[2] > max_text_width:
+                    result.append(chunk)
+                    chunk = char
+                else:
+                    chunk = candidate_chunk
+            current = chunk
+        if current or not result:
+            result.append(current)
+        return result
+
+    lines = []
+    for raw_line in str(text or '').splitlines():
+        lines.extend(wrap(raw_line))
+    # Derive line spacing from the actual font metrics. A fixed height is not
+    # safe for Arabic marks, especially with the large font setting.
+    sample_bbox = probe.textbbox((0, 0), visual('إيصال'), font=font)
+    glyph_height = max(1, sample_bbox[3] - sample_bbox[1])
+    line_height = max(scale + 8, glyph_height + 8)
+    top_padding = 10
+    bottom_padding = 10
+    image = Image.new('L', (width, max(32, len(lines) * line_height + top_padding + bottom_padding)), 255)
+    draw = ImageDraw.Draw(image)
+    y = top_padding
+    right_aligned = str(text_alignment or 'center') == 'right'
+    for line in lines:
+        shaped = visual(line)
+        bbox = draw.textbbox((0, 0), shaped, font=font)
+        line_width = bbox[2] - bbox[0]
+        if right_aligned:
+            # النص العربي RTL: "يمين" يعني إلصاق الحافة اليمنى بحافة الورق.
+            x = max(6, width - line_width - 12)
+        else:
+            x = max(6, (width - line_width) // 2)
+        # Compensate for fonts with a negative top bearing. Without this, the
+        # first Arabic glyph row can be clipped and appear to touch the line
+        # above it on some thermal printers.
+        draw_y = y - bbox[1]
+        draw.text((x, draw_y), shaped, fill=0, font=font)
+        y += line_height
+    image = image.crop((0, 0, width, max(y + bottom_padding, 32)))
+
+    # Include the configured restaurant logo in the same raster job. This avoids
+    # the old split path where the logo appeared in browser preview but was
+    # silently omitted from thermal printing.
+    if logo_data and isinstance(logo_data, str) and logo_data.startswith('data:image/') and ',' in logo_data:
+        try:
+            encoded = logo_data.split(',', 1)[1]
+            logo_bytes = base64.b64decode(encoded, validate=True)
+            logo = Image.open(BytesIO(logo_bytes)).convert('L')
+            max_logo_width = width - 32
+            max_logo_height = {'small': 48, 'medium': 72, 'large': 104}.get(str(logo_size or 'medium'), 72)
+            logo.thumbnail((max_logo_width, max_logo_height), Image.Resampling.LANCZOS)
+            if logo.width and logo.height:
+                logo_canvas = Image.new('L', (width, logo.height + 16), 255)
+                if logo_alignment == 'right':
+                    logo_x = width - logo.width - 10
+                elif logo_alignment == 'left':
+                    logo_x = 10
+                else:
+                    logo_x = (width - logo.width) // 2
+                logo_canvas.paste(logo, (max(0, logo_x), 8))
+                combined = Image.new('L', (width, logo_canvas.height + image.height), 255)
+                combined.paste(logo_canvas, (0, 0))
+                combined.paste(image, (0, logo_canvas.height))
+                image = combined
+        except (ValueError, OSError, binascii.Error):
+            # A damaged optional logo must never block printing the Arabic text.
+            pass
+
+    # Density is implemented at the raster threshold, which is safe across
+    # old and new ESC/POS models because no vendor-specific head command is
+    # required. Higher density marks lighter gray antialias pixels as black.
+    try:
+        density = max(30, min(100, int(print_density or 80)))
+    except (TypeError, ValueError):
+        density = 80
+    threshold = 120 + int(density * 0.75)
+    if str(print_quality or 'normal') == 'high':
+        threshold += 6
+    elif str(print_quality or 'normal') == 'draft':
+        threshold -= 8
+    if str(print_quality or 'normal') == 'high':
+        # Ordered 4x4 dithering preserves thin Arabic strokes and logo detail
+        # better than a single global threshold on low-resolution heads.
+        matrix = ((0, 8, 2, 10), (12, 4, 14, 6), (3, 11, 1, 9), (15, 7, 13, 5))
+        bitmap = Image.new('1', image.size, 1)
+        source = image.load(); target = bitmap.load()
+        for yy in range(image.height):
+            for xx in range(image.width):
+                local_threshold = threshold - 24 + matrix[yy % 4][xx % 4] * 3
+                target[xx, yy] = 0 if source[xx, yy] < local_threshold else 1
+    else:
+        bitmap = image.point(lambda p: 0 if p < threshold else 255, mode='1')
+    row_bytes = (width + 7) // 8
+    data = bytearray()
+    pixels = bitmap.load()
+    for row in range(bitmap.height):
+        for col_byte in range(row_bytes):
+            value = 0
+            for bit in range(8):
+                col = col_byte * 8 + bit
+                if col < width and pixels[col, row] == 0:
+                    value |= 0x80 >> bit
+            data.append(value)
+    header = bytes((0x1d, 0x76, 0x30, 0x00, row_bytes & 0xff, row_bytes >> 8, bitmap.height & 0xff, bitmap.height >> 8))
+    return b'\x1b\x40' + header + bytes(data) + b'\n\n\n\x1d\x56\x00'
+
+def escpos_cut_bytes(printer=None):
+    """يبني أمر القص من إعدادات الطابعة بدل افتراض أمر واحد لكل الموديلات."""
+    printer = printer or {}
+    if not bool(printer.get('cut_enabled', True)):
+        return b''
+    try:
+        feed_lines = max(0, min(10, int(printer.get('feed_before_cut', 3) or 0)))
+    except (TypeError, ValueError):
+        feed_lines = 3
+    cut_mode = str(printer.get('cut_mode', 'full') or 'full')
+    cut_code = b'\x00' if cut_mode == 'full' else b'\x01'
+    return (b'\n' * feed_lines) + b'\x1d\x56' + cut_code
+
+def render_escpos_raster_payload_for_printer(text, printer=None):
+    """مسار الطباعة الرسمي: صورة عربية raster ثم قص مضبوط من إعدادات الطابعة."""
+    printer = printer or {}
+    # Roll-fed ESC/POS printers physically advance paper in portrait. Keep the
+    # saved orientation available to the UI and non-roll drivers, but never
+    # rotate a long receipt for RAW thermal output: that would clip or shrink
+    # the receipt. The thermal-safe layout remains portrait for both modes.
+    # Do not pad or rotate a roll receipt to a fixed page size. The raster
+    # height is intentionally derived from the number of wrapped lines, so a
+    # one-line order is short and a long order grows downward naturally.
+    payload = render_escpos_raster_payload(
+        text,
+        printer.get('paper_width', 80),
+        printer.get('font_size', 'medium'),
+        printer.get('logo_data', ''),
+        printer.get('logo_size', 'medium'),
+        printer.get('logo_alignment', 'center'),
+        printer.get('receipt_alignment', 'center'),
+        printer.get('print_density', 80),
+        printer.get('print_quality', 'normal'),
+    )
+    default_tail = b'\n\n\n\x1d\x56\x00'
+    if payload.endswith(default_tail):
+        return payload[:-len(default_tail)] + escpos_cut_bytes(printer)
+    return payload + escpos_cut_bytes(printer)
+
+
+def submit_network_raw_print(host, port, text, font_size='medium', paper_width=80, printer_config=None):
     """إرسال مباشر لطابعة حرارية ESC/POS عبر Wi‑Fi/LAN عند إدخال عنوانها، دون أي تعريف Windows."""
     try:
         host = str(host or '').strip()
         port = int(port or 9100)
         if not host or not (1 <= port <= 65535):
             return {'ok': False, 'status': 'not_configured', 'message': 'أدخل عنوان IP ومنفذًا صالحًا للطابعة'}
-        payload = ('\x1b\x40' + str(text or '') + '\n\n\n\x1d\x56\x00').encode('utf-8', errors='replace')
-        with socket.create_connection((host, port), timeout=5) as conn:
-            conn.sendall(payload)
-        return {'ok': True, 'status': 'submitted', 'message': f'تم إرسال الإيصال إلى الطابعة الشبكية {host}:{port}', 'job_id': uuid.uuid4().hex[:12]}
+        config = dict(printer_config or {})
+        config.update({'paper_width': paper_width, 'font_size': font_size})
+        payload = render_escpos_raster_payload_for_printer(text, config)
+        timeout = max(3, min(30, int(config.get('printer_timeout', 5) or 5)))
+        retries = max(0, min(3, int(config.get('printer_retry_count', 1) or 0)))
+        last_error = None
+        for attempt in range(retries + 1):
+            try:
+                with socket.create_connection((host, port), timeout=timeout) as conn:
+                    conn.sendall(payload)
+                return {'ok': True, 'status': 'submitted', 'message': f'تم إرسال الإيصال إلى الطابعة الشبكية {host}:{port}', 'job_id': uuid.uuid4().hex[:12], 'attempt': attempt + 1}
+            except OSError as exc:
+                last_error = exc
+        raise last_error or OSError('فشل الاتصال بالطابعة')
     except (OSError, ValueError) as exc:
         return {'ok': False, 'status': 'failed', 'message': f'تعذر الاتصال بالطابعة الشبكية: {str(exc)[:160]}'}
 
 def print_text_to_printer(printer_name, text):
-    """يرسل نص خام مباشرة لطابعة محددة عن طريق PowerShell (Out-Printer).
-    ملاحظة مهمة: هذا المسار مفيد للتأكد من الاتصال بالطابعة (اختبار)، لكنه لا يضمن ترتيب صحيح
-    للنص العربي (RTL) على كل طابعة لأنه طباعة نصية خام بدون محرك رسم. الفواتير الفعلية بالكاشير قيصر
-    تستمر تُطبع عن طريق نافذة المتصفح (HTML) لأنها ترندر العربي صح، وهذا فقط للفحص السريع."""
+    """مسار توافق قديم؛ يمر الآن عبر raster العربي ولا يرسل UTF-8 خامًا."""
     try:
-        tmp_path = os.path.join(VAULT_DIR, f'_thermal_print_{uuid.uuid4().hex}.txt')
-        with open(tmp_path, 'w', encoding='utf-8') as f:
-            f.write(text)
-        cmd = f'Get-Content -Path "{tmp_path}" -Encoding UTF8 | Out-Printer -Name "{printer_name}"'
-        subprocess.run(['powershell', '-NoProfile', '-Command', cmd], timeout=10, check=True)
-        try:
-            os.remove(tmp_path)
-        except OSError:
-            pass
-        return True
+        result = submit_silent_thermal_print(
+            printer_name, text, 'medium', 80, 'CAESAR Arabic Receipt',
+            {'cut_enabled': True, 'feed_before_cut': 3, 'cut_mode': 'full'},
+        )
+        return bool(result.get('ok'))
     except Exception:
         return False
 
@@ -3178,47 +4129,89 @@ def powershell_literal(value):
 
 
 def submit_silent_windows_print(printer_name, text, document_name='CAESAR Receipt'):
-    """يرسل الإيصال إلى Windows Print Spooler مباشرةً دون نافذة أو مربع حوار متصفح."""
+    """مسار توافق قديم؛ يحوّل النص إلى صورة عربية ويرسله RAW إلى Windows."""
     if sys.platform != 'win32':
         return {'ok': False, 'status': 'unavailable', 'message': 'الطباعة الصامتة الفعلية متاحة عند تشغيل النظام على Windows'}
+    return submit_silent_thermal_print(
+        printer_name, text, 'medium', 80, document_name,
+        {'cut_enabled': True, 'feed_before_cut': 3, 'cut_mode': 'full'},
+    )
+
+
+def submit_silent_thermal_print(printer_name, text, font_size='medium', paper_width=80, document_name='CAESAR Receipt', printer_config=None):
+    """يرسل إيصال ESC/POS خامًا إلى Windows حتى يعمل تكبير الخط فعليًا."""
+    return submit_raw_windows_bytes(
+        printer_name, render_escpos_raster_payload_for_printer(text, {**(printer_config or {}), 'paper_width': paper_width, 'font_size': font_size}), document_name
+    )
+
+
+def submit_raw_windows_bytes(printer_name, payload, document_name='CAESAR Raw Command'):
+    """يرسل بايتات ESC/POS مباشرة إلى Windows Spooler بدون تحويلها إلى نص."""
+    if sys.platform != 'win32':
+        return {'ok': False, 'status': 'unavailable', 'message': 'الأوامر الخام للطابعة متاحة عند التشغيل على Windows'}
     printer_name = str(printer_name or '').strip()
-    if not printer_name:
-        return {'ok': False, 'status': 'not_configured', 'message': 'لم تُحدد طابعة إيصالات'}
-    tmp_path = ''
+    if not printer_name or not payload:
+        return {'ok': False, 'status': 'not_configured', 'message': 'لم تُحدد طابعة لإرسال أمر القص'}
     try:
-        tmp_path = os.path.join(VAULT_DIR, f'_caesar_receipt_{uuid.uuid4().hex}.txt')
-        with open(tmp_path, 'w', encoding='utf-8', newline='\r\n') as handle:
-            handle.write(str(text or ''))
-        script = (
-            "$ErrorActionPreference = 'Stop'; "
-            f"$printer = Get-Printer -Name {powershell_literal(printer_name)}; "
-            "if ($null -eq $printer) { throw 'الطابعة المحددة غير متاحة' }; "
-            f"Get-Content -LiteralPath {powershell_literal(tmp_path)} -Encoding UTF8 | Out-Printer -Name {powershell_literal(printer_name)}"
-        )
-        result = subprocess.run(
-            ['powershell', '-NoProfile', '-NonInteractive', '-Command', script],
-            capture_output=True, text=True, timeout=15, check=False
-        )
-        if result.returncode != 0:
-            detail = (result.stderr or result.stdout or 'تعذر قبول مهمة الطباعة في Windows').strip().replace('\n', ' ')
-            return {'ok': False, 'status': 'failed', 'message': detail[:220]}
-        return {
-            'ok': True,
-            'status': 'submitted',
-            'message': 'تم إرسال الإيصال إلى طابور الطباعة المحلي',
-            'job_id': uuid.uuid4().hex[:12],
-            'document_name': str(document_name)[:80],
-        }
-    except subprocess.TimeoutExpired:
-        return {'ok': False, 'status': 'timed_out', 'message': 'انتهت مهلة انتظار خدمة الطباعة المحلية'}
-    except Exception as exc:
-        return {'ok': False, 'status': 'failed', 'message': str(exc)[:220] or 'تعذر إرسال الإيصال للطابعة'}
-    finally:
-        if tmp_path:
+        import ctypes
+        from ctypes import wintypes
+
+        class DOC_INFO_1W(ctypes.Structure):
+            _fields_ = [('pDocName', wintypes.LPCWSTR), ('pOutputFile', wintypes.LPCWSTR), ('pDatatype', wintypes.LPCWSTR)]
+
+        winspool = ctypes.WinDLL('winspool.drv')
+        handle = wintypes.HANDLE()
+        winspool.OpenPrinterW.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(wintypes.HANDLE), ctypes.c_void_p]
+        winspool.OpenPrinterW.restype = wintypes.BOOL
+        if not winspool.OpenPrinterW(printer_name, ctypes.byref(handle), None):
+            raise OSError('تعذر الاتصال بالطابعة المحددة')
+        try:
+            doc = DOC_INFO_1W(str(document_name)[:80], None, 'RAW')
+            winspool.StartDocPrinterW.argtypes = [wintypes.HANDLE, wintypes.DWORD, ctypes.c_void_p]
+            winspool.StartDocPrinterW.restype = wintypes.DWORD
+            if not winspool.StartDocPrinterW(handle, 1, ctypes.byref(doc)):
+                raise OSError('تعذر بدء أمر الطباعة الخام')
             try:
-                os.remove(tmp_path)
-            except OSError:
-                pass
+                if not winspool.StartPagePrinter(handle):
+                    raise OSError('تعذر بدء صفحة أمر القص')
+                try:
+                    raw = bytes(payload)
+                    buffer = ctypes.create_string_buffer(raw)
+                    written = wintypes.DWORD(0)
+                    if not winspool.WritePrinter(handle, buffer, len(raw), ctypes.byref(written)) or written.value != len(raw):
+                        raise OSError('لم تستقبل الطابعة أمر القص كاملًا')
+                finally:
+                    winspool.EndPagePrinter(handle)
+            finally:
+                winspool.EndDocPrinter(handle)
+        finally:
+            winspool.ClosePrinter(handle)
+        return {'ok': True, 'status': 'submitted', 'message': 'تم إرسال أمر قص الورق إلى الطابعة', 'job_id': uuid.uuid4().hex[:12]}
+    except Exception as exc:
+        return {'ok': False, 'status': 'failed', 'message': str(exc)[:220] or 'تعذر إرسال أمر قص الورق'}
+
+
+def cut_paper_to_printer(printer):
+    """يقص الرول بعد إغلاق الوردية عبر ESC/POS، دون فتح نافذة أو حوار طباعة."""
+    printer = printer or {}
+    if printer.get('connection_mode') == 'network':
+        host = str(printer.get('network_host') or '').strip()
+        try:
+            port = int(printer.get('network_port', 9100) or 9100)
+        except (TypeError, ValueError):
+            port = 9100
+        if not host or not (1 <= port <= 65535):
+            return {'ok': False, 'status': 'not_configured', 'message': 'لم تُضبط طابعة شبكة لقص الورق'}
+        try:
+            with socket.create_connection((host, port), timeout=5) as conn:
+                conn.sendall(b'\x1b\x40' + escpos_cut_bytes(printer))
+            return {'ok': True, 'status': 'submitted', 'message': f'تم إرسال أمر قص الورق إلى {host}:{port}', 'job_id': uuid.uuid4().hex[:12]}
+        except OSError as exc:
+            return {'ok': False, 'status': 'failed', 'message': f'تعذر الاتصال بطابعة الشبكة لقص الورق: {str(exc)[:160]}'}
+    return submit_raw_windows_bytes(
+        printer.get('printer_name', ''), b'\x1b\x40' + escpos_cut_bytes(printer), 'CAESAR Shift Paper Cut'
+    )
+
 
 CASH_DRAWER_PULSE_PROFILES = {
     'pin2_standard': (b'\x1b\x70\x00\x19\xfa', 'المخرج 1 — قياسي'),
@@ -3314,7 +4307,12 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
     printer = settings.get('printer', {})
     restaurant_name = restaurant.get('name') or 'كاشير قيصر قيصر'
     caption = str(printer.get('logo_caption', '') or '').strip()
-    width = 42 if int(printer.get('paper_width', 80) or 80) >= 80 else 32
+    text_columns = {58: 32, 80: 42, 112: 60}
+    try:
+        configured_width = int(printer.get('paper_width', 80) or 80)
+    except (TypeError, ValueError):
+        configured_width = 80
+    width = text_columns.get(configured_width, 42)
     divider_char = {'line': '-', 'double': '=', 'dots': '.'}.get(printer.get('receipt_divider', 'line'), '-')
     divider = divider_char * width
     align_center = printer.get('receipt_alignment', 'center') == 'center'
@@ -3337,7 +4335,12 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
     else:
         header = str(printer.get('receipt_header', 'إيصال مبيعات') or 'إيصال مبيعات')[:36]
         header_lines = [format_line(restaurant_name)] + ([format_line(caption)] if caption else []) + [divider, format_line(header)]
-        detail_lines = [f"الفاتورة: {order.get('id', '')}", f"التاريخ: {(order.get('timestamp') or order.get('date', ''))[:16]}", divider]
+        raw_date = str(order.get('timestamp') or order.get('date', ''))[:16]
+        # Keep the technical LTR value isolated from the Arabic RTL label. The
+        # raster renderer must not run bidi reshaping over a mixed ISO token.
+        safe_date = raw_date.replace('T', ' ')
+        isolated_date = '\u200e' + safe_date + '\u200e' if safe_date else ''
+        detail_lines = [f"الفاتورة: {order.get('id', '')}", f"التاريخ: {isolated_date}", divider]
         item_lines = [f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', [])] + [divider]
         total_lines = ['الإجمالي: ' + str(order.get('total', 0)), 'الدفع: ' + str(order.get('payment', ''))]
         footer_lines = []
@@ -3365,12 +4368,13 @@ def _dispatch_print_job(job):
     data, order, ticket_type, log_id = job
     printer = data.get('settings', {}).get('printer', {})
     printer_name = str(printer.get('printer_name') or '').strip()
+    font_size = str(printer.get('font_size', 'medium') or 'medium')
     document_text = thermal_receipt_text(data, order, ticket_type)
     if printer.get('connection_mode') == 'network':
-        return submit_network_raw_print(printer.get('network_host'), printer.get('network_port', 9100), document_text)
-    return submit_silent_windows_print(
-        printer_name, document_text,
-        f"CAESAR {'Kitchen' if ticket_type == 'kitchen' else 'Receipt'} {order.get('id', '')}"
+        return submit_network_raw_print(printer.get('network_host'), printer.get('network_port', 9100), document_text, font_size, printer.get('paper_width', 80), printer)
+    return submit_silent_thermal_print(
+        printer_name, document_text, font_size, printer.get('paper_width', 80),
+        f"CAESAR {'Kitchen' if ticket_type == 'kitchen' else 'Receipt'} {order.get('id', '')}", printer
     )
 
 
@@ -3380,14 +4384,18 @@ def _print_worker():
         try:
             data, order, ticket_type, log_id = job
             result = _dispatch_print_job(job)
-            latest = load()
-            row = next((item for item in latest.get('print_log', []) if item.get('id') == log_id), None)
-            if row:
-                row.update({'status': result.get('status', 'failed'),
-                            'message': result.get('message', 'تعذر إرسال أمر الطباعة'),
-                            'job_id': result.get('job_id', ''),
-                            'document_name': result.get('document_name', '')})
-                save(latest)
+            # load() وsave() محميتان كل واحدة على حدة، لكن العامل يحتاج
+            # القفل نفسه طوال دورة القراءة والتعديل والحفظ حتى لا يكتب فوق
+            # فاتورة أو حركة نقدية حفظها طلب HTTP بالتزامن.
+            with DATA_LOCK:
+                latest = load()
+                row = next((item for item in latest.get('print_log', []) if item.get('id') == log_id), None)
+                if row:
+                    row.update({'status': result.get('status', 'failed'),
+                                'message': result.get('message', 'تعذر إرسال أمر الطباعة'),
+                                'job_id': result.get('job_id', ''),
+                                'document_name': result.get('document_name', '')})
+                    save(latest)
         except Exception as exc:
             error_logger.error('خطأ في عامل الطباعة: %s', exc, exc_info=True)
         finally:
@@ -3404,10 +4412,14 @@ def queue_thermal_print(data, order, ticket_type='receipt', wait=False):
     if not enabled:
         return {'queued': False, 'status': 'disabled', 'type': ticket_type, 'message': 'الطباعة التلقائية غير مفعلة'}
     printer_name = str(printer.get('printer_name') or '').strip()
-    log = {'id': uuid.uuid4().hex[:12], 'timestamp': datetime.now().isoformat(), 'order_id': order.get('id', ''), 'type': ticket_type, 'printer': printer_name, 'status': 'skipped', 'message': '', 'resolved': False}
-    if sys.platform != 'win32':
+    is_network = printer.get('connection_mode') == 'network'
+    printer_target = (str(printer.get('network_host') or '').strip() + ':' + str(printer.get('network_port', 9100))) if is_network else printer_name
+    log = {'id': uuid.uuid4().hex[:12], 'timestamp': datetime.now().isoformat(), 'order_id': order.get('id', ''), 'type': ticket_type, 'printer': printer_target, 'status': 'skipped', 'message': '', 'resolved': False}
+    if is_network and (not str(printer.get('network_host') or '').strip()):
+        log.update({'status': 'skipped', 'message': 'لم يُحدد عنوان طابعة الشبكة'})
+    elif not is_network and sys.platform != 'win32':
         log.update({'status': 'skipped', 'message': 'الطباعة التلقائية الفعلية متاحة على Windows فقط'})
-    elif not printer_name:
+    elif not is_network and not printer_name:
         log.update({'status': 'skipped', 'message': 'لم تُحدد طابعة حرارية'})
     else:
         try:
@@ -3422,6 +4434,12 @@ def queue_thermal_print(data, order, ticket_type='receipt', wait=False):
                 log.update({'status': 'queued', 'message': 'تم حفظ الفاتورة ووضع الطباعة في الطابور'})
         except queue.Full:
             log.update({'status': 'failed', 'message': 'طابور الطباعة ممتلئ؛ أعد المحاولة لاحقًا'})
+        except Exception as exc:
+            # الطباعة خدمة جانبية: لا يجوز أن تفشل عملية البيع بسبب خطأ
+            # مفاجئ في تعريف الطابعة أو في مولد صورة الإيصال. سجّل الخطأ
+            # ليظهر في سجل الطباعة وتبقى الفاتورة قابلة لإعادة المحاولة.
+            error_logger.error('فشل إرسال تذكرة %s للطلب %s', ticket_type, order.get('id', ''), exc_info=True)
+            log.update({'status': 'failed', 'message': str(exc)[:220] or 'تعذر إرسال أمر الطباعة'})
     data.setdefault('print_log', []).append(log)
     data['print_log'] = data['print_log'][-200:]
     return log
@@ -3429,7 +4447,7 @@ def queue_thermal_print(data, order, ticket_type='receipt', wait=False):
 
 def unresolved_print_failures(data):
     """يعيد محاولات الإرسال الفاشلة التي لم يحلها إرسال ناجح لاحقًا."""
-    return [row for row in data.get('print_log', []) if row.get('status') in {'failed', 'timed_out'} and not row.get('resolved', False)]
+    return [row for row in data.get('print_log', []) if row.get('status') in {'failed', 'timed_out', 'queued'} and not row.get('resolved', False)]
 
 
 @app.route('/api/printer/list', methods=['GET'])
@@ -3461,13 +4479,25 @@ def get_printer_settings():
     p = data.get('settings', {}).get('printer', {})
     return jsonify({
         "paper_width": p.get('paper_width', 80),
+        "paper_orientation": p.get('paper_orientation', 'portrait'),
+        "receipt_length_mode": 'auto',
         "font_size": p.get('font_size', 'medium'),
         "copies": p.get('copies', 1),
         "footer_text": p.get('footer_text', ''),
         "printer_name": p.get('printer_name', ''),
         "connection_mode": p.get('connection_mode', 'windows'),
+        "printer_transport": p.get('printer_transport', 'auto'),
+        "printer_family": p.get('printer_family', 'auto'),
+        "print_density": p.get('print_density', 80),
+        "print_quality": p.get('print_quality', 'normal'),
+        "print_speed": p.get('print_speed', 'normal'),
+        "printer_timeout": p.get('printer_timeout', 5),
+        "printer_retry_count": p.get('printer_retry_count', 1),
         "network_host": p.get('network_host', ''),
         "network_port": p.get('network_port', 9100),
+        "cut_enabled": bool(p.get('cut_enabled', True)),
+        "cut_mode": p.get('cut_mode', 'full'),
+        "feed_before_cut": p.get('feed_before_cut', 3),
         "auto_print_receipt": bool(p.get('auto_print_receipt', False)),
         "auto_print_kitchen": bool(p.get('auto_print_kitchen', False)),
         "cash_drawer_enabled": bool(p.get('cash_drawer_enabled', False)),
@@ -3514,9 +4544,43 @@ def set_printer_settings():
         paper_width = 80
     if paper_width not in (58, 80, 112):
         return jsonify({'ok': False, 'error': 'عرض الورق يجب أن يكون 58mm أو 80mm أو 112mm'}), 400
+    paper_orientation = str(payload.get('paper_orientation', existing.get('paper_orientation', 'portrait')) or 'portrait')
+    if paper_orientation not in {'portrait', 'landscape'}:
+        return jsonify({'ok': False, 'error': 'اتجاه الورق غير صالح'}), 400
+    printer_transport = str(payload.get('printer_transport', existing.get('printer_transport', 'auto')) or 'auto')
+    if printer_transport not in {'auto', 'windows_usb_wifi', 'network_raw'}:
+        return jsonify({'ok': False, 'error': 'طريقة اتصال الطابعة غير صالحة'}), 400
+    printer_family = str(payload.get('printer_family', existing.get('printer_family', 'auto')) or 'auto')
+    if printer_family not in {'auto', 'escpos_thermal', 'epson_tm', 'xprinter', 'zjiang', 'generic_escpos'}:
+        return jsonify({'ok': False, 'error': 'عائلة الطابعة غير صالحة'}), 400
+    try:
+        print_density = max(30, min(100, int(payload.get('print_density', existing.get('print_density', 80)) or 80)))
+    except (TypeError, ValueError):
+        print_density = 80
+    print_quality = str(payload.get('print_quality', existing.get('print_quality', 'normal')) or 'normal')
+    if print_quality not in {'draft', 'normal', 'high'}:
+        return jsonify({'ok': False, 'error': 'جودة الطباعة غير صالحة'}), 400
+    print_speed = str(payload.get('print_speed', existing.get('print_speed', 'normal')) or 'normal')
+    if print_speed not in {'slow', 'normal', 'fast'}:
+        return jsonify({'ok': False, 'error': 'سرعة الطباعة غير صالحة'}), 400
+    try:
+        printer_timeout = max(3, min(30, int(payload.get('printer_timeout', existing.get('printer_timeout', 5)) or 5)))
+    except (TypeError, ValueError):
+        printer_timeout = 5
+    try:
+        printer_retry_count = max(0, min(3, int(payload.get('printer_retry_count', existing.get('printer_retry_count', 1)) or 0)))
+    except (TypeError, ValueError):
+        printer_retry_count = 1
     font_size = str(payload.get('font_size', existing.get('font_size', 'medium')) or 'medium')
     if font_size not in {'small', 'medium', 'large'}:
         return jsonify({'ok': False, 'error': 'حجم خط الإيصال غير صالح'}), 400
+    cut_mode = str(payload.get('cut_mode', existing.get('cut_mode', 'full')) or 'full')
+    if cut_mode not in {'full', 'partial'}:
+        return jsonify({'ok': False, 'error': 'نمط القص غير صالح'}), 400
+    try:
+        feed_before_cut = max(0, min(10, int(payload.get('feed_before_cut', existing.get('feed_before_cut', 3)) or 0)))
+    except (TypeError, ValueError):
+        feed_before_cut = 3
     receipt_alignment = str(payload.get('receipt_alignment', existing.get('receipt_alignment', 'center')) or 'center')
     receipt_divider = str(payload.get('receipt_divider', existing.get('receipt_divider', 'line')) or 'line')
     receipt_density = str(payload.get('receipt_density', existing.get('receipt_density', 'standard')) or 'standard')
@@ -3541,13 +4605,25 @@ def set_printer_settings():
         social_links[key] = value
     data['settings']['printer'] = {
         'paper_width': paper_width,
+        'paper_orientation': paper_orientation,
+        'receipt_length_mode': 'auto',
         'font_size': font_size,
         'copies': payload.get('copies', existing.get('copies', 1)),
         'footer_text': str(payload.get('footer_text', existing.get('footer_text', '')) or '')[:160],
         'printer_name': str(payload.get('printer_name', existing.get('printer_name', '')) or '')[:160],
         'connection_mode': str(payload.get('connection_mode', existing.get('connection_mode', 'windows')) or 'windows') if str(payload.get('connection_mode', existing.get('connection_mode', 'windows')) or 'windows') in {'windows','network'} else 'windows',
+        'printer_transport': printer_transport,
+        'printer_family': printer_family,
+        'print_density': print_density,
+        'print_quality': print_quality,
+        'print_speed': print_speed,
+        'printer_timeout': printer_timeout,
+        'printer_retry_count': printer_retry_count,
         'network_host': str(payload.get('network_host', existing.get('network_host', '')) or '')[:120],
         'network_port': int(payload.get('network_port', existing.get('network_port', 9100)) or 9100) if str(payload.get('network_port', existing.get('network_port', 9100)) or '9100').isdigit() else 9100,
+        'cut_enabled': bool(payload.get('cut_enabled', existing.get('cut_enabled', True))),
+        'cut_mode': cut_mode,
+        'feed_before_cut': feed_before_cut,
         'auto_print_receipt': bool(payload.get('auto_print_receipt', existing.get('auto_print_receipt', False))),
         'auto_print_kitchen': bool(payload.get('auto_print_kitchen', existing.get('auto_print_kitchen', False))),
         'cash_drawer_enabled': bool(payload.get('cash_drawer_enabled', existing.get('cash_drawer_enabled', False))),
@@ -3742,8 +4818,12 @@ def reprint_order(order_id):
     if not order:
         return jsonify({'ok': False, 'error': 'الفاتورة غير موجودة أو ملغاة'}), 404
     printer = data.get('settings', {}).get('printer', {})
-    if not printer.get('printer_name'):
-        return jsonify({'ok': False, 'error': 'حدد طابعة أولًا من إعدادات الطابعة'}), 400
+    if printer.get('connection_mode') == 'network':
+        configured_printer = bool(str(printer.get('network_host') or '').strip())
+    else:
+        configured_printer = bool(str(printer.get('printer_name') or '').strip())
+    if not configured_printer:
+        return jsonify({'ok': False, 'error': 'حدد الطابعة أو عنوان طابعة الشبكة أولًا من الإعدادات'}), 400
     previous = printer.get('auto_print_receipt', False)
     printer['auto_print_receipt'] = True
     result = queue_thermal_print(data, order, 'receipt')
@@ -3772,8 +4852,12 @@ def retry_failed_print(order_id):
     if not failures:
         return jsonify({'ok': False, 'error': 'لا توجد محاولة طباعة فاشلة غير معالجة لهذا المستند'}), 409
     printer = data.get('settings', {}).get('printer', {})
-    if not printer.get('printer_name'):
-        return jsonify({'ok': False, 'error': 'حدد طابعة أولًا من إعدادات الطابعة'}), 400
+    if printer.get('connection_mode') == 'network':
+        configured_printer = bool(str(printer.get('network_host') or '').strip())
+    else:
+        configured_printer = bool(str(printer.get('printer_name') or '').strip())
+    if not configured_printer:
+        return jsonify({'ok': False, 'error': 'حدد الطابعة أو عنوان طابعة الشبكة أولًا من الإعدادات'}), 400
     enabled_key = 'auto_print_receipt' if ticket_type == 'receipt' else 'auto_print_kitchen'
     previous = printer.get(enabled_key, False)
     printer[enabled_key] = True
@@ -3818,6 +4902,10 @@ def test_printer():
         return jsonify({"ok": False, "message": "ما في طابعة محددة بعد - اختر طابعة من الإعدادات أولاً"})
     printer = data.get('settings', {}).get('printer', {})
     payload = request.get_json(silent=True) or {}
+    printer = dict(printer)
+    for key in ('print_density', 'print_quality', 'print_speed'):
+        if key in payload:
+            printer[key] = payload[key]
     try:
         width = int(payload.get('paper_width', printer.get('paper_width', 80)) or 80)
     except (ValueError, TypeError):
@@ -3828,15 +4916,56 @@ def test_printer():
     restaurant = data.get('settings', {}).get('restaurant', {}).get('name', 'كاشير قيصر قيصر')
     header = str(payload.get('receipt_header', printer.get('receipt_header', 'إيصال مبيعات')) or 'إيصال مبيعات')[:36]
     divider = '-' * chars
-    test_text = f"{restaurant.center(chars)}\n{divider}\n{header.center(chars)}\n{'اختبار مقاس ' + str(width) + 'mm'.center(chars)}\n{datetime.now().strftime('%Y-%m-%d %H:%M')}\n{divider}\nOK\n\n\n"
+    pattern = str(payload.get('pattern', 'standard') or 'standard')
+    if pattern == 'density':
+        test_text = f"{restaurant.center(chars)}\n{divider}\nاختبار الكثافة\nخفيف  متوسط  داكن\nMMMMMMMMMMMMMMMM\nالعربية: شاورما كريسبي بروستد\n1234567890\n{divider}\n"
+    elif pattern == 'alignment':
+        test_text = f"{restaurant.center(chars)}\n{divider}\nيمين: العربية\nوسط: CAESAR POS\nيسار: 1234567890\n{divider}\n"
+    else:
+        test_text = f"{restaurant.center(chars)}\n{divider}\n{header.center(chars)}\n{('اختبار مقاس ' + str(width) + 'mm').center(chars)}\n{datetime.now().strftime('%Y-%m-%d %H:%M')}\n{divider}\nتمت الطباعة العربية بنجاح\n"
+    test_font_size = str(printer.get('font_size', 'medium') or 'medium')
     if printer.get('connection_mode') == 'network':
-        dispatched = submit_network_raw_print(printer.get('network_host'), printer.get('network_port', 9100), test_text)
+        dispatched = submit_network_raw_print(printer.get('network_host'), printer.get('network_port', 9100), test_text, test_font_size, width, printer)
         ok = dispatched.get('ok', False)
         msg = dispatched.get('message', 'تعذر اختبار الطابعة الشبكية')
     else:
-        ok = print_text_to_printer(printer_name, test_text)
-        msg = f"تم إرسال طباعة تجريبية إلى: {printer_name}" if ok else f"تعذر الإرسال للطابعة: {printer_name} - تأكد أنها مثبتة ومتاحة في Windows"
+        dispatched = submit_silent_thermal_print(printer_name, test_text, test_font_size, width, 'CAESAR Arabic Print Test', printer)
+        ok = dispatched.get('ok', False)
+        msg = dispatched.get('message', f"تعذر الإرسال للطابعة: {printer_name}")
     return jsonify({"ok": ok, "message": msg, "paper_width": width})
+
+
+@app.route('/api/printer/diagnostics', methods=['POST'])
+def printer_diagnostics():
+    """يفحص مسار الاتصال دون إرسال إيصال أو تغيير إعدادات الطابعة."""
+    if not has_role('manager', 'supervisor', 'cashier'):
+        return permission_error()
+    printer = load().get('settings', {}).get('printer', {})
+    mode = printer.get('connection_mode', 'windows')
+    if mode == 'network':
+        host = str(printer.get('network_host', '') or '').strip()
+        try:
+            port = int(printer.get('network_port', 9100) or 9100)
+            timeout = max(3, min(30, int(printer.get('printer_timeout', 5) or 5)))
+        except (TypeError, ValueError):
+            return jsonify({'ok': False, 'status': 'invalid_config', 'message': 'عنوان IP أو المنفذ غير صالح'}), 400
+        if not host or not (1 <= port <= 65535):
+            return jsonify({'ok': False, 'status': 'not_configured', 'message': 'أدخل عنوان IP ومنفذ الطابعة أولًا'}), 400
+        try:
+            with socket.create_connection((host, port), timeout=timeout):
+                pass
+            return jsonify({'ok': True, 'status': 'online', 'transport': 'network', 'message': f'الطابعة تستجيب على {host}:{port}'})
+        except OSError as exc:
+            return jsonify({'ok': False, 'status': 'offline', 'transport': 'network', 'message': f'لا يوجد اتصال بالطابعة: {str(exc)[:160]}'})
+    if sys.platform != 'win32':
+        return jsonify({'ok': False, 'status': 'unavailable', 'transport': 'windows', 'message': 'فحص USB/Windows يعمل داخل النسخة المبنية على Windows فقط'})
+    printers = list_windows_printers()
+    printer_status = list_windows_printer_status()
+    name = printer.get('printer_name') or get_default_windows_printer()
+    current = next((row for row in printer_status if row.get('name') == name), None)
+    found = bool(current)
+    online = bool(current and current.get('status') != 'offline')
+    return jsonify({'ok': online, 'status': 'ready' if online else ('offline' if found else 'not_found'), 'transport': 'windows', 'printer_name': name or '', 'printers': printers, 'printer_status': printer_status, 'message': 'الطابعة متصلة وجاهزة حسب Windows' if online else ('الطابعة مثبتة لكنها Offline أو في حالة خطأ' if found else 'الطابعة غير ظاهرة في قائمة Windows')})
 
 
 @app.route('/api/settings/users', methods=['GET'])
@@ -4011,11 +5140,21 @@ def enforce_api_access():
     """يفرض الإعداد الأولي والجلسة والصلاحية على الواجهة البرمجية، وليس على الأزرار فقط."""
     if not request.path.startswith('/api/'):
         return None
-    DATA_LOCK.acquire()
-    request._caesar_data_lock = True
-    data = load()
+    # القراءة لا تحتاج قفل الطلب العام؛ load() يحمي عملية القراءة نفسها.
+    # حصر القفل العام في الطلبات التي تغيّر الحالة يسمح بتوازي شاشات LAN
+    # (المطبخ/الطاولات/الجوال) ويمنع أن يحجب تقرير أو استعلام قراءة بقية الأجهزة.
+    if request.method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
+        DATA_LOCK.acquire()
+        request._caesar_data_lock = True
+    direct_order_read = request.method == 'GET' and (request.path == '/api/orders' or request.path.startswith('/api/order/'))
+    data = load_snapshot_only() if direct_order_read else load()
     path = request.path
     method = request.method
+    if method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
+        origin = request.headers.get('Origin', '').strip().rstrip('/')
+        expected_origin = request.host_url.rstrip('/')
+        if origin and origin != expected_origin:
+            return jsonify({'ok': False, 'error': 'مصدر الطلب غير مسموح'}), 403
 
     # لا يمكن البيع أو مشاهدة بيانات مطعم قبل إنشاء هوية المطعم والمدير الأول.
     if not commercial_setup_complete(data):
@@ -4113,7 +5252,7 @@ def audit_successful_mutation(response):
             data['audit_log'] = data['audit_log'][-500:]
             save(data)
         except Exception:
-            pass
+            error_logger.error('فشل تسجيل سجل التدقيق (audit_log) لمسار %s', request.path, exc_info=True)
     return response
 
 
@@ -4121,7 +5260,11 @@ def audit_successful_mutation(response):
 def mobile_api_cors(response):
     """يسمح لتطبيق النادل المحلي فقط بالوصول إلى واجهات /api/mobile المحمية برمز."""
     if request.path.startswith('/api/mobile/'):
-        response.headers['Access-Control-Allow-Origin'] = '*'
+        origin = request.headers.get('Origin', '')
+        configured = {item.strip() for item in os.environ.get('CAESAR_MOBILE_ORIGINS', '').split(',') if item.strip()}
+        if origin and origin in configured:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Vary'] = 'Origin'
         response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, OPTIONS'
     return response
@@ -4138,21 +5281,28 @@ def get_audit_log():
 def auth_login():
     """تسجيل دخول فعلي يحفظ الجلسة - يُستخدم لفتح الصفحات المخصصة للمدير فقط."""
     data = load()
-    username = (request.json.get('username') or '').strip()
-    password = request.json.get('password') or ''
+    payload = request.get_json(silent=True) or {}
+    username = str(payload.get('username') or '').strip()
+    password = str(payload.get('password') or '')
+    ip_address = request.remote_addr or 'unknown'
+    remaining = login_throttle_remaining(data, username, ip_address)
+    if remaining:
+        return jsonify({'ok': False, 'error': f'محاولات كثيرة؛ أعد المحاولة بعد {remaining} ثانية'}), 429
     users = data.get('settings', {}).get('users', [])
-    for u in users:
-        if u.get('username') == username and verify_password(u.get('password_hash'), password):
-            # ترقية تجزئة النسخ القديمة عند أول دخول ناجح، من دون تغيير كلمة المرور.
-            if not str(u.get('password_hash', '')).startswith('pbkdf2_sha256$'):
-                u['password_hash'] = hash_password(password)
-                save(data)
-            session.clear()
-            session.permanent = True
-            session['username'] = u['username']
-            session['role'] = u.get('role', 'cashier')
-            return jsonify({"ok": True, "username": u['username'], "role": session['role']})
-    return jsonify({"ok": False, "error": "اسم المستخدم أو كلمة المرور غير صحيحة"}), 401
+    matched = next((u for u in users if u.get('username') == username), None)
+    if matched and verify_password(matched.get('password_hash'), password):
+        clear_login_failures(data, username, ip_address)
+        # ترقية تجزئة النسخ القديمة عند أول دخول ناجح، من دون تغيير كلمة المرور.
+        if not str(matched.get('password_hash', '')).startswith('pbkdf2_sha256$'):
+            matched['password_hash'] = hash_password(password)
+            save(data)
+        session.clear()
+        session.permanent = True
+        session['username'] = matched['username']
+        session['role'] = matched.get('role', 'cashier')
+        return jsonify({'ok': True, 'username': matched['username'], 'role': session['role']})
+    record_login_failure(data, username, ip_address)
+    return jsonify({'ok': False, 'error': 'اسم المستخدم أو كلمة المرور غير صحيحة'}), 401
 
 @app.route('/api/auth/logout', methods=['POST'])
 def auth_logout():
@@ -4264,17 +5414,28 @@ def factory_reset_endpoint():
         with open(FACTORY_FILE, 'r', encoding='utf-8') as f:
             factory_data = json.load(f)
         factory_data['order_counter'] = 0
-        atomic_write_json(DATA_FILE, factory_data)
-        return jsonify({"ok": True, "message": "تمت إعادة ضبط المصنع، وحُفظت نسخة احتياطية من البيانات السابقة"})
+        save(factory_data)
+        conn = db_connect()
+        try:
+            conn.execute('BEGIN IMMEDIATE')
+            conn.execute('DELETE FROM order_items')
+            conn.execute('DELETE FROM orders')
+            conn.execute('COMMIT')
+        except Exception:
+            try: conn.execute('ROLLBACK')
+            except sqlite3.Error: pass
+            raise
+        finally:
+            conn.close()
+        atomic_write_json(DATA_FILE, _compact_state_snapshot(factory_data))
+        return jsonify({"ok": True, "message": "تمت إعادة ضبط المصنع وتحديث SQLite وملف الحالة بنجاح"})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @app.route('/api/check-update', methods=['GET'])
 def check_update_route():
-    """يتحقق فعلياً من GitHub لو في نسخة أحدث، ولو موجودة يحمّل ملفات الواجهة المحدّثة تلقائياً.
-    استدعاء يدوي بس (مش تلقائي عند كل تشغيل) حتى ما يبطئ الإقلاع أو يفشل لو ما في إنترنت،
-    بما إنه النظام مصمم يشتغل أوفلاين بالأساس. اضغط زر 'تحقق من التحديثات' بالإعدادات لما يكون عندك نت."""
+    """يعيد حالة الإصدار المحلية دون فحص شبكة أو تنزيل ملفات."""
     result = check_for_updates()
     return jsonify(result)
 
@@ -4282,10 +5443,18 @@ def check_update_route():
 @app.route('/api/order/<order_id>', methods=['GET'])
 def get_order(order_id):
     """البحث عن فاتورة برقمها"""
-    data = load()
-    all_orders = data.get('orders', []) + data.get('orders_archive', [])
-    for o in all_orders:
-        if o.get('id') == order_id:
+    conn = db_connect()
+    try:
+        row = conn.execute('SELECT payload FROM orders WHERE id=?', (str(order_id),)).fetchone()
+    finally:
+        conn.close()
+    if row:
+        try:
+            return jsonify(json.loads(row['payload']))
+        except (TypeError, ValueError):
+            pass
+    for o in load_cold_orders():
+        if str(o.get('id')) == str(order_id):
             return jsonify(o)
     return jsonify({"error": "الفاتورة غير موجودة"}), 404
 
@@ -4387,8 +5556,16 @@ def close_shift_secure():
              'expected_cash': expected_cash, 'actual_cash': actual_cash,
              'difference': round(float(actual_cash) - expected_cash, 2) if actual_cash is not None else None,
              'closed_by': session.get('username', 'manager'), 'reason': str(payload.get('reason', ''))[:300]}
-    _store(data, 'shifts').append(shift); save(data); backup()
-    return jsonify({'ok': True, 'shift': shift})
+    _store(data, 'shifts').append(shift)
+    cut_result = cut_paper_to_printer(data.get('settings', {}).get('printer', {}))
+    shift['paper_cut'] = {
+        'status': cut_result.get('status', 'failed'),
+        'message': cut_result.get('message', ''),
+        'job_id': cut_result.get('job_id', ''),
+        'time': datetime.now().isoformat(),
+    }
+    save(data); backup()
+    return jsonify({'ok': True, 'shift': shift, 'paper_cut': cut_result})
 
 @app.route('/api/offers', methods=['GET', 'POST'])
 def offers_api():
@@ -4416,11 +5593,57 @@ def split_order(order_id):
     for o in data.get('orders', []):
         if str(o.get('id')) == str(order_id):
             if o.get('voided') or not item_indexes: return jsonify({'ok': False, 'error': 'لا يمكن تقسيم الفاتورة بهذه البيانات'}), 400
-            moved = [o.get('items', [])[i] for i in item_indexes if isinstance(i, int) and 0 <= i < len(o.get('items', []))]
+            if not isinstance(item_indexes, list) or any(not isinstance(i, int) for i in item_indexes):
+                return jsonify({'ok': False, 'error': 'فهرس الصنف غير صالح'}), 400
+            if len(set(item_indexes)) != len(item_indexes):
+                return jsonify({'ok': False, 'error': 'لا يمكن اختيار الصنف نفسه أكثر من مرة'}), 400
+            source_items = o.get('items', []) or []
+            if any(i < 0 or i >= len(source_items) for i in item_indexes):
+                return jsonify({'ok': False, 'error': 'فهرس الصنف غير موجود'}), 400
+            moved = [source_items[i] for i in item_indexes]
             if not moved: return jsonify({'ok': False, 'error': 'الأصناف غير موجودة'}), 400
-            remaining = [x for i, x in enumerate(o.get('items', [])) if i not in item_indexes]
-            new_order = dict(o); new_order['id'] = next_order_id(data); new_order['items'] = moved; new_order['total'] = round(sum((x.get('price', 0) or 0) * (x.get('quantity', x.get('qty', 1)) or 0) for x in moved), 2); new_order['split_from'] = o.get('id'); new_order['timestamp'] = datetime.now().isoformat()
-            o['items'] = remaining; o['total'] = round(sum((x.get('price', 0) or 0) * (x.get('quantity', x.get('qty', 1)) or 0) for x in remaining), 2); o['split_into'] = new_order['id']; data['orders'].append(new_order); save(data); backup(); return jsonify({'ok': True, 'new_order': new_order})
+            selected = set(item_indexes)
+            remaining = [x for i, x in enumerate(source_items) if i not in selected]
+            def item_total(items):
+                return sum_money(float(x.get('price', 0) or 0) * float(x.get('quantity', x.get('qty', 1)) or 0) for x in items)
+            old_subtotal = item_total(source_items)
+            moved_subtotal = item_total(moved)
+            remaining_subtotal = item_total(remaining)
+            old_total = round_money(o.get('total', 0))
+            discount_total = round_money(max(0, old_subtotal - old_total))
+            moved_discount = round_money(discount_total * moved_subtotal / old_subtotal) if old_subtotal else 0
+            remaining_discount = round_money(discount_total - moved_discount)
+            moved_total = round_money(max(0, moved_subtotal - moved_discount))
+            remaining_total = round_money(max(0, remaining_subtotal - remaining_discount))
+            if round_money(moved_total + remaining_total) != old_total:
+                remaining_total = round_money(old_total - moved_total)
+                remaining_discount = round_money(remaining_subtotal - remaining_total)
+            if 'cash_amount' in o or 'card_amount' in o:
+                old_cash = round_money(o.get('cash_amount', 0))
+                old_card = round_money(o.get('card_amount', 0))
+            elif o.get('payment') == 'بطاقة':
+                old_cash, old_card = 0.0, old_total
+            else:
+                old_cash, old_card = old_total, 0.0
+            if round_money(old_cash + old_card) != old_total:
+                return jsonify({'ok': False, 'error': 'تقسيمة الدفع لا تطابق إجمالي الفاتورة'}), 409
+            new_cash = round_money(old_cash * moved_total / old_total) if old_total else 0.0
+            new_card = round_money(moved_total - new_cash) if old_total else 0.0
+            new_order = dict(o)
+            new_order['id'] = next_order_id(data)
+            new_order['items'] = moved
+            new_order.update({'subtotal': moved_subtotal, 'discount_pct': 0,
+                              'discount_amount': moved_discount, 'discount_total': moved_discount, 'total': moved_total,
+                              'cash_amount': new_cash, 'card_amount': new_card,
+                              'split_from': o.get('id'), 'timestamp': datetime.now().isoformat()})
+            o['items'] = remaining
+            o.update({'subtotal': remaining_subtotal, 'discount_pct': 0,
+                      'discount_amount': remaining_discount, 'discount_total': remaining_discount, 'total': remaining_total,
+                      'cash_amount': round_money(old_cash - new_cash),
+                      'card_amount': round_money(old_card - new_card), 'split_into': new_order['id']})
+            data['orders'].append(new_order)
+            save(data, [o['id'], new_order['id']]); backup()
+            return jsonify({'ok': True, 'new_order': new_order, 'original_order': o})
     return jsonify({'ok': False, 'error': 'الطلب غير موجود'}), 404
 
 DINE_IN_STATUSES = {'open', 'closed', 'cancelled'}
@@ -4469,21 +5692,18 @@ def dine_in_totals(data, payload):
         return None, item_error
     if not items:
         return None, 'أضف صنفاً واحداً على الأقل إلى طلب الطاولة'
-    subtotal = round(sum(item['price'] * item['quantity'] for item in items), 2)
+    subtotal = sum_money(item['price'] * item['quantity'] for item in items)
     discount_pct = as_money(payload.get('discount_pct', 0), 0)
     discount_amount = as_money(payload.get('discount_amount', 0), 0)
     if discount_pct is None or not 0 <= discount_pct <= 100 or discount_amount is None:
         return None, 'قيمة الخصم غير صالحة'
-    after_percent = round(subtotal * (1 - discount_pct / 100), 2)
+    after_percent = round_money(subtotal * (1 - discount_pct / 100))
     if discount_amount > after_percent:
         return None, 'الخصم أكبر من إجمالي الطلب'
-    return {
-        'items': items,
-        'subtotal': subtotal,
-        'discount_pct': discount_pct,
-        'discount_amount': discount_amount,
-        'total': round(after_percent - discount_amount, 2)
-    }, None
+    total = round_money(after_percent - discount_amount)
+    return {'items': items, 'subtotal': subtotal, 'discount_pct': discount_pct,
+            'discount_amount': discount_amount, 'discount_total': round_money(subtotal - total),
+            'total': total}, None
 
 
 def dine_in_session_view(session_row):
@@ -4491,6 +5711,7 @@ def dine_in_session_view(session_row):
         'id': session_row.get('id'), 'table_id': session_row.get('table_id'), 'table_name': session_row.get('table_name'),
         'status': session_row.get('status'), 'items': session_row.get('items', []), 'subtotal': session_row.get('subtotal', 0),
         'discount_pct': session_row.get('discount_pct', 0), 'discount_amount': session_row.get('discount_amount', 0),
+        'discount_total': session_row.get('discount_total', 0),
         'total': session_row.get('total', 0), 'note': session_row.get('note', ''), 'customer': session_row.get('customer', ''),
         'kitchen_status': session_row.get('kitchen_status', 'new'), 'kitchen_release': session_row.get('kitchen_release', 'now'),
         'manager_approval': session_row.get('manager_approval'), 'opened_by': session_row.get('opened_by', ''),
@@ -4534,9 +5755,15 @@ def mobile_waiter_login():
     username = str(payload.get('username', '')).strip()
     password = str(payload.get('password', ''))
     data = load()
+    ip_address = request.remote_addr or 'unknown'
+    remaining = login_throttle_remaining(data, username, ip_address)
+    if remaining:
+        return jsonify({'ok': False, 'error': f'محاولات كثيرة؛ أعد المحاولة بعد {remaining} ثانية'}), 429
     user = next((row for row in active_users(data) if row.get('username') == username and row.get('role') == 'waiter'), None)
     if not user or not verify_password(user.get('password_hash', user.get('password', '')), password):
+        record_login_failure(data, username, ip_address)
         return jsonify({'ok': False, 'error': 'بيانات النادل غير صحيحة'}), 401
+    clear_login_failures(data, username, ip_address)
     token = secrets.token_urlsafe(32)
     expires_at = (datetime.now() + timedelta(days=30)).isoformat()
     tokens = [row for row in data.setdefault('mobile_tokens', []) if row.get('expires_at', '') >= datetime.now().isoformat() and row.get('user_id') != user.get('id')]
@@ -4780,6 +6007,7 @@ def close_dine_in_session(session_id):
     order = {
         'id': next_order_id(data), 'timestamp': now, 'items': session_row['items'],
         'subtotal': session_row['subtotal'], 'discount_pct': session_row['discount_pct'], 'discount_amount': session_row['discount_amount'],
+        'discount_total': session_row.get('discount_total', round_money(session_row['subtotal'] - session_row['total'])),
         'total': session_row['total'], 'type': 'صالة', 'note': session_row.get('note', ''),
         'customer': session_row.get('customer', ''), 'table': session_row.get('table_name', ''),
         'table_id': session_row.get('table_id'), 'cashier_name': session.get('username', 'غير محدد'),
@@ -4794,11 +6022,11 @@ def close_dine_in_session(session_id):
     if payment_data.get('cash_amount', 0):
         record_cash_movement(data, 'in', payment_data['cash_amount'], 'مبيعات كاشير قيصر',
                              channel='cash', reference_type='order', reference_id=order['id'],
-                             note='فاتورة صالة ' + str(order['id']), currency=order['currency'], exchange_rate=order['exchange_rate'])
+                             note='فاتورة صالة ' + str(order['id']))
     if payment_data.get('card_amount', 0):
         record_cash_movement(data, 'in', payment_data['card_amount'], 'مبيعات كاشير قيصر',
                              channel='card', reference_type='order', reference_id=order['id'],
-                             note='فاتورة صالة ' + str(order['id']), currency=order['currency'], exchange_rate=order['exchange_rate'])
+                             note='فاتورة صالة ' + str(order['id']))
     consume_inventory_for_order(data, order['items'], order['id'])
     receipt_print = queue_thermal_print(data, order, 'receipt')
     kitchen_print = queue_thermal_print(data, order, 'kitchen')
@@ -4810,7 +6038,7 @@ def close_dine_in_session(session_id):
     table = find_table(data, session_row.get('table_id'))
     if table:
         table['status'] = 'free'; table.pop('active_session_id', None); table.pop('active_since', None)
-    save(data); backup()
+    save(data, [order['id']]); backup()
     return jsonify({'ok': True, 'id': order['id'], 'total': order['total'], 'order': order, 'print': {'receipt': receipt_print, 'kitchen': kitchen_print}, 'drawer': drawer_result})
 
 
@@ -4903,7 +6131,7 @@ def update_delivery_order(order_id):
             return jsonify({'ok': False, 'error': 'السائق غير موجود'}), 404
         order['driver_id'] = driver['id']; order['driver_name'] = driver['name']; status = 'assigned' if status == 'pending' else status
     order['delivery_status'] = status; order['delivery_updated_at'] = datetime.now().isoformat(); order['delivery_updated_by'] = session.get('username', 'unknown')
-    save(data); backup()
+    save(data, [order['id']]); backup()
     return jsonify({'ok': True, 'order': order})
 
 
@@ -5021,7 +6249,7 @@ def kitchen_status(order_id):
                 order['preparation_started_at'] = datetime.now().isoformat()
             if status == 'ready' and prior_status != 'ready':
                 record_kitchen_ready_metrics(data, order, order.get('id'))
-            save(data); return jsonify({'ok': True, 'status': status, 'print': released_print})
+            save(data, [order['id']]); return jsonify({'ok': True, 'status': status, 'print': released_print})
     return jsonify({'ok': False, 'error': 'الطلب غير موجود'}), 404
 
 
@@ -5107,10 +6335,5 @@ if __name__ == '__main__':
     print(f' Version: {CURRENT_VERSION}')
     print(f'  Vault: {VAULT_DIR}')
     print('='*50)
-
-    # فحص التحديثات
-    updated = False  # Disabled
-    if updated:
-        print(' تم التحديث! يرجى إعادة التشغيل.')
 
     start_flask()

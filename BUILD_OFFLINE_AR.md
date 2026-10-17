@@ -2,11 +2,16 @@
 
 ## المتطلبات المحلية قبل البناء
 
-ضع الملفات التالية داخل مجلد المشروع قبل تشغيل `Setup_CAESAR_OneFile.bat`:
+تتضمن الحزمة نسخة Python 3.12 محمولة ومكتبات البناء والتشغيل داخل `Lib/site-packages`، ومنها `PyInstaller` و`pywebview` و`Flask`. لذلك لا يلزم وجود `offline_wheels` عندما تكون الحزمة كاملة.
+
+قبل تشغيل البناء، تأكد من وجود:
 
 - `python.exe` وبيئة Python المضمنة الموجودة في الحزمة.
-- مجلد `offline_wheels` ويحتوي ملفات wheel الخاصة بـ `pyinstaller` و`pywebview` واعتمادياتهما، لأن السكربت لا يستخدم الإنترنت ولا ينزّل أي حزمة.
-- مجلد `WebView2Runtime` يحتوي نسخة Fixed WebView2 Runtime المتوافقة مع Windows x64. يجب أن تكون النسخة مفكوكة داخل هذا المجلد، وليس ملف مثبت يحتاج تنزيلًا.
+- `Lib/site-packages` بالمحتوى المرفق.
+- `app` و`caesar_desktop.py` و`app\caesar_icon.ico`.
+- `WebView2Runtime` اختياريًا؛ وجوده يتيح تشغيل التطبيق على أجهزة لا تحتوي WebView2 مسبقًا.
+
+إذا كان أحد الاستيرادات المطلوبة مفقودًا فعلًا، يتوقف السكربت برسالة واضحة ويبحث فقط عن wheel المطابق لذلك الاعتماد داخل `offline_wheels`. لا يتم طلب تثبيت أو استخدام `pip` عند اكتمال المكتبات المضمنة، ولا يُستخدم الإنترنت كمسار خفي.
 
 ## البناء
 
@@ -19,7 +24,13 @@ Setup_CAESAR_OneFile.bat
 أو من PowerShell:
 
 ```powershell
-.\Setup_CAESAR_OneFile.ps1 -Wheelhouse .\offline_wheels -WebView2Runtime .\WebView2Runtime
+.\Setup_CAESAR_OneFile.ps1
+```
+
+يعرض السكربت أولًا حالة الاعتمادات. عند اكتمالها ستظهر رسالة شبيهة بـ:
+
+```text
+Embedded Python environment is complete; skipping pip and offline_wheels installation.
 ```
 
 ينتج السكربت:
@@ -51,3 +62,9 @@ node tests\verify_frontend.mjs
 ```
 
 وأخيرًا تشغيل `dist\CAESAR_POS.exe` على جهاز Windows مفصول عن الإنترنت والتحقق من الدخول، إنشاء فاتورة، العداد، التصفير، الترخيص، والنسخ الاحتياطي.
+
+## إصلاح خطأ Embedded package missing
+
+يستخدم `Setup_CAESAR_OneFile.ps1` الآن `python.exe` الموجود داخل مجلد الحزمة فقط، ويضيف `Lib\site-packages` إلى مسار الاستيراد صراحةً. لذلك سيتم اكتشاف Flask وPyInstaller وPyWebView حتى إذا لم يقرأ Windows ملف `python312._pth` بعد فك الضغط أو إعادة تسمية المجلد. لا يتم تشغيل pip عندما تكون الحزم المضمنة موجودة.
+
+إذا ظهرت مشكلة جديدة، سيطبع السكربت مسار Python ومسارات الحزم المستخدمة قبل إظهار الحزمة الناقصة، بدل إعطاء تحذير عام فقط.

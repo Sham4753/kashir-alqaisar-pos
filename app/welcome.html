@@ -90,22 +90,15 @@
                     return;
                 }
                 const box = document.getElementById('profilesBox');
-                box.innerHTML = users.map(u => {
-                const isManager = u.role === 'manager';
-                const icon = isManager
-                    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0M19 7h2M20 6v2"></path></svg>'
-                    : '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0M4 4h16M8 4v2M16 4v2"></path></svg>';
-                    const roleLabel = isManager ? 'مدير' : 'كاشير قيصر';
-                    return `
-                    <button onclick="openPwModal('${u.username}', '${u.role}')" class="profile-card w-full backdrop-blur p-4 flex items-center gap-4 text-right">
-                        <div class="profile-icon">${icon}</div>
-                        <div class="flex-1">
-                            <div class="font-bold text-lg">${u.username}</div>
-                        <div class="text-xs text-blue-100">${roleLabel}</div>
-                        </div>
-                        <svg class="q-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M9 12h11"></path></svg>
-                    </button>`;
-                }).join('');
+                box.replaceChildren();
+                users.forEach(u => {
+                    const button=document.createElement('button'); button.type='button'; button.className='profile-card w-full backdrop-blur p-4 flex items-center gap-4 text-right';
+                    button.addEventListener('click',()=>openPwModal(String(u.username||''),String(u.role||'')));
+                    const content=document.createElement('div'); content.className='flex-1'; const username=document.createElement('div'); username.className='font-bold text-lg'; username.textContent=String(u.username||'');
+                    const role=document.createElement('div'); role.className='text-xs text-blue-100'; role.textContent=u.role==='manager'?'مدير':'كاشير قيصر'; content.append(username,role);
+                    const icon=document.createElement('div'); icon.className='profile-icon'; icon.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0M4 4h16M8 4v2M16 4v2"></path></svg>';
+                    button.append(icon,content); box.append(button);
+                });
             } catch (e) {
                 document.getElementById('noUsersBox').classList.remove('hidden');
             }
@@ -139,7 +132,9 @@
                 });
                 const data = await res.json();
                 if (data.ok) {
-                    window.location.href = data.role === 'manager' ? 'settings.html' : 'index.html';
+                    // تسجيل الدخول الأول يفتح شاشة الكاشير لكل الأدوار.
+                    // إعدادات المدير تبقى متاحة من رابطها المحمي داخل النظام.
+                    window.location.href = 'index.html';
                 } else {
                     document.getElementById('pwError').classList.remove('hidden');
                 }
@@ -153,12 +148,19 @@
                 const r = await fetch('/api/settings/support-info');
                 const d = await r.json();
                 const box = document.getElementById('supportBox');
-                const items = [];
-                if (d.support_phone) items.push(`<a href="tel:${d.support_phone}" class="hover:text-white">هاتف:  ${d.support_phone}</a>`);
-                if (d.whatsapp) items.push(`<a href="https://wa.me/${d.whatsapp.replace(/[^0-9]/g,'')}" target="_blank" class="hover:text-white"> واتساب</a>`);
-                if (d.facebook) items.push(`<a href="${d.facebook}" target="_blank" class="hover:text-white"> فيسبوك</a>`);
-                if (d.instagram) items.push(`<a href="${d.instagram}" target="_blank" class="hover:text-white"> انستغرام</a>`);
-                box.innerHTML = items.length > 0 ? items.join('<span class="opacity-30">|</span>') : 'الدعم الفني';
+                box.replaceChildren();
+                const addLink = (label, href) => {
+                    const link = document.createElement('a');
+                    link.className = 'hover:text-white'; link.textContent = label;
+                    try { const url = new URL(href, window.location.origin); if (!['https:','tel:'].includes(url.protocol)) return; link.href = url.href; }
+                    catch (_) { return; }
+                    box.append(link, Object.assign(document.createElement('span'), {textContent:'|', className:'opacity-30'}));
+                };
+                if (d.support_phone) addLink('هاتف: ' + String(d.support_phone), 'tel:' + String(d.support_phone).replace(/[^0-9+]/g,''));
+                if (d.whatsapp) addLink('واتساب', 'https://wa.me/' + String(d.whatsapp).replace(/[^0-9]/g,''));
+                if (d.facebook) addLink('فيسبوك', d.facebook);
+                if (d.instagram) addLink('انستغرام', d.instagram);
+                if (!box.children.length) box.textContent = 'الدعم الفني';
             } catch (e) {}
         }
 

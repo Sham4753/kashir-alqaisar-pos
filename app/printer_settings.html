@@ -8,11 +8,12 @@
     <link rel="stylesheet" href="design-system.css">
     <script defer src="design-system.js"></script>
     <script defer src="currency-manager.js"></script>
+    <!-- صفحة مصمم الوصل المتقدم مستقلة وتبقى متاحة من إعدادات النظام. -->
     <style>
         .receipt-preset{border:1px solid #cbd5e1;background:#f8fafc;color:#334155;border-radius:8px;padding:.65rem .8rem;font-weight:700;transition:.18s}
         .receipt-preset:hover,.receipt-preset:focus{border-color:#2563eb;background:#eff6ff;color:#1d4ed8;outline:0}
         .receipt-preview-shell{background:linear-gradient(135deg,#e2e8f0,#f8fafc);border:1px solid #cbd5e1;border-radius:8px;padding:1rem;overflow:auto}
-        .receipt-paper{margin:auto;min-height:360px;background:white;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 12px 24px #0f172a1a;padding:18px 14px;transition:width .2s ease}
+        .receipt-paper{margin:auto;min-height:360px;background:white;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 12px 24px #0f172a1a;padding:18px 14px;transition:width .2s ease,transform .2s ease}.receipt-paper.orientation-landscape{min-height:250px;transform:rotate(0deg)}
         .receipt-paper pre{font-family:var(--receipt-font-family,ui-monospace,SFMono-Regular,Menlo,monospace);font-size:var(--receipt-font-size,11px);line-height:1.6;white-space:pre-wrap;word-break:break-word;margin:0;color:#111827}
         .receipt-paper.compact pre{line-height:1.35}.receipt-paper.spacious pre{line-height:1.95}
         .receipt-preview-logo{display:block;max-width:72%;max-height:56px;object-fit:contain;margin:0 auto 9px;transition:max-width .2s ease,max-height .2s ease}.receipt-preview-logo.hidden{display:none}
@@ -53,6 +54,28 @@
                     <option value="80" selected>80mm</option>
                     <option value="112">112mm</option>
                 </select>
+            </div>
+
+            <div class="rounded-xl border border-emerald-100 bg-emerald-50 p-4 space-y-2">
+                <h2 class="font-bold text-emerald-950">طول الإيصال</h2>
+                <div class="flex items-center gap-2 rounded-lg bg-white p-3 text-sm">
+                    <input id="receipt_length_auto" type="checkbox" class="w-5 h-5 accent-emerald-600" checked disabled>
+                    <span><b>تلقائي حسب محتوى الطلب</b><small class="block text-xs text-gray-600 mt-1">كل صنف وسطر وملاحظة يزيد طول الورقة تلقائيًا. لا توجد ورقة ثابتة الطول.</small></span>
+                </div>
+                <p class="text-xs leading-5 text-emerald-900">«أسطر قبل القص» أدناه لا تحدد طول الفاتورة؛ هي مسافة فارغة فقط بين نهاية الإيصال والسكين لحماية آخر سطر.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">اتجاه الورق</label>
+                    <select id="paper_orientation" class="w-full border border-gray-300 rounded-lg px-4 py-2.5">
+                        <option value="portrait" selected>طولي طويل — رول حراري (موصى به)</option>
+                        <option value="landscape">عرضي — طابعة ورق/تعريف يدعم العرضي</option>
+                    </select>
+                </div>
+                <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+                    <b>توافق الاتجاه:</b> في الرول الحراري يكون العرض ثابتًا والطول تلقائيًا حسب عدد أسطر الطلب. استخدم «طولي طويل» لطابعات 58/80/112mm؛ خيار العرضي مخصص لطابعة ورق يدعم تعريفها الاتجاه، ولا يُطبّق على ESC/POS الخام حتى لا ينقلب الإيصال أو يُقص.
+                </div>
             </div>
 
             <div class="rounded-xl border border-blue-100 bg-blue-50 p-4 space-y-3">
@@ -125,9 +148,38 @@
                     <option value="windows">تلقائي — أي طابعة مثبتة في Windows (USB أو Wi‑Fi)</option>
                     <option value="network">Wi‑Fi/LAN مباشر — طابعة حرارية بعنوان IP</option>
                 </select>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <label class="text-sm font-medium">طريقة النقل<select id="printer_transport" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"><option value="auto">تلقائي</option><option value="windows_usb_wifi">Windows — USB/Wi‑Fi</option><option value="network_raw">RAW/ESC-POS — شبكة</option></select></label>
+                    <label class="text-sm font-medium">عائلة الطابعة<select id="printer_family" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"><option value="auto">تلقائي — اكتشاف يدوي</option><option value="escpos_thermal">حرارية ESC/POS عامة</option><option value="epson_tm">Epson TM</option><option value="xprinter">Xprinter</option><option value="zjiang">Zjiang / POS-58 / POS-80</option><option value="generic_escpos">Generic ESC/POS</option></select></label>
+                </div>
+                <div class="rounded-lg border border-indigo-200 bg-white p-3 space-y-3">
+                    <h3 class="font-bold text-indigo-900">الصيانة والتوافق</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <label class="text-sm font-medium">كثافة الطباعة<select id="print_density" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"><option value="50">خفيفة</option><option value="65">متوسطة</option><option value="80" selected>قياسية</option><option value="90">داكنة</option><option value="100">أقصى</option></select></label>
+                        <label class="text-sm font-medium">جودة الصورة<select id="print_quality" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"><option value="draft">اقتصادية</option><option value="normal" selected>قياسية</option><option value="high">عالية</option></select></label>
+                        <label class="text-sm font-medium">سرعة الطباعة<select id="print_speed" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"><option value="slow">بطيئة — أوضح</option><option value="normal" selected>قياسية</option><option value="fast">سريعة</option></select></label>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="text-sm font-medium">مهلة الاتصال (ثانية)<input id="printer_timeout" type="number" min="3" max="30" value="5" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"></label>
+                        <label class="text-sm font-medium">إعادة المحاولة تلقائيًا<select id="printer_retry_count" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"><option value="0">بدون إعادة</option><option value="1" selected>مرة واحدة</option><option value="2">مرتان</option><option value="3">ثلاث مرات</option></select></label>
+                    </div>
+                    <p class="text-xs leading-5 text-indigo-800">الكثافة تعدّل صورة الإيصال قبل الإرسال، لذلك تعمل مع الطابعات القديمة والحديثة. إعادة المحاولة تفيد انقطاع Wi‑Fi أو تأخر الطابعة.</p>
+                    <p class="text-[11px] leading-5 text-amber-800"><b>تنبيه السرعة:</b> «بطيئة/قياسية/سريعة» تفضيل توافق فقط؛ سرعة رأس الطباعة الفعلية يحددها Firmware أو DIP Switch، ولا يمكن ضمان تغييرها برمجيًا لكل موديلات ESC/POS.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <button type="button" onclick="runPrinterDiagnostics()" class="border border-indigo-300 bg-white text-indigo-800 font-bold rounded-lg px-3 py-2 text-sm">فحص الاتصال</button>
+                        <button type="button" onclick="testPrinterPattern('density')" class="border border-indigo-300 bg-white text-indigo-800 font-bold rounded-lg px-3 py-2 text-sm">اختبار الكثافة</button>
+                        <button type="button" onclick="testPrinterPattern('alignment')" class="border border-indigo-300 bg-white text-indigo-800 font-bold rounded-lg px-3 py-2 text-sm">اختبار المحاذاة</button>
+                    </div>
+                    <div id="printerDiagnosticResult" class="hidden rounded-lg p-3 text-xs leading-5" role="status"></div>
+                </div>
                 <div id="networkPrinterFields" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <label class="text-sm font-medium">عنوان IP للطابعة<input id="network_host" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 direction-ltr text-left" placeholder="192.168.1.100"></label>
                     <label class="text-sm font-medium">المنفذ<input id="network_port" type="number" value="9100" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 direction-ltr text-left"></label>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                    <label class="flex items-center gap-2 text-sm font-medium"><input id="cut_enabled" type="checkbox" class="w-5 h-5 accent-indigo-600"> تفعيل القص التلقائي</label>
+                    <label class="text-sm font-medium">نوع القص<select id="cut_mode" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"><option value="full">قص كامل</option><option value="partial">قص جزئي</option></select></label>
+                    <label class="text-sm font-medium">أسطر قبل القص<input id="feed_before_cut" type="number" min="0" max="10" value="3" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"></label>
                 </div>
                 <p class="text-xs leading-5 text-indigo-800">اختر الوضع التلقائي للطابعات التي تظهر في إعدادات Windows، سواء كانت USB أو Wi‑Fi. استخدم الوضع المباشر فقط لطابعة حرارية تدعم RAW/ESC-POS على الشبكة.</p>
             </div>
@@ -187,13 +239,24 @@
                 const res = await fetch('/api/printer/settings');
                 const config = await res.json();
                 document.getElementById('paper_width').value = config.paper_width || 80;
+                document.getElementById('paper_orientation').value = config.paper_orientation || 'portrait';
                 document.getElementById('font_size').value = config.font_size || 'medium';
                 document.getElementById('copies').value = config.copies || 1;
                 document.getElementById('footer_text').value = config.footer_text || '';
                 document.getElementById('currentPrinterName').textContent = config.printer_name || (config.network_host ? config.network_host + ':' + (config.network_port || 9100) : 'لم يتم تحديد طابعة بعد');
                 document.getElementById('connection_mode').value = config.connection_mode || 'windows';
+                document.getElementById('printer_transport').value = config.printer_transport || 'auto';
+                document.getElementById('printer_family').value = config.printer_family || 'auto';
+                document.getElementById('print_density').value = config.print_density ?? 80;
+                document.getElementById('print_quality').value = config.print_quality || 'normal';
+                document.getElementById('print_speed').value = config.print_speed || 'normal';
+                document.getElementById('printer_timeout').value = config.printer_timeout ?? 5;
+                document.getElementById('printer_retry_count').value = config.printer_retry_count ?? 1;
                 document.getElementById('network_host').value = config.network_host || '';
                 document.getElementById('network_port').value = config.network_port || 9100;
+                document.getElementById('cut_enabled').checked = config.cut_enabled !== false;
+                document.getElementById('cut_mode').value = config.cut_mode || 'full';
+                document.getElementById('feed_before_cut').value = config.feed_before_cut ?? 3;
                 toggleNetworkPrinterFields();
                 document.getElementById('auto_print_receipt').checked = !!config.auto_print_receipt;
                 document.getElementById('auto_print_kitchen').checked = !!config.auto_print_kitchen;
@@ -236,12 +299,23 @@
         async function saveSettings(options = {}) {
             const config = {
                 paper_width: parseInt(document.getElementById('paper_width').value),
+                paper_orientation: document.getElementById('paper_orientation').value,
                 font_size: document.getElementById('font_size').value,
                 copies: parseInt(document.getElementById('copies').value),
                 footer_text: document.getElementById('footer_text').value,
                 connection_mode: document.getElementById('connection_mode').value,
+                printer_transport: document.getElementById('printer_transport').value,
+                printer_family: document.getElementById('printer_family').value,
+                print_density: parseInt(document.getElementById('print_density').value || 80),
+                print_quality: document.getElementById('print_quality').value,
+                print_speed: document.getElementById('print_speed').value,
+                printer_timeout: parseInt(document.getElementById('printer_timeout').value || 5),
+                printer_retry_count: parseInt(document.getElementById('printer_retry_count').value || 1),
                 network_host: document.getElementById('network_host').value.trim(),
                 network_port: parseInt(document.getElementById('network_port').value || 9100),
+                cut_enabled: document.getElementById('cut_enabled').checked,
+                cut_mode: document.getElementById('cut_mode').value,
+                feed_before_cut: parseInt(document.getElementById('feed_before_cut').value || 3),
                 auto_print_receipt: document.getElementById('auto_print_receipt').checked,
                 auto_print_kitchen: document.getElementById('auto_print_kitchen').checked,
                 cash_drawer_enabled: document.getElementById('cash_drawer_enabled').checked,
@@ -289,7 +363,14 @@
         }
 
         function toggleNetworkPrinterFields() { document.getElementById('networkPrinterFields').classList.toggle('hidden', document.getElementById('connection_mode').value !== 'network'); }
+        function syncPrinterTransport() {
+            const transport = document.getElementById('printer_transport').value;
+            if (transport === 'network_raw') document.getElementById('connection_mode').value = 'network';
+            if (transport === 'windows_usb_wifi') document.getElementById('connection_mode').value = 'windows';
+            toggleNetworkPrinterFields();
+        }
         document.getElementById('connection_mode').addEventListener('change', toggleNetworkPrinterFields);
+        document.getElementById('printer_transport').addEventListener('change', syncPrinterTransport);
 
         async function discoverPrinters() {
             showToast(' جارِ البحث...');
@@ -359,6 +440,29 @@
             } catch (e) {
                 showToast(' خطأ في الطباعة');
             } finally { setTestPrintLoading(false, width); }
+        }
+        async function runPrinterDiagnostics() {
+            const box = document.getElementById('printerDiagnosticResult');
+            box.className = 'rounded-lg p-3 text-xs leading-5 bg-slate-100 text-slate-700';
+            box.textContent = 'جار فحص الاتصال…';
+            try {
+                const res = await fetch('/api/printer/diagnostics', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+                const data = await res.json();
+                box.className = 'rounded-lg p-3 text-xs leading-5 ' + (data.ok ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-900');
+                box.textContent = data.message || 'انتهى الفحص';
+            } catch (e) { box.className = 'rounded-lg p-3 text-xs leading-5 bg-red-100 text-red-900'; box.textContent = 'تعذر تنفيذ فحص الاتصال'; }
+        }
+        async function testPrinterPattern(pattern) {
+            if (testPrintInProgress) return;
+            const saved = await saveSettings({silent:true});
+            if (!saved) return;
+            const width = Number(document.getElementById('paper_width').value || 80);
+            setTestPrintLoading(true, width);
+            try {
+                const res = await fetch('/api/printer/test', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({paper_width:width, pattern, print_density:Number(document.getElementById('print_density').value || 80), print_quality:document.getElementById('print_quality').value})});
+                const data = await res.json(); showToast(data.message || 'انتهى الاختبار');
+            } catch (e) { showToast('تعذر إرسال اختبار النمط'); }
+            finally { setTestPrintLoading(false, width); }
         }
         async function saveAndTestPrint() {
             if (testPrintInProgress) return;
@@ -444,8 +548,9 @@
             paper.style.width = width >= 80 ? '382px' : '286px';
             paper.style.setProperty('--receipt-font-family', fontFamily); paper.style.setProperty('--receipt-font-size', fontScale);
             paper.style.setProperty('--thermal-ink', String(Math.max(30, Math.min(100, thermalInkDensity)) / 100));
-            paper.className = 'receipt-paper ' + document.getElementById('receipt_density').value + (thermalPreviewActive ? ' thermal-sim' : '');
-            document.getElementById('previewSize').textContent = 'معاينة ' + width + 'mm';
+            const orientation = document.getElementById('paper_orientation').value || 'portrait';
+            paper.className = 'receipt-paper ' + document.getElementById('receipt_density').value + ' orientation-' + orientation + (thermalPreviewActive ? ' thermal-sim' : '');
+            document.getElementById('previewSize').textContent = 'معاينة ' + width + 'mm — ' + (orientation === 'landscape' ? 'عرضي' : 'طولي');
             blockRoot.innerHTML = '';
             receiptLayout.forEach(id => { if (id === 'logo') { if (logoData) blockRoot.appendChild(receiptLogo); return; } const block = document.createElement('pre'); block.className = 'receipt-preview-block'; block.textContent = (previewBlocks[id] || []).join('\n'); blockRoot.appendChild(block); });
             updateReceipt58LongTextWarning(width, [rest, caption, document.getElementById('receipt_header').value.trim(), document.getElementById('footer_text').value.trim(), document.getElementById('social_facebook').value.trim(), document.getElementById('social_instagram').value.trim(), document.getElementById('social_whatsapp').value.trim()]);
@@ -523,7 +628,7 @@
             catch (e) { showToast(' ' + (e.message || 'ملف القوالب غير صالح')); }
         }
 
-        ['paper_width','font_size','footer_text','restaurant_name','logo_caption','logo_size','logo_alignment','receipt_font_family','receipt_font_scale','receipt_header','receipt_alignment','receipt_divider','receipt_density','receipt_show_cashier','receipt_show_order_type','social_facebook','social_instagram','social_whatsapp'].forEach(id => document.getElementById(id).addEventListener('input', updateReceiptPreview));
+        ['paper_width','paper_orientation','font_size','footer_text','restaurant_name','logo_caption','logo_size','logo_alignment','receipt_font_family','receipt_font_scale','receipt_header','receipt_alignment','receipt_divider','receipt_density','receipt_show_cashier','receipt_show_order_type','social_facebook','social_instagram','social_whatsapp'].forEach(id => document.getElementById(id).addEventListener('input', updateReceiptPreview));
         loadSettings();
     </script>
 </body>

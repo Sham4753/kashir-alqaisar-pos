@@ -1,7 +1,25 @@
 #!/usr/bin/env python3
 """Generate an offline CAESAR POS HMAC-SHA256 license."""
 import hashlib, hmac, os
-SECRET = os.environ.get("CAESAR_LICENSE_SECRET", "caesar-pos-commercial-license-v4-2026").encode("utf-8")
+
+def load_secret():
+    """Require a vendor-only secret; never silently issue keys with a public default."""
+    value = os.environ.get("CAESAR_LICENSE_SECRET", "").strip()
+    if not value:
+        for name in ('.license_secret', 'license.secret'):
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), name)
+            try:
+                with open(path, 'r', encoding='utf-8') as handle:
+                    value = handle.read().strip()
+                if value:
+                    break
+            except OSError:
+                continue
+    if len(value) < 32:
+        raise SystemExit('CAESAR_LICENSE_SECRET or vendor .license_secret (32+ characters) is required.')
+    return value.encode('utf-8')
+
+SECRET = load_secret()
 def normalize(machine_id):
     return "".join(c for c in str(machine_id).strip().upper() if c.isalnum() or c in ":_-")
 def generate(machine_id):

@@ -322,3 +322,44 @@ body, p, span, div, label, td, th, li {
   font-size:12.5px; font-weight:700; cursor:pointer;
 }
 .ctx-menu-item:hover{ background:#f1f5f9 }
+
+
+/* Consolidated light-theme surfaces for the two custom-layout pages. */
+body.caesar-ui.light.caesar-page-index {
+  --bg: var(--q-bg); --bg-deep: var(--q-bg); --panel: var(--q-surface); --panel-soft: var(--q-surface-soft);
+  --panel-muted: var(--q-surface-muted); --text: var(--q-ink); --text-soft: var(--q-ink-soft);
+  --muted: var(--q-muted); --line: var(--q-line); --line-strong: var(--q-line-strong);
+  --blue: var(--q-brand); --blue-bright: var(--q-brand-strong); --blue-soft: var(--q-brand-soft);
+  --success: var(--q-success); --success-soft: var(--q-success-soft); --danger: var(--q-danger); --shadow: var(--q-shadow);
+}
+body.caesar-ui.light.caesar-page-index .app,
+body.caesar-ui.light.caesar-page-index .main { background: var(--q-bg) !important; color: var(--q-ink) !important; }
+body.caesar-ui.light.caesar-page-index .sidebar,
+body.caesar-ui.light.caesar-page-index .order-panel { background: var(--q-surface) !important; color: var(--q-ink) !important; border-color: var(--q-line) !important; }
+body.caesar-ui.light.caesar-page-index .nav a,
+body.caesar-ui.light.caesar-page-index .brand-copy strong,
+body.caesar-ui.light.caesar-page-index .product-name,
+body.caesar-ui.light.caesar-page-index .cart-name,
+body.caesar-ui.light.caesar-page-index h1,
+body.caesar-ui.light.caesar-page-index h2 { color: var(--q-ink) !important; }
+body.caesar-ui.light.caesar-page-index .product,
+body.caesar-ui.light.caesar-page-index .product-card,
+body.caesar-ui.light.caesar-page-index .counter-card,
+body.caesar-ui.light.caesar-page-index .search input,
+body.caesar-ui.light.caesar-page-index .category,
+body.caesar-ui.light.caesar-page-index .icon-button,
+body.caesar-ui.light.caesar-page-index .segment,
+body.caesar-ui.light.caesar-page-index .action-secondary { background: var(--q-surface) !important; border-color: var(--q-line) !important; box-shadow: var(--q-shadow-soft) !important; }
+body.caesar-ui.light.caesar-page-settings .topbar,
+body.caesar-ui.light.caesar-page-settings .card,
+body.caesar-ui.light.caesar-page-settings .tabs,
+body.caesar-ui.light.caesar-page-settings .tab.active,
+body.caesar-ui.light.caesar-page-settings .field input,
+body.caesar-ui.light.caesar-page-settings .field select,
+body.caesar-ui.light.caesar-page-settings .field textarea { background: var(--q-surface) !important; color: var(--q-ink) !important; border-color: var(--q-line) !important; }
+body.caesar-ui.light.caesar-page-settings .page,
+body.caesar-ui.light.caesar-page-settings { background: var(--q-bg) !important; color: var(--q-ink) !important; }
+body.caesar-ui.light.caesar-page-settings .brand strong,
+body.caesar-ui.light.caesar-page-settings .intro h1,
+body.caesar-ui.light.caesar-page-settings .card h2,
+body.caesar-ui.light.caesar-page-settings .field label { color: var(--q-ink) !important; }

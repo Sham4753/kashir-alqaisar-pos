@@ -73,6 +73,9 @@
     </div>
 
     <script>
+function esc(value){return String(value??'').replace(/[&<>\"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]));}
+function jsArg(value){return JSON.stringify(String(value??''));}
+
         let employees = [];
         let currentEditId = null;
         let currentCurrency = 'SYP', usdRate = 0, eurRate = 0;
@@ -106,7 +109,7 @@
             const val = sel.value;
             sel.innerHTML = '<option value="">▼ اختر الموظف...</option>';
             employees.forEach(emp => {
-                sel.innerHTML += `<option value="${emp.id}">${emp.name} - راتب: ${emp.salary} - سلفة: ${emp.advance||0}</option>`;
+                sel.innerHTML += `<option value="${emp.id}">${esc(emp.name)} - راتب: ${emp.salary} - سلفة: ${emp.advance||0}</option>`;
             });
             if (val) sel.value = val;
         }
@@ -127,7 +130,7 @@
                     totalAdvance += emp.advance || 0;
                     return `
                     <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-200">
-                        <span class="font-bold">${emp.name}</span>
+                        <span class="font-bold">${esc(emp.name)}</span>
                         <div class="text-left">
                             <div class="text-green-600">راتب: ${formatPrice(emp.salary||0)}</div>
                             <div class="text-red-500">سلف: ${formatPrice(emp.advance||0)}</div>
