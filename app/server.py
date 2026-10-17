@@ -1,5 +1,6 @@
-import os, sys, json, shutil, threading, hashlib, hmac, base64, secrets, tempfile, subprocess, socket, uuid, re, traceback, time, platform, sqlite3, queue
+import os, sys, json, shutil, threading, hashlib, hmac, base64, secrets, tempfile, subprocess, socket, uuid, re, traceback, time, platform, sqlite3, queue, math
 from datetime import datetime, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import zipfile
 import binascii
 from xml.sax.saxutils import escape as xml_escape
@@ -1031,11 +1032,42 @@ def currency_snapshot(data, payload=None):
     currency = payload.get('currency') or settings.get('currency', 'SYP')
     if currency not in ('SYP', 'USD', 'EUR'):
         currency = 'SYP'
+    raw_rate = payload.get('exchange_rate') or (1 if currency == 'SYP' else settings.get('usd_rate' if currency == 'USD' else 'eur_rate', 0)) or 0
     try:
-        rate = float(payload.get('exchange_rate') or (1 if currency == 'SYP' else settings.get('usd_rate' if currency == 'USD' else 'eur_rate', 0)) or 0)
+        rate = float(raw_rate)
+        if not math.isfinite(rate) or rate < 0:
+            rate = 0
     except (TypeError, ValueError):
         rate = 0
     return {'currency': currency, 'exchange_rate': rate}
+
+
+def amount_in_base(data, amount, currency='SYP', exchange_rate=None):
+    """تحويل مبلغ مدخل إلى الليرة السورية؛ سعر الصرف هو عدد الليرات لكل وحدة أجنبية."""
+    try:
+        value = Decimal(str(amount))
+        if not value.is_finite():
+            return None
+        code = currency if currency in ('SYP', 'USD', 'EUR') else 'SYP'
+        if code == 'SYP':
+            return float(value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+        snap = currency_snapshot(data, {'currency': code, 'exchange_rate': exchange_rate})
+        rate = Decimal(str(snap['exchange_rate']))
+        if not rate.is_finite() or rate <= 0:
+            return None
+        return float((value * rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+
+
+def expense_amount_base(data, expense):
+    """قيمة المصروف بالليرة، مع دعم السجلات القديمة التي لم تخزن المبلغ المحول."""
+    if 'amount_base' in expense and expense.get('amount_base') is not None:
+        return round_money(expense.get('amount_base'))
+    # مشتريات المواد ورواتب/سلف الموظفين كانت تحفظ دائماً بعملة الأساس.
+    if expense.get('material_id') is not None or expense.get('employee_id') is not None:
+        return round_money(expense.get('amount', 0))
+    return amount_in_base(data, expense.get('amount', 0), expense.get('currency', 'SYP'), expense.get('exchange_rate'))
 
 def next_order_id(data):
     """يولّد رقم فاتورة لا يتكرر بعد الأرشفة أو إعادة التشغيل."""
@@ -1363,6 +1395,31 @@ def compute_product_cost(data, product):
         total_cost += avg * (ing.get('qty', 0) or 0)
     return total_cost
 
+
+def compute_product_cost_as_of(data, product, sold_at):
+    """تكلفة استدراكية للفواتير القديمة من مشتريات مؤرخة حتى تاريخ البيع فقط.
+
+    لا تُخمّن عند غياب تاريخ شراء أو تاريخ بيع؛ عندئذٍ تصنّف التكلفة غير معروفة
+    بدلاً من إدخال مشتريات مستقبلية في ربح فترة سابقة.
+    """
+    recipe = product.get('recipe', []) if product else []
+    sold_date = str(sold_at or '')[:10]
+    if not recipe or len(sold_date) != 10:
+        return None
+    total_cost = 0.0
+    for ingredient in recipe:
+        name = ingredient.get('material', '')
+        rows = [row for row in data.get('materials', []) if row.get('name') == name]
+        if not rows or any(len(str(row.get('date') or row.get('timestamp') or '')[:10]) != 10 for row in rows):
+            return None
+        eligible = [row for row in rows if str(row.get('date') or row.get('timestamp'))[:10] <= sold_date]
+        total_qty = sum(float(row.get('quantity', 0) or 0) for row in eligible)
+        total_paid = sum(float(row.get('price', 0) or 0) for row in eligible)
+        if total_qty <= 0:
+            return None
+        total_cost += (total_paid / total_qty) * float(ingredient.get('qty', 0) or 0)
+    return total_cost
+
 @app.route('/api/product/<int:pid>/cost', methods=['GET'])
 def get_product_cost(pid):
     """تكلفة وهامش ربح منتج واحد."""
@@ -1422,11 +1479,36 @@ def consume_inventory_for_order(data, items, order_id=''):
                                       reference_type='order', reference_id=order_id,
                                       note='استهلاك وصفة عند بيع: ' + str(name))
 
+def round_money(value):
+    try:
+        amount = Decimal(str(value if value is not None else 0))
+        if not amount.is_finite():
+            return 0.0
+        return float(amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+    except (InvalidOperation, TypeError, ValueError):
+        return 0.0
+
+
+def sum_money(values):
+    total = Decimal('0')
+    try:
+        for value in values:
+            amount = Decimal(str(value if value is not None else 0))
+            if amount.is_finite():
+                total += amount
+        return float(total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+    except (InvalidOperation, TypeError, ValueError):
+        return round_money(float(total))
+
+
 def as_money(value, default=None):
     try:
-        amount = round(float(value), 2)
-        return amount if amount >= 0 else default
-    except (TypeError, ValueError):
+        amount = Decimal(str(value))
+        if not amount.is_finite():
+            return default
+        amount = amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        return float(amount) if amount >= 0 else default
+    except (InvalidOperation, TypeError, ValueError):
         return default
 
 
@@ -1503,13 +1585,15 @@ def approved_order_items(data, raw_items):
             if name in catalog and name not in modifier_names:
                 modifier_names.append(name)
         modifiers = [catalog[name] for name in modifier_names]
-        modifier_total = round(sum(row['price'] for row in modifiers), 2)
+        modifier_total = sum_money(row['price'] for row in modifiers)
         station = str(product.get('kitchen_station', 'main') or 'main')
         if station not in KITCHEN_STATION_LABELS:
             station = 'main'
+        unit_cost = compute_product_cost(data, product)
         approved.append({'product_id': product.get('id'), 'name': str(product.get('name', '')).strip(),
                          'base_price': base_price, 'modifier_total': modifier_total,
-                         'price': round(base_price + modifier_total, 2), 'quantity': qty,
+                         'price': sum_money((base_price, modifier_total)), 'quantity': qty,
+                         'unit_cost_snapshot': round(float(unit_cost), 4) if unit_cost is not None else None,
                          'modifiers': modifiers, 'kitchen_station': station})
     return approved, None
 
@@ -1524,7 +1608,7 @@ def normalize_payment(total, payload):
         return {'payment': payment, 'cash_amount': 0, 'card_amount': total}, None
     cash = as_money(payload.get('cash_amount'))
     card = as_money(payload.get('card_amount'))
-    if cash is None or card is None or abs((cash + card) - total) > 0.01:
+    if cash is None or card is None or round_money(cash + card) != round_money(total):
         return None, 'مبالغ الدفع المختلط يجب أن تساوي إجمالي الفاتورة'
     return {'payment': payment, 'cash_amount': cash, 'card_amount': card}, None
 
@@ -1660,16 +1744,16 @@ def orders():
         items, item_error = approved_order_items(data, payload.get('items'))
         if item_error:
             return jsonify({'ok': False, 'error': item_error}), 400
-        subtotal = round(sum(item['price'] * item['quantity'] for item in items), 2)
+        subtotal = sum_money(item['price'] * item['quantity'] for item in items)
         discount_pct = as_money(payload.get('discount_pct', 0), 0)
         discount_amount = as_money(payload.get('discount_amount', 0), 0)
         if discount_pct is None or discount_pct > 100 or discount_amount is None:
             return jsonify({'ok': False, 'error': 'قيمة الخصم غير صالحة'}), 400
-        after_percent = round(subtotal * (1 - discount_pct / 100), 2)
+        after_percent = round_money(subtotal * (1 - discount_pct / 100))
         if discount_amount > after_percent:
             return jsonify({'ok': False, 'error': 'الخصم أكبر من إجمالي الفاتورة'}), 400
-        total = round(after_percent - discount_amount, 2)
-        total_discount = round(subtotal - total, 2)
+        total = round_money(after_percent - discount_amount)
+        total_discount = round_money(subtotal - total)
         approval_record = None
         needs_approval, approval_policy = manager_approval_required(data, discount_pct, total_discount)
         if needs_approval:
@@ -1688,6 +1772,7 @@ def orders():
         o = {
             'id': next_order_id(data), 'timestamp': datetime.now().isoformat(), 'items': items,
             'subtotal': subtotal, 'discount_pct': discount_pct, 'discount_amount': discount_amount,
+            'discount_total': total_discount,
             'total': total, 'type': order_type, 'note': str(payload.get('note', ''))[:500],
             'customer': str(payload.get('customer', ''))[:120], 'table': str(payload.get('table', ''))[:60],
             'cashier_name': session.get('username', 'غير محدد'),
@@ -1704,11 +1789,11 @@ def orders():
         if payment_data.get('cash_amount', 0):
             record_cash_movement(data, 'in', payment_data['cash_amount'], 'مبيعات كاشير قيصر',
                                  channel='cash', reference_type='order', reference_id=o['id'],
-                                 note='فاتورة ' + str(o['id']), currency=o['currency'], exchange_rate=o['exchange_rate'])
+                                 note='فاتورة ' + str(o['id']))
         if payment_data.get('card_amount', 0):
             record_cash_movement(data, 'in', payment_data['card_amount'], 'مبيعات كاشير قيصر',
                                  channel='card', reference_type='order', reference_id=o['id'],
-                                 note='فاتورة ' + str(o['id']), currency=o['currency'], exchange_rate=o['exchange_rate'])
+                                 note='فاتورة ' + str(o['id']))
         consume_inventory_for_order(data, o['items'], o['id'])
         receipt_print = queue_thermal_print(data, o, 'receipt')
         kitchen_print = queue_thermal_print(data, o, 'kitchen', wait=True) if kitchen_release == 'now' else {
@@ -1877,77 +1962,124 @@ def void_order(order_id):
                 if o.get('cash_amount', 0):
                     record_cash_movement(data, 'out', o.get('cash_amount'), 'استرجاع فاتورة ملغاة',
                                          channel='cash', reference_type='void_order', reference_id=o.get('id'),
-                                         note='إلغاء فاتورة ' + str(o.get('id')), currency=o.get('currency'), exchange_rate=o.get('exchange_rate'))
+                                         note='إلغاء فاتورة ' + str(o.get('id')))
                 if o.get('card_amount', 0):
                     record_cash_movement(data, 'out', o.get('card_amount'), 'استرجاع فاتورة ملغاة',
                                          channel='card', reference_type='void_order', reference_id=o.get('id'),
-                                         note='إلغاء فاتورة ' + str(o.get('id')), currency=o.get('currency'), exchange_rate=o.get('exchange_rate'))
+                                         note='إلغاء فاتورة ' + str(o.get('id')))
                 save(data); backup()
                 return jsonify({"ok": True})
     return jsonify({"ok": False, "error": "الطلب غير موجود"}), 404
 
 @app.route('/api/orders/<order_id>/edit-items', methods=['POST'])
 def edit_order_items(order_id):
-    """تعديل أصناف طلب قائم (حذف صنف، أو تغيير كميته) بدل إلغاء الطلب كامل.
-    محمي بنفس حماية كلمة مرور الإلغاء. يضبط المخزون تلقائياً بالفرق بين القديم والجديد،
-    ويعيد حساب الإجمالي، ويسجّل تاريخ التعديل والسبب بالطلب نفسه (بدون ما يمسح الأثر الأصلي)."""
+    """يعدّل أصناف الفاتورة بأسعار المنيو، ويضبط الخصم والتحصيل والمخزون بسجلات عكسية."""
     data = load()
-    ok, err = check_manager_password(data, request.json)
+    payload = request.get_json(silent=True) or {}
+    ok, err = check_manager_password(data, payload)
     if not ok:
         return err
-    new_items = request.json.get('items') if request.json else None
-    reason = request.json.get('reason', '') if request.json else ''
-    if new_items is None:
-        return jsonify({"ok": False, "error": "ما في قائمة أصناف جديدة"}), 400
+    new_items_raw = payload.get('items')
+    reason = str(payload.get('reason', '') or '')[:240]
+    if not isinstance(new_items_raw, list) or not new_items_raw:
+        return jsonify({'ok': False, 'error': 'يجب أن تبقى الفاتورة محتوية على صنف واحد صالح على الأقل'}), 400
 
-    for lst_name in ('orders', 'orders_archive'):
-        for o in data.get(lst_name, []):
-            if str(o.get('id')) == str(order_id):
-                if o.get('voided'):
-                    return jsonify({"ok": False, "error": "الطلب ملغى، ما فيك تعدّله"}), 400
+    for list_name in ('orders', 'orders_archive'):
+        for order in data.get(list_name, []):
+            if str(order.get('id')) != str(order_id):
+                continue
+            if order.get('voided'):
+                return jsonify({'ok': False, 'error': 'الطلب ملغى، ما فيك تعدّله'}), 400
+            items, item_error = approved_order_items(data, new_items_raw)
+            if item_error:
+                return jsonify({'ok': False, 'error': item_error}), 400
 
-                item_recipes = build_item_recipes(data)
-                old_items = o.get('items', [])
-                old_qty_by_name = {}
-                for i in old_items:
-                    old_qty_by_name[i.get('name', '')] = old_qty_by_name.get(i.get('name', ''), 0) + i.get('quantity', i.get('qty', 1))
-                new_qty_by_name = {}
-                for i in new_items:
-                    new_qty_by_name[i.get('name', '')] = new_qty_by_name.get(i.get('name', ''), 0) + i.get('quantity', i.get('qty', 1))
+            subtotal = sum_money(item['price'] * item['quantity'] for item in items)
+            discount_pct = as_money(order.get('discount_pct', 0), 0)
+            fixed_discount = as_money(order.get('discount_amount', 0), 0)
+            if discount_pct is None or discount_pct > 100 or fixed_discount is None:
+                return jsonify({'ok': False, 'error': 'بيانات الخصم القديمة غير صالحة؛ أصلحها قبل تعديل الفاتورة'}), 400
+            after_percent = round_money(subtotal * (1 - discount_pct / 100))
+            if fixed_discount > after_percent:
+                return jsonify({'ok': False, 'error': 'الخصم المحفوظ أكبر من إجمالي الأصناف الجديدة'}), 400
+            new_total = round_money(after_percent - fixed_discount)
+            total_discount = round_money(subtotal - new_total)
 
-                # ضبط المخزون بالفرق (نقص الكمية = رجّع للمخزون، زيادة الكمية = خصم إضافي)
-                all_names = set(old_qty_by_name) | set(new_qty_by_name)
-                for name in all_names:
-                    diff = old_qty_by_name.get(name, 0) - new_qty_by_name.get(name, 0)  # موجب = نقص بالطلب
-                    recipe = item_recipes.get(name)
-                    if not recipe or diff == 0:
-                        continue
-                    for ing in recipe:
-                        qty_change = (ing.get('qty', 0) or 0) * diff
-                        if qty_change > 0:
-                            sync_inventory_add(data, ing.get('material', ''), '', qty_change)
-                        else:
-                            sync_inventory_consume(data, ing.get('material', ''), -qty_change)
+            old_total = round_money(order.get('total', 0))
+            payment = order.get('payment', 'نقدي')
+            if 'cash_amount' in order or 'card_amount' in order:
+                old_cash = round_money(order.get('cash_amount', 0))
+                old_card = round_money(order.get('card_amount', 0))
+            elif payment == 'بطاقة':
+                old_cash, old_card = 0.0, old_total
+            elif payment == 'مختلط':
+                return jsonify({'ok': False, 'error': 'لا يمكن تعديل فاتورة مختلطة قديمة بلا تقسيمة نقد/بطاقة محفوظة'}), 400
+            else:
+                old_cash, old_card = old_total, 0.0
+            if round_money(old_cash + old_card) != old_total:
+                return jsonify({'ok': False, 'error': 'تقسيمة الدفع الحالية لا تطابق إجمالي الفاتورة؛ سوّها قبل التعديل'}), 409
+            if payment == 'نقدي':
+                new_cash, new_card = new_total, 0.0
+            elif payment == 'بطاقة':
+                new_cash, new_card = 0.0, new_total
+            elif payment == 'مختلط':
+                if old_total <= 0:
+                    return jsonify({'ok': False, 'error': 'لا يمكن تحديد توزيع الدفع الجديد لفاتورة مختلطة بإجمالي صفري'}), 409
+                cash_ratio = old_cash / old_total
+                new_cash = round_money(new_total * cash_ratio)
+                new_card = round_money(new_total - new_cash)
+            else:
+                return jsonify({'ok': False, 'error': 'طريقة الدفع المسجلة غير صالحة'}), 400
 
-                # سجل تعديل (بدون فقدان الطلب الأصلي - للمراجعة لاحقاً)
-                edit_history = o.setdefault('edit_history', [])
-                edit_history.append({
-                    "date": datetime.now().isoformat(), "reason": reason,
-                    "old_items": old_items, "old_total": o.get('total', 0)
-                })
-                o['items'] = new_items
-                new_total = sum((i.get('price', 0) or 0) * i.get('quantity', i.get('qty', 1)) for i in new_items)
-                o['total'] = new_total
-                # لو طريقة الدفع كانت واحدة (نقدي أو بطاقة بالكامل)، عدّل المبلغ تلقائياً معها
-                if o.get('payment') == 'نقدي':
-                    o['cash_amount'] = new_total
-                elif o.get('payment') == 'بطاقة':
-                    o['card_amount'] = new_total
-                # لو "مختلط"، نسيب المبالغ متل ما هي - يحتاج مراجعة يدوية من المدير لأنه ما فينا نخمّن التقسيم الجديد
-                o['edited'] = True
-                save(data); backup()
-                return jsonify({"ok": True, "new_total": new_total})
-    return jsonify({"ok": False, "error": "الطلب غير موجود"}), 404
+            def item_key(item):
+                pid = item.get('product_id', item.get('id'))
+                return ('id', str(pid)) if pid not in (None, '') else ('name', str(item.get('name', '')).strip())
+
+            old_qty, new_qty = {}, {}
+            for item in order.get('items', []):
+                key = item_key(item)
+                old_qty[key] = old_qty.get(key, 0) + (item.get('quantity', item.get('qty', 1)) or 0)
+            for item in items:
+                key = item_key(item)
+                new_qty[key] = new_qty.get(key, 0) + item['quantity']
+            recipes = build_item_recipes(data)
+            for key in set(old_qty) | set(new_qty):
+                difference = old_qty.get(key, 0) - new_qty.get(key, 0)
+                recipe = recipes.get(int(key[1])) if key[0] == 'id' and key[1].isdigit() else recipes.get(key[1])
+                if not recipe or not difference:
+                    continue
+                for ingredient in recipe:
+                    quantity_change = (ingredient.get('qty', 0) or 0) * difference
+                    material = ingredient.get('material', '')
+                    if quantity_change > 0:
+                        sync_inventory_add(data, material, '', quantity_change)
+                    elif quantity_change < 0:
+                        sync_inventory_consume(data, material, -quantity_change)
+                    if quantity_change:
+                        record_inventory_movement(data, material, quantity_change, 'order_edit_adjustment',
+                                                  reference_type='order_edit', reference_id=order_id,
+                                                  note='تسوية مخزون بعد تعديل فاتورة ' + str(order_id))
+
+            edit_history = order.setdefault('edit_history', [])
+            edit_history.append({'date': datetime.now().isoformat(), 'reason': reason,
+                                 'old_items': order.get('items', []), 'old_subtotal': order.get('subtotal'),
+                                 'old_total': old_total, 'old_cash_amount': old_cash, 'old_card_amount': old_card})
+            order.update({'items': items, 'subtotal': subtotal, 'discount_pct': discount_pct,
+                          'discount_amount': fixed_discount, 'discount_total': total_discount,
+                          'total': new_total, 'cash_amount': new_cash, 'card_amount': new_card,
+                          'edited': True, 'last_edit_reason': reason, 'last_edited_at': datetime.now().isoformat()})
+
+            # فروق التحصيل تسجل كسطور جديدة ولا تمحو أثر القبض الأصلي.
+            for channel, old_amount, new_amount in (('cash', old_cash, new_cash), ('card', old_card, new_card)):
+                delta = round_money(new_amount - old_amount)
+                if delta:
+                    record_cash_movement(data, 'in' if delta > 0 else 'out', abs(delta), 'تسوية تعديل فاتورة',
+                                         channel=channel, reference_type='order_edit', reference_id=order_id,
+                                         note='فرق تحصيل بعد تعديل الفاتورة', currency='SYP', exchange_rate=1,
+                                         base_amount=abs(delta))
+            save(data, [order_id]); backup()
+            return jsonify({'ok': True, 'new_total': new_total, 'cash_amount': new_cash, 'card_amount': new_card})
+    return jsonify({'ok': False, 'error': 'الطلب غير موجود'}), 404
 
 
 def close_shift():
@@ -2154,7 +2286,7 @@ def pay_debt(did):
                 'total': amount,
                 'type': 'تسديد دين',
                 'note': d.get('note', ''),
-                'payment': method,
+                'payment': method, 'accounting_type': 'debt_payment', 'debt_id': did,
                 'cash_amount': amount if method == 'نقدي' else 0,
                 'card_amount': amount if method == 'بطاقة' else 0,
                 'cashier_name': session.get('username', 'غير محدد'),
@@ -2163,6 +2295,11 @@ def pay_debt(did):
                 'timestamp': datetime.now().isoformat()
             }
             data.setdefault('orders', []).append(payment_order)
+            record_cash_movement(data, 'in', amount, 'تحصيل دين',
+                                 channel='card' if method == 'بطاقة' else 'cash',
+                                 reference_type='debt_payment', reference_id=payment_order['id'],
+                                 note='تسديد دين: ' + str(d.get('name', '')),
+                                 base_amount=amount)
             save(data, [payment_order['id']]); backup()
             return jsonify({"ok": True, "paid": d['paid'], "remaining": d['amount'] - d['paid']})
     return jsonify({"ok": False}), 404
@@ -2238,9 +2375,12 @@ def expenses_api():
     if amount <= 0 or not payload.get('note'):
         return jsonify({'ok': False, 'error': 'الوصف والمبلغ مطلوبان'}), 400
     snap = currency_snapshot(data, payload)
+    base_amount = amount_in_base(data, amount, snap['currency'], snap['exchange_rate'])
+    if amount <= 0 or base_amount is None:
+        return jsonify({'ok': False, 'error': 'مبلغ المصروف أو سعر الصرف غير صالح'}), 400
     rows = data.setdefault('expenses', [])
     expense = {'id': max([x.get('id', 0) for x in rows if isinstance(x, dict)], default=0) + 1,
-               'amount': amount, 'currency': snap['currency'], 'exchange_rate': snap['exchange_rate'],
+               'amount': amount, 'amount_base': base_amount, 'currency': snap['currency'], 'exchange_rate': snap['exchange_rate'],
                'category': payload.get('category', 'عام'), 'note': str(payload.get('note'))[:200],
                'payment': payload.get('payment', 'نقدي'), 'date': payload.get('date') or datetime.now().isoformat(),
                'created_by': session.get('username', 'نظام محلي')}
@@ -2248,7 +2388,8 @@ def expenses_api():
     record_cash_movement(data, 'out', amount, 'مصروف تشغيلي',
                          channel='card' if expense['payment'] == 'بطاقة' else 'cash',
                          reference_type='expense', reference_id=expense['id'],
-                         note=expense['note'], currency=expense['currency'], exchange_rate=expense['exchange_rate'])
+                         note=expense['note'], currency=expense['currency'], exchange_rate=expense['exchange_rate'],
+                         base_amount=base_amount)
     save(data); backup()
     return jsonify({'ok': True, 'expense': expense})
 
@@ -2262,7 +2403,8 @@ def delete_expense(eid):
                          channel='card' if target.get('payment') == 'بطاقة' else 'cash',
                          reference_type='expense_void', reference_id=eid,
                          note='عكس المصروف: ' + str(target.get('note', '')),
-                         currency=target.get('currency'), exchange_rate=target.get('exchange_rate'))
+                         currency=target.get('currency'), exchange_rate=target.get('exchange_rate'),
+                         base_amount=expense_amount_base(data, target))
     save(data); backup(); return jsonify({'ok': True})
 
 @app.route('/api/employees', methods=['GET'])
@@ -2288,7 +2430,7 @@ def add_employee():
     if advance:
         advance_amount = positive_amount(advance, 0) or 0
         data.setdefault('expenses', []).append({
-            'employee_id': new_id, 'amount': advance_amount, 'currency': currency_snapshot(data, {}).get('currency', 'SYP'),
+            'employee_id': new_id, 'amount': advance_amount, 'amount_base': advance_amount, 'currency': 'SYP', 'exchange_rate': 1,
             'date': datetime.now().isoformat(), 'note': f"سلفة موظف: {request.json.get('name')}", 'category': 'سلفة موظف',
             'payment': 'نقدي', 'created_by': session.get('username', 'نظام محلي')
         })
@@ -2324,7 +2466,7 @@ def pay_salary(eid):
         return jsonify({'ok': False, 'error': 'مبلغ الراتب يجب أن يكون أكبر من صفر'}), 400
     timestamp = datetime.now().isoformat()
     data.setdefault('expenses', []).append({
-        'employee_id': eid, 'amount': amount, 'currency': currency_snapshot(data, {}).get('currency', 'SYP'),
+        'employee_id': eid, 'amount': amount, 'amount_base': amount, 'currency': 'SYP', 'exchange_rate': 1,
         'date': timestamp, 'note': f"دفع راتب: {emp['name']}", 'category': 'رواتب', 'payment': 'نقدي',
         'created_by': session.get('username', 'نظام محلي')
     })
@@ -2344,7 +2486,7 @@ def add_employee_advance(eid):
         return jsonify({'ok': False, 'error': 'مبلغ السلفة يجب أن يكون أكبر من صفر'}), 400
     emp['advance'] = round(float(emp.get('advance', 0) or 0) + amount, 2)
     timestamp = datetime.now().isoformat()
-    data.setdefault('expenses', []).append({'employee_id': eid, 'amount': amount, 'currency': currency_snapshot(data, {}).get('currency', 'SYP'), 'date': timestamp, 'note': f"سلفة موظف: {emp.get('name', '')}", 'category': 'سلفة موظف', 'payment': 'نقدي', 'created_by': session.get('username', 'نظام محلي')})
+    data.setdefault('expenses', []).append({'employee_id': eid, 'amount': amount, 'amount_base': amount, 'currency': 'SYP', 'exchange_rate': 1, 'date': timestamp, 'note': f"سلفة موظف: {emp.get('name', '')}", 'category': 'سلفة موظف', 'payment': 'نقدي', 'created_by': session.get('username', 'نظام محلي')})
     record_cash_movement(data, 'out', amount, 'سلفة موظف', reference_type='employee_advance', reference_id=eid, note=f"سلفة موظف: {emp.get('name', '')}")
     save(data); backup(); return jsonify({'ok': True, 'amount': amount, 'advance_total': emp['advance']})
 
@@ -2449,22 +2591,76 @@ def record_inventory_movement(data, material_name, quantity, movement_type, *, u
     return movement
 
 
-def record_cash_movement(data, direction, amount, category, *, channel='cash', reference_type='', reference_id='', supplier_id=None, note='', currency=None, exchange_rate=None):
+def record_cash_movement(data, direction, amount, category, *, channel='cash', reference_type='', reference_id='', supplier_id=None, note='', currency=None, exchange_rate=None, base_amount=None):
     """سجل تدفق نقدي مستقل عن مصروف الربح والخسارة لمنع عدّ شراء المورد مرتين."""
     amount = positive_amount(amount)
-    if direction not in {'in', 'out'} or amount is None or channel not in {'cash', 'card'}:
+    base_amount = positive_amount(base_amount if base_amount is not None else amount)
+    if direction not in {'in', 'out'} or amount is None or base_amount is None or channel not in {'cash', 'card'}:
         return None
-    snap = currency_snapshot(data, {'currency': currency} if currency else {})
+    snap = currency_snapshot(data, {'currency': currency} if currency else {'currency': 'SYP', 'exchange_rate': 1})
     movements = data.setdefault('cash_movements', [])
     movement = {
         'id': max([int(row.get('id', 0) or 0) for row in movements if isinstance(row, dict)] or [0]) + 1,
         'timestamp': datetime.now().isoformat(), 'direction': direction, 'channel': channel, 'amount': amount,
+        'amount_base': round_money(base_amount),
         'currency': snap['currency'], 'exchange_rate': exchange_rate if exchange_rate is not None else snap['exchange_rate'],
         'category': category, 'reference_type': reference_type, 'reference_id': str(reference_id or ''),
         'supplier_id': supplier_id, 'note': str(note or '')[:240], 'created_by': session.get('username', 'نظام محلي')
     }
     movements.append(movement)
     return movement
+
+
+def cash_movement_amount_base(data, movement):
+    if movement.get('amount_base') is not None:
+        return round_money(movement.get('amount_base'))
+    # السجلات اليدوية القديمة فقط كانت تحفظ amount بعملة أجنبية؛ بقية الحركات قيمها بعملة الأساس.
+    if movement.get('reference_type') in {'expense', 'expense_void'}:
+        return amount_in_base(data, movement.get('amount', 0), movement.get('currency', 'SYP'), movement.get('exchange_rate')) or 0
+    return round_money(movement.get('amount', 0))
+
+
+def normalized_cash_movement(data, movement):
+    row = dict(movement)
+    is_foreign_expense = movement.get('reference_type') in {'expense', 'expense_void'}
+    row['original_amount'] = movement.get('original_amount', movement.get('amount', 0) if is_foreign_expense else cash_movement_amount_base(data, movement))
+    row['original_currency'] = movement.get('original_currency', movement.get('currency', 'SYP') if is_foreign_expense else 'SYP')
+    row['amount'] = cash_movement_amount_base(data, movement)
+    row['amount_base'] = row['amount']
+    row['currency'] = 'SYP'
+    row['exchange_rate'] = 1
+    return row
+
+
+def financial_cash_movements(data, period=None, date_from='', date_to=''):
+    movements = list(data.get('cash_movements', []))
+    if not movements:
+        movements = list(data.get('cashbook', []))
+    seen_debt_receipts = {(str(m.get('reference_id')), m.get('reference_type')) for m in movements}
+    # أضف تحصيلات الديون التاريخية التي كانت تحفظ كطلب فقط، بما فيها الأرشيف البارد عند نطاق التقرير.
+    cold_from, cold_to = date_from, date_to
+    now = datetime.now()
+    if not cold_from and not cold_to and period == 'daily':
+        cold_from = cold_to = now.strftime('%Y-%m-%d')
+    elif not cold_from and not cold_to and period == 'monthly':
+        cold_from, cold_to = now.strftime('%Y-%m-01'), now.strftime('%Y-%m-%d')
+    elif not cold_from and not cold_to and period == 'yearly':
+        cold_from, cold_to = now.strftime('%Y-01-01'), now.strftime('%Y-%m-%d')
+    legacy_orders = data.get('orders', []) + data.get('orders_archive', []) + load_cold_orders(cold_from, cold_to)
+    for order in legacy_orders:
+        if order.get('type') != 'تسديد دين' and order.get('accounting_type') != 'debt_payment':
+            continue
+        order_id = str(order.get('id', ''))
+        if (order_id, 'debt_payment') in seen_debt_receipts:
+            continue
+        timestamp = order.get('timestamp', order.get('date', ''))
+        for channel, amount in (('cash', order.get('cash_amount', order.get('total', 0) if order.get('payment') != 'بطاقة' else 0)),
+                                ('card', order.get('card_amount', order.get('total', 0) if order.get('payment') == 'بطاقة' else 0))):
+            if amount:
+                movements.append({'timestamp': timestamp, 'direction': 'in', 'channel': channel,
+                                  'amount': amount, 'amount_base': amount, 'reference_type': 'legacy_debt_payment',
+                                  'reference_id': order_id, 'category': 'تحصيل دين'})
+    return movements
 
 
 def supplier_payment_rows(data, supplier_id):
@@ -2573,7 +2769,7 @@ def supplier_payments(sid):
         return jsonify({'ok': False, 'error': 'مبلغ وطريقة دفع صحيحتان مطلوبان'}), 400
     summary = next((row for row in supplier_summary(data) if row.get('id') == sid), None)
     due = float(summary.get('due_total', 0) or 0) if summary else 0
-    if amount > due + 0.01:
+    if amount > round_money(due):
         return jsonify({'ok': False, 'error': 'دفعة المورد أكبر من الرصيد المستحق'}), 400
     payments = data.setdefault('supplier_payments', [])
     payment = {
@@ -2589,7 +2785,7 @@ def supplier_payments(sid):
                          reference_type='supplier_payment', reference_id=payment['id'], supplier_id=sid,
                          note='دفعة للمورد: ' + supplier.get('name', ''))
     save(data); backup()
-    return jsonify({'ok': True, 'payment': payment, 'remaining_due': max(0, round(due - amount, 2))}), 201
+    return jsonify({'ok': True, 'payment': payment, 'remaining_due': max(0, round_money(due - amount))}), 201
 
 
 @app.route('/api/inventory/movements', methods=['GET'])
@@ -2608,18 +2804,15 @@ def cashbook_summary_api():
     data = load()
     date_from = str(request.args.get('from', '') or '').strip()
     date_to = str(request.args.get('to', '') or '').strip()
-    rows = list(data.get('cash_movements', []))
-    if date_from:
-        rows = [row for row in rows if row.get('timestamp', '')[:10] >= date_from]
-    if date_to:
-        rows = [row for row in rows if row.get('timestamp', '')[:10] <= date_to]
-    cash_in = round(sum(float(row.get('amount', 0) or 0) for row in rows if row.get('channel') == 'cash' and row.get('direction') == 'in'), 2)
-    cash_out = round(sum(float(row.get('amount', 0) or 0) for row in rows if row.get('channel') == 'cash' and row.get('direction') == 'out'), 2)
-    card_in = round(sum(float(row.get('amount', 0) or 0) for row in rows if row.get('channel') == 'card' and row.get('direction') == 'in'), 2)
-    card_out = round(sum(float(row.get('amount', 0) or 0) for row in rows if row.get('channel') == 'card' and row.get('direction') == 'out'), 2)
+    rows = [row for row in financial_cash_movements(data, date_from=date_from, date_to=date_to) if (not date_from or row.get('timestamp', '')[:10] >= date_from)
+            and (not date_to or row.get('timestamp', '')[:10] <= date_to)]
+    cash_in = sum_money(cash_movement_amount_base(data, row) for row in rows if row.get('channel') == 'cash' and row.get('direction') == 'in')
+    cash_out = sum_money(cash_movement_amount_base(data, row) for row in rows if row.get('channel') == 'cash' and row.get('direction') == 'out')
+    card_in = sum_money(cash_movement_amount_base(data, row) for row in rows if row.get('channel') == 'card' and row.get('direction') == 'in')
+    card_out = sum_money(cash_movement_amount_base(data, row) for row in rows if row.get('channel') == 'card' and row.get('direction') == 'out')
     return jsonify({'ok': True, 'cash_in': cash_in, 'cash_out': cash_out, 'cash_balance': round(cash_in - cash_out, 2),
                     'card_in': card_in, 'card_out': card_out, 'card_balance': round(card_in - card_out, 2),
-                    'movements': sorted(rows, key=lambda row: row.get('timestamp', ''), reverse=True)[:100]})
+                    'movements': [normalized_cash_movement(data, row) for row in sorted(rows, key=lambda row: row.get('timestamp', ''), reverse=True)[:100]]})
 
 
 @app.route('/api/materials', methods=['GET'])
@@ -2684,8 +2877,9 @@ def add_material():
     }
     materials.append(material)
     data.setdefault('expenses', []).append({
-        'material_id': new_id, 'amount': price, 'date': material['date'], 'note': f"شراء مادة: {name}",
-        'supplier_id': supplier_id, 'paid_amount': paid_amount, 'payment': payment_method, 'invoice_no': material['invoice_no'],
+        'material_id': new_id, 'amount': price, 'amount_base': price, 'date': material['date'], 'note': f"شراء مادة: {name}",
+        'supplier_id': supplier_id, 'paid_amount': paid_amount, 'paid_amount_base': paid_amount,
+        'payment': payment_method, 'invoice_no': material['invoice_no'],
         'created_by': session.get('username', 'نظام محلي')
     })
     sync_inventory_add(data, name, unit, quantity)
@@ -2714,7 +2908,7 @@ def update_material(mid):
     target.update({'name':name,'quantity':quantity,'unit':unit,'price':price,'paid_amount':round(old_paid,2)})
     for e in data.get('expenses',[]):
         if e.get('material_id')==mid and not e.get('voided'):
-            e.update({'amount':price,'paid_amount':round(old_paid,2),'note':f'شراء مادة: {name}'})
+            e.update({'amount':price,'amount_base':price,'paid_amount':round(old_paid,2),'paid_amount_base':round(old_paid,2),'note':f'شراء مادة: {name}'})
     if old_name != name or old_qty != float(quantity):
         sync_inventory_consume(data,old_name,old_qty); sync_inventory_add(data,name,unit,quantity)
         delta=round(float(quantity)-old_qty,4)
@@ -2732,7 +2926,7 @@ def delete_material(mid):
     for e in data.setdefault('expenses',[]):
         if e.get('material_id')==mid and not e.get('voided'):
             e['voided']=True; e['voided_at']=datetime.now().isoformat(); e['voided_by']=session.get('username','نظام محلي')
-    if paid: record_cash_movement(data,'in',paid,'عكس شراء مواد خام ملغى',channel='card' if target.get('payment')=='بطاقة' else 'cash',reference_type='material_void',reference_id=mid,note='عكس شراء: '+name,currency=target.get('currency'),exchange_rate=target.get('exchange_rate'))
+    if paid: record_cash_movement(data,'in',paid,'عكس شراء مواد خام ملغى',channel='card' if target.get('payment')=='بطاقة' else 'cash',reference_type='material_void',reference_id=mid,note='عكس شراء: '+name)
     data['materials']=[m for m in data.get('materials',[]) if m.get('id')!=mid]; save(data); backup(); return jsonify({"ok":True,"voided":True})
 @app.route('/api/inventory', methods=['GET'])
 def get_inventory():
@@ -2839,12 +3033,29 @@ def get_analytics():
         odate = o.get('timestamp', '')[:10]
         for i in o.get('items', []):
             name = i.get('name', '')
-            qty = i.get('quantity', i.get('qty', 1))
-            price = i.get('price', 0)
-            entry = item_sales.setdefault(name, {'quantity': 0, 'total': 0, 'dates': {}})
+            qty = i.get('quantity', i.get('qty', 1)) or 0
+            price = i.get('price', 0) or 0
+            order_subtotal = o.get('subtotal')
+            if order_subtotal is None:
+                order_subtotal = sum_money((row.get('price', 0) or 0) * (row.get('quantity', row.get('qty', 1)) or 0) for row in o.get('items', []))
+            order_total = round_money(o.get('total', 0))
+            net_factor = order_total / order_subtotal if order_subtotal else 0
+            item_total = qty * price * net_factor
+            entry = item_sales.setdefault(name, {'quantity': 0, 'total': 0, 'cost_total': 0, 'uncosted': False, 'dates': {}})
             entry['quantity'] += qty
-            entry['total'] += qty * price
+            entry['total'] += item_total
             entry['dates'][odate] = entry['dates'].get(odate, 0) + qty
+            product = next((row for products in data.get('menu', {}).values() for row in products
+                            if str(row.get('id')) == str(i.get('product_id', i.get('id')))), None)
+            if product is None:
+                matches = [row for products in data.get('menu', {}).values() for row in products if row.get('name') == name]
+                product = matches[0] if len(matches) == 1 else None
+            unit_cost = i.get('unit_cost_snapshot') if 'unit_cost_snapshot' in i else compute_product_cost_as_of(
+                data, product, o.get('timestamp') or o.get('date'))
+            if unit_cost is None:
+                entry['uncosted'] = True
+            else:
+                entry['cost_total'] += float(unit_cost) * qty
 
     # تضييق النتائج حسب فلتر القسم/المنتج المختار بالتقرير التفصيلي
     filtered_items = item_sales
@@ -2862,36 +3073,44 @@ def get_analytics():
         for n, e in filtered_items.items()
     ]
 
-    # عندما يكون هناك فلتر قسم/منتج، المبيعات والطلبات تُحسب على مستوى الصنف المطابق فقط
-    # (مو إجمالي الطلب كامل، لأنه ممكن يحوي أصناف من أقسام تانية)
-    if category_filter or product_filter:
-        total_sales = sum(e['total'] for e in filtered_items.values())
-        total_orders = sum(
-            1 for o in orders
-            if any(i.get('name', '') in filtered_items for i in o.get('items', []))
-        )
-    else:
-        total_sales = sum(o.get('total', 0) for o in orders)
-        total_orders = len(orders)
+    # عند اختيار منتج/قسم توزع الخصومات على أصناف الطلب بنسبة قيمة كل صنف.
+    def order_matches_filter(order):
+        return not (category_filter or product_filter) or any(
+            item.get('name', '') in filtered_items for item in order.get('items', []))
+
+    def selected_order_total(order):
+        if not (category_filter or product_filter):
+            return round_money(order.get('total', 0))
+        gross = sum((item.get('price', 0) or 0) * (item.get('quantity', item.get('qty', 1)) or 0)
+                    for item in order.get('items', []) if item.get('name', '') in filtered_items)
+        subtotal = order.get('subtotal')
+        if subtotal is None:
+            subtotal = sum_money((item.get('price', 0) or 0) * (item.get('quantity', item.get('qty', 1)) or 0)
+                                 for item in order.get('items', []))
+        return round_money(gross * round_money(order.get('total', 0)) / subtotal) if subtotal else 0.0
+
+    selected_orders = [order for order in orders if order_matches_filter(order)]
+    total_sales = sum_money(selected_order_total(order) for order in selected_orders)
+    total_orders = len(selected_orders)
 
     # 1. متوسط قيمة الطلب
     avg_order = total_sales / total_orders if total_orders > 0 else 0
 
     # 2. نسبة/عدد كل نوع طلب
     type_stats = {'سفري': 0, 'صالة': 0, 'ديليفري': 0}
-    for o in orders:
+    for o in selected_orders:
         t = o.get('type', 'سفري')
         type_stats[t] = type_stats.get(t, 0) + 1
     type_pct = {k: round(v/total_orders*100, 1) if total_orders > 0 else 0 for k, v in type_stats.items()}
 
     # 3. أداء الموظفين
     cashier_stats = {}
-    for o in orders:
+    for o in selected_orders:
         c = o.get('cashier_name', 'غير معروف')
         if c not in cashier_stats:
             cashier_stats[c] = {'orders': 0, 'sales': 0}
         cashier_stats[c]['orders'] += 1
-        cashier_stats[c]['sales'] += o.get('total', 0)
+        cashier_stats[c]['sales'] += selected_order_total(o)
 
     # 4. صافي الربح
     # المصاريف (سلف الموظفين + شراء المواد الخام) تُصفّى حسب نفس الفترة المختارة تماماً مثل المبيعات،
@@ -2911,40 +3130,58 @@ def get_analytics():
             period_expenses = [e for e in period_expenses if e.get('date', '')[:10] <= date_to]
     else:
         period_expenses = all_expenses
-    total_expenses = sum(e.get('amount', 0) for e in period_expenses)
+    expense_base = {id(e): (expense_amount_base(data, e) or 0) for e in period_expenses}
+    total_expenses = sum_money(expense_base.values())
 
     # فصل مشتريات المواد عن المصروفات التشغيلية حتى لا تختلط تكلفة المخزون مع الربح التشغيلي.
     purchase_expenses = [e for e in period_expenses if e.get('material_id') is not None]
-    purchases_total = sum(e.get('amount', 0) or 0 for e in purchase_expenses)
-    purchases_paid = sum(e.get('paid_amount', e.get('amount', 0)) or 0 for e in purchase_expenses)
-    other_expenses = total_expenses - purchases_total
+    purchases_total = sum_money(expense_base[id(e)] for e in purchase_expenses)
+    purchases_paid = sum_money(e.get('paid_amount_base', e.get('paid_amount', e.get('amount', 0))) or 0 for e in purchase_expenses)
 
-    # الرواتب: راتب شهري ثابت، فلا تُخصم بالكامل من تحليل يوم واحد فقط.
+    # قيد الراتب المستحق شهرياً مرة واحدة: لا تُطرح معه دفعات/سلف الموظف المسجلة كمصروف نقدي مرة ثانية.
     single_day = period == 'daily' or (period == 'custom' and date_from and date_to and date_from == date_to)
-    total_salaries = 0 if single_day else sum(e.get('salary', 0) for e in data.get('employees', []))
+    salary_months = 0.0
+    if period == 'monthly':
+        salary_months = 1.0
+    elif period == 'yearly' or (period == 'custom' and date_from and date_to and not single_day):
+        try:
+            start_date = datetime(now.year, 1, 1).date() if period == 'yearly' else datetime.strptime(date_from, '%Y-%m-%d').date()
+            end_date = now.date() if period == 'yearly' else datetime.strptime(date_to, '%Y-%m-%d').date()
+            if end_date >= start_date:
+                cursor = start_date.replace(day=1)
+                while cursor <= end_date:
+                    next_month = datetime(cursor.year + (cursor.month == 12), 1 if cursor.month == 12 else cursor.month + 1, 1).date()
+                    month_end = next_month - timedelta(days=1)
+                    overlap_start, overlap_end = max(start_date, cursor), min(end_date, month_end)
+                    days_in_month = (month_end - cursor).days + 1
+                    salary_months += ((overlap_end - overlap_start).days + 1) / days_in_month
+                    cursor = next_month
+        except (TypeError, ValueError):
+            salary_months = 0.0
+    total_salaries = sum_money((e.get('salary', 0) or 0) * salary_months for e in data.get('employees', []))
+    payroll_cash_expenses = sum_money(expense_base[id(e)] for e in period_expenses if e.get('employee_id') is not None)
+    if not single_day:
+        total_salaries = max(total_salaries, payroll_cash_expenses)
+    other_expenses = total_expenses - purchases_total - (0 if single_day else payroll_cash_expenses)
 
     # تكلفة البضاعة المباعة: تعتمد على الوصفات ومتوسط سعر شراء المواد، وتُحسب فقط للأصناف ذات التكلفة المعروفة.
-    products_by_name = {p.get('name', ''): p for items in data.get('menu', {}).values() for p in items}
     cost_of_goods_sold = 0
     uncosted_products = []
     for name, entry in filtered_items.items():
-        product = products_by_name.get(name)
-        unit_cost = compute_product_cost(data, product) if product else None
-        if unit_cost is None:
+        cost_of_goods_sold += entry.get('cost_total', 0) or 0
+        if entry.get('uncosted'):
             uncosted_products.append(name)
-        else:
-            cost_of_goods_sold += unit_cost * (entry.get('quantity', 0) or 0)
     gross_profit = total_sales - cost_of_goods_sold
     gross_margin_pct = round((gross_profit / total_sales * 100), 1) if total_sales else 0
     operating_profit = gross_profit - other_expenses - total_salaries
     # التدفق النقدي ليس ربحًا على أساس الاستحقاق: شراء آجل لا يخرج نقدًا،
     # والدفعة الجزئية لا يجوز طرح كامل فاتورة المورد. احسبه من دفتر الصندوق
     # الفعلي ضمن نفس الفترة حتى تتطابق التحليلات مع النقد والبطاقات.
-    period_cash_movements = [m for m in data.get('cash_movements', [])
+    period_cash_movements = [m for m in financial_cash_movements(data, period, date_from, date_to)
                              if _in_report_period(m.get('timestamp', ''), period, date_from, date_to)]
-    cash_flow_after_purchases = round(
-        sum(float(m.get('amount', 0) or 0) * (1 if m.get('direction') == 'in' else -1)
-            for m in period_cash_movements), 2)
+    cash_flow_after_purchases = sum_money(
+        cash_movement_amount_base(data, m) * (1 if m.get('direction') == 'in' else -1)
+        for m in period_cash_movements)
     inventory_value = sum((item.get('stock', 0) or 0) * (material_avg_cost(data, item.get('name', '')) or 0) for item in data.get('inventory', []))
     supplier_rows = supplier_summary(data)
     supplier_due = sum(row.get('due_total', 0) or 0 for row in supplier_rows)
@@ -2957,17 +3194,27 @@ def get_analytics():
     # الطلبات القديمة قبل هذا التحديث ما فيها cash_amount/card_amount فبنرجع لتخمين من حقل payment النصي.
     total_cash = 0
     total_card = 0
-    for o in orders:
+    for o in selected_orders:
         if 'cash_amount' in o or 'card_amount' in o:
-            total_cash += o.get('cash_amount', 0) or 0
-            total_card += o.get('card_amount', 0) or 0
+            cash_amount = o.get('cash_amount', 0) or 0
+            card_amount = o.get('card_amount', 0) or 0
         else:
             pm = o.get('payment', '')
-            amt = o.get('total', 0)
-            if pm == 'بطاقة':
-                total_card += amt
-            else:
-                total_cash += amt
+            cash_amount = 0 if pm == 'بطاقة' else o.get('total', 0)
+            card_amount = o.get('total', 0) if pm == 'بطاقة' else 0
+        if category_filter or product_filter:
+            order_total = round_money(o.get('total', 0))
+            original_subtotal = o.get('subtotal')
+            if original_subtotal is None:
+                original_subtotal = sum_money((i.get('price', 0) or 0) * (i.get('quantity', i.get('qty', 1)) or 0) for i in o.get('items', []))
+            selected_gross = sum((i.get('price', 0) or 0) * (i.get('quantity', i.get('qty', 1)) or 0)
+                                 for i in o.get('items', [])
+                                 if i.get('name', '') in filtered_items)
+            selected_total = selected_gross * order_total / original_subtotal if original_subtotal else 0
+            tender_ratio = selected_total / order_total if order_total else 0
+            cash_amount, card_amount = round_money(cash_amount * tender_ratio), round_money(card_amount * tender_ratio)
+        total_cash += cash_amount
+        total_card += card_amount
 
     # تفاصيل الفواتير: تبقى على مستوى الفاتورة مع أصنافها، وتُرشّح عند اختيار قسم/منتج.
     order_details = []
@@ -2988,7 +3235,7 @@ def get_analytics():
         if original_subtotal is None:
             original_subtotal = sum((i.get('price', 0) or 0) * (i.get('quantity', i.get('qty', 1)) or 0) for i in o.get('items', []))
         original_total = o.get('total', 0) or 0
-        discount_amount = o.get('discount_amount')
+        discount_amount = o.get('discount_total')
         if discount_amount is None:
             discount_amount = max(0, (original_subtotal or 0) - original_total)
         filtered_subtotal = sum(i['total'] for i in detail_items)
@@ -3002,8 +3249,8 @@ def get_analytics():
             'date': o.get('timestamp') or o.get('date', ''),
             'type': o.get('type', 'سفري'),
             'payment': o.get('payment', '') or 'غير محدد',
-            'cash_amount': o.get('cash_amount', 0) or 0,
-            'card_amount': o.get('card_amount', 0) or 0,
+            'cash_amount': round_money((o.get('cash_amount', 0) or 0) * (detail_total / original_total)) if (category_filter or product_filter) and original_total else (o.get('cash_amount', 0) or 0),
+            'card_amount': round_money((o.get('card_amount', 0) or 0) * (detail_total / original_total)) if (category_filter or product_filter) and original_total else (o.get('card_amount', 0) or 0),
             'customer': o.get('customer', ''),
             'table': o.get('table', ''),
             'cashier_name': o.get('cashier_name', 'غير معروف'),
@@ -3072,10 +3319,12 @@ def _report_period_orders(data, period='daily', date_from='', date_to=''):
     else:
         eff_from = eff_to = ''  # 'custom' بلا تواريخ، أو فترة غير معروفة: كل شيء
 
-    orders = [o for o in data.get('orders', []) + data.get('orders_archive', []) if not o.get('voided')]
+    orders = [o for o in data.get('orders', []) + data.get('orders_archive', [])
+              if not o.get('voided') and o.get('type') != 'تسديد دين' and o.get('accounting_type') != 'debt_payment']
     needs_cold = (not eff_from) or (eff_from < retention_cutoff)
     if needs_cold:
-        cold = [o for o in load_cold_orders(eff_from, eff_to) if not o.get('voided')]
+        cold = [o for o in load_cold_orders(eff_from, eff_to) if not o.get('voided')
+                and o.get('type') != 'تسديد دين' and o.get('accounting_type') != 'debt_payment']
         if cold:
             live_ids = {str(o.get('id')) for o in orders}
             orders += [o for o in cold if str(o.get('id')) not in live_ids]
@@ -3128,7 +3377,8 @@ def financial_report_payload(data, period='daily', date_from='', date_to='', cas
         })
         total = float(order.get('total', 0) or 0)
         subtotal = float(order.get('subtotal', total) or total)
-        discount = float(order.get('discount_amount', max(0, subtotal - total)) or 0)
+        discount_value = order.get('discount_total')
+        discount = float(max(0, subtotal - total) if discount_value is None else (discount_value or 0))
         cash_amount = order.get('cash_amount')
         card_amount = order.get('card_amount')
         if cash_amount is None and card_amount is None:
@@ -3153,19 +3403,18 @@ def financial_report_payload(data, period='daily', date_from='', date_to='', cas
             row[key] = round(row[key], 2)
         cashier_summary.append(row)
     cashier_summary.sort(key=lambda row: (-row['sales'], row['cashier']))
-    modern_cashbook = data.get('cash_movements', [])
-    legacy_cashbook = data.get('cashbook', []) if not modern_cashbook else []
-    cashbook = [movement for movement in modern_cashbook + legacy_cashbook if _in_report_period(movement.get('timestamp'), period, date_from, date_to)]
-    cash_in = sum(float(m.get('amount', 0) or 0) for m in cashbook if m.get('channel') == 'cash' and m.get('direction') == 'in')
-    cash_out = sum(float(m.get('amount', 0) or 0) for m in cashbook if m.get('channel') == 'cash' and m.get('direction') == 'out')
-    card_in = sum(float(m.get('amount', 0) or 0) for m in cashbook if m.get('channel') == 'card' and m.get('direction') == 'in')
-    card_out = sum(float(m.get('amount', 0) or 0) for m in cashbook if m.get('channel') == 'card' and m.get('direction') == 'out')
+    cashbook = [movement for movement in financial_cash_movements(data, period, date_from, date_to)
+                if _in_report_period(movement.get('timestamp'), period, date_from, date_to)]
+    cash_in = sum_money(cash_movement_amount_base(data, m) for m in cashbook if m.get('channel') == 'cash' and m.get('direction') == 'in')
+    cash_out = sum_money(cash_movement_amount_base(data, m) for m in cashbook if m.get('channel') == 'cash' and m.get('direction') == 'out')
+    card_in = sum_money(cash_movement_amount_base(data, m) for m in cashbook if m.get('channel') == 'card' and m.get('direction') == 'in')
+    card_out = sum_money(cash_movement_amount_base(data, m) for m in cashbook if m.get('channel') == 'card' and m.get('direction') == 'out')
     return {
         'period': period, 'from': date_from, 'to': date_to, 'cashier_filter': cashier_filter,
         'cashier_summary': cashier_summary, 'orders': orders,
-        'cashbook': sorted(cashbook, key=lambda row: str(row.get('timestamp', '')), reverse=True),
+        'cashbook': [normalized_cash_movement(data, row) for row in sorted(cashbook, key=lambda row: str(row.get('timestamp', '')), reverse=True)],
         'summary': {
-            'sales': round(sum(float(order.get('total', 0) or 0) for order in orders), 2), 'orders': len(orders),
+            'sales': sum_money(float(order.get('total', 0) or 0) for order in orders), 'orders': len(orders),
             'cash_in': round(cash_in, 2), 'cash_out': round(cash_out, 2), 'cash_balance': round(cash_in - cash_out, 2),
             'card_in': round(card_in, 2), 'card_out': round(card_out, 2), 'card_balance': round(card_in - card_out, 2)
         }
@@ -3210,7 +3459,7 @@ def create_financial_xlsx(report):
     sheets = [
         ('الملخص المالي', [['تقرير مالي ومبيعات - كاشير قيصر قيصر'], ['الفترة', report['period']], ['من', report['from'] or '—'], ['إلى', report['to'] or '—'], [], ['البند', 'القيمة'], ['إجمالي المبيعات', summary['sales']], ['عدد الفواتير', summary['orders']], ['نقد داخل', summary['cash_in']], ['نقد خارج', summary['cash_out']], ['رصيد النقد', summary['cash_balance']], ['بطاقة داخل', summary['card_in']], ['بطاقة خارج', summary['card_out']], ['رصيد البطاقات', summary['card_balance']]]),
         ('مبيعات الكاشير قيصر', [['الكاشير قيصر', 'عدد الفواتير', 'المبيعات', 'النقد', 'البطاقات', 'الخصومات', 'متوسط الفاتورة', 'صالة', 'سفري', 'ديليفري']] + [[row['cashier'], row['orders'], row['sales'], row['cash'], row['card'], row['discounts'], row['average_order'], row['dine_in_orders'], row['takeaway_orders'], row['delivery_orders']] for row in report['cashier_summary']]),
-        ('الفواتير', [['رقم الفاتورة', 'التاريخ', 'الكاشير قيصر', 'النوع', 'الدفع', 'النقد', 'البطاقات', 'الخصم', 'الإجمالي', 'حالة الطباعة', 'الطاولة', 'الزبون', 'الأصناف']] + [[order.get('id', ''), order.get('timestamp') or order.get('date', ''), order.get('cashier_name', 'غير معروف'), order.get('type', 'سفري'), order.get('payment', ''), order.get('cash_amount', ''), order.get('card_amount', ''), order.get('discount_amount', ''), order.get('total', 0), order_print_status_label(order), order.get('table', ''), order.get('customer', ''), '، '.join(f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', []))] for order in report['orders']]),
+        ('الفواتير', [['رقم الفاتورة', 'التاريخ', 'الكاشير قيصر', 'النوع', 'الدفع', 'النقد', 'البطاقات', 'الخصم', 'الإجمالي', 'حالة الطباعة', 'الطاولة', 'الزبون', 'الأصناف']] + [[order.get('id', ''), order.get('timestamp') or order.get('date', ''), order.get('cashier_name', 'غير معروف'), order.get('type', 'سفري'), order.get('payment', ''), order.get('cash_amount', ''), order.get('card_amount', ''), order.get('discount_total', max(0, (order.get('subtotal') or 0) - (order.get('total') or 0))), order.get('total', 0), order_print_status_label(order), order.get('table', ''), order.get('customer', ''), '، '.join(f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', []))] for order in report['orders']]),
         ('دفتر الصندوق', [['التاريخ', 'الاتجاه', 'القناة', 'التصنيف', 'المبلغ', 'الكاشير قيصر/المستخدم', 'المرجع', 'الملاحظة']] + [[movement.get('timestamp', ''), movement.get('direction', ''), movement.get('channel', ''), movement.get('category', ''), movement.get('amount', 0), movement.get('created_by', ''), movement.get('reference_id', ''), movement.get('note', '')] for movement in report['cashbook']])
     ]
     buffer = BytesIO()
@@ -5356,29 +5605,42 @@ def split_order(order_id):
             selected = set(item_indexes)
             remaining = [x for i, x in enumerate(source_items) if i not in selected]
             def item_total(items):
-                return round(sum(float(x.get('price', 0) or 0) * float(x.get('quantity', x.get('qty', 1)) or 0) for x in items), 2)
+                return sum_money(float(x.get('price', 0) or 0) * float(x.get('quantity', x.get('qty', 1)) or 0) for x in items)
             old_subtotal = item_total(source_items)
             moved_subtotal = item_total(moved)
             remaining_subtotal = item_total(remaining)
-            old_total = round(float(o.get('total', 0) or 0), 2)
-            discount = round(max(0, old_subtotal - old_total), 2)
-            moved_discount = round(discount * moved_subtotal / old_subtotal, 2) if old_subtotal else 0
-            remaining_discount = round(discount - moved_discount, 2)
-            moved_total = round(max(0, moved_subtotal - moved_discount), 2)
-            remaining_total = round(max(0, remaining_subtotal - remaining_discount), 2)
-            old_cash = round(float(o.get('cash_amount', 0) or 0), 2)
-            old_card = round(float(o.get('card_amount', 0) or 0), 2)
+            old_total = round_money(o.get('total', 0))
+            discount_total = round_money(max(0, old_subtotal - old_total))
+            moved_discount = round_money(discount_total * moved_subtotal / old_subtotal) if old_subtotal else 0
+            remaining_discount = round_money(discount_total - moved_discount)
+            moved_total = round_money(max(0, moved_subtotal - moved_discount))
+            remaining_total = round_money(max(0, remaining_subtotal - remaining_discount))
+            if round_money(moved_total + remaining_total) != old_total:
+                remaining_total = round_money(old_total - moved_total)
+                remaining_discount = round_money(remaining_subtotal - remaining_total)
+            if 'cash_amount' in o or 'card_amount' in o:
+                old_cash = round_money(o.get('cash_amount', 0))
+                old_card = round_money(o.get('card_amount', 0))
+            elif o.get('payment') == 'بطاقة':
+                old_cash, old_card = 0.0, old_total
+            else:
+                old_cash, old_card = old_total, 0.0
+            if round_money(old_cash + old_card) != old_total:
+                return jsonify({'ok': False, 'error': 'تقسيمة الدفع لا تطابق إجمالي الفاتورة'}), 409
+            new_cash = round_money(old_cash * moved_total / old_total) if old_total else 0.0
+            new_card = round_money(moved_total - new_cash) if old_total else 0.0
             new_order = dict(o)
             new_order['id'] = next_order_id(data)
             new_order['items'] = moved
-            new_order.update({'subtotal': moved_subtotal, 'discount_amount': moved_discount, 'total': moved_total,
-                              'cash_amount': round(old_cash * moved_total / old_total, 2) if old_total else 0,
-                              'card_amount': round(old_card * moved_total / old_total, 2) if old_total else 0,
+            new_order.update({'subtotal': moved_subtotal, 'discount_pct': 0,
+                              'discount_amount': moved_discount, 'discount_total': moved_discount, 'total': moved_total,
+                              'cash_amount': new_cash, 'card_amount': new_card,
                               'split_from': o.get('id'), 'timestamp': datetime.now().isoformat()})
             o['items'] = remaining
-            o.update({'subtotal': remaining_subtotal, 'discount_amount': remaining_discount, 'total': remaining_total,
-                      'cash_amount': round(old_cash - new_order['cash_amount'], 2),
-                      'card_amount': round(old_card - new_order['card_amount'], 2), 'split_into': new_order['id']})
+            o.update({'subtotal': remaining_subtotal, 'discount_pct': 0,
+                      'discount_amount': remaining_discount, 'discount_total': remaining_discount, 'total': remaining_total,
+                      'cash_amount': round_money(old_cash - new_cash),
+                      'card_amount': round_money(old_card - new_card), 'split_into': new_order['id']})
             data['orders'].append(new_order)
             save(data, [o['id'], new_order['id']]); backup()
             return jsonify({'ok': True, 'new_order': new_order, 'original_order': o})
@@ -5430,21 +5692,18 @@ def dine_in_totals(data, payload):
         return None, item_error
     if not items:
         return None, 'أضف صنفاً واحداً على الأقل إلى طلب الطاولة'
-    subtotal = round(sum(item['price'] * item['quantity'] for item in items), 2)
+    subtotal = sum_money(item['price'] * item['quantity'] for item in items)
     discount_pct = as_money(payload.get('discount_pct', 0), 0)
     discount_amount = as_money(payload.get('discount_amount', 0), 0)
     if discount_pct is None or not 0 <= discount_pct <= 100 or discount_amount is None:
         return None, 'قيمة الخصم غير صالحة'
-    after_percent = round(subtotal * (1 - discount_pct / 100), 2)
+    after_percent = round_money(subtotal * (1 - discount_pct / 100))
     if discount_amount > after_percent:
         return None, 'الخصم أكبر من إجمالي الطلب'
-    return {
-        'items': items,
-        'subtotal': subtotal,
-        'discount_pct': discount_pct,
-        'discount_amount': discount_amount,
-        'total': round(after_percent - discount_amount, 2)
-    }, None
+    total = round_money(after_percent - discount_amount)
+    return {'items': items, 'subtotal': subtotal, 'discount_pct': discount_pct,
+            'discount_amount': discount_amount, 'discount_total': round_money(subtotal - total),
+            'total': total}, None
 
 
 def dine_in_session_view(session_row):
@@ -5452,6 +5711,7 @@ def dine_in_session_view(session_row):
         'id': session_row.get('id'), 'table_id': session_row.get('table_id'), 'table_name': session_row.get('table_name'),
         'status': session_row.get('status'), 'items': session_row.get('items', []), 'subtotal': session_row.get('subtotal', 0),
         'discount_pct': session_row.get('discount_pct', 0), 'discount_amount': session_row.get('discount_amount', 0),
+        'discount_total': session_row.get('discount_total', 0),
         'total': session_row.get('total', 0), 'note': session_row.get('note', ''), 'customer': session_row.get('customer', ''),
         'kitchen_status': session_row.get('kitchen_status', 'new'), 'kitchen_release': session_row.get('kitchen_release', 'now'),
         'manager_approval': session_row.get('manager_approval'), 'opened_by': session_row.get('opened_by', ''),
@@ -5747,6 +6007,7 @@ def close_dine_in_session(session_id):
     order = {
         'id': next_order_id(data), 'timestamp': now, 'items': session_row['items'],
         'subtotal': session_row['subtotal'], 'discount_pct': session_row['discount_pct'], 'discount_amount': session_row['discount_amount'],
+        'discount_total': session_row.get('discount_total', round_money(session_row['subtotal'] - session_row['total'])),
         'total': session_row['total'], 'type': 'صالة', 'note': session_row.get('note', ''),
         'customer': session_row.get('customer', ''), 'table': session_row.get('table_name', ''),
         'table_id': session_row.get('table_id'), 'cashier_name': session.get('username', 'غير محدد'),
@@ -5761,11 +6022,11 @@ def close_dine_in_session(session_id):
     if payment_data.get('cash_amount', 0):
         record_cash_movement(data, 'in', payment_data['cash_amount'], 'مبيعات كاشير قيصر',
                              channel='cash', reference_type='order', reference_id=order['id'],
-                             note='فاتورة صالة ' + str(order['id']), currency=order['currency'], exchange_rate=order['exchange_rate'])
+                             note='فاتورة صالة ' + str(order['id']))
     if payment_data.get('card_amount', 0):
         record_cash_movement(data, 'in', payment_data['card_amount'], 'مبيعات كاشير قيصر',
                              channel='card', reference_type='order', reference_id=order['id'],
-                             note='فاتورة صالة ' + str(order['id']), currency=order['currency'], exchange_rate=order['exchange_rate'])
+                             note='فاتورة صالة ' + str(order['id']))
     consume_inventory_for_order(data, order['items'], order['id'])
     receipt_print = queue_thermal_print(data, order, 'receipt')
     kitchen_print = queue_thermal_print(data, order, 'kitchen')
