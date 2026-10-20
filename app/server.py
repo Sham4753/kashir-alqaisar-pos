@@ -3375,10 +3375,10 @@ def financial_report_payload(data, period='daily', date_from='', date_to='', cas
             'cashier': cashier, 'orders': 0, 'sales': 0.0, 'cash': 0.0, 'card': 0.0,
             'discounts': 0.0, 'dine_in_orders': 0, 'takeaway_orders': 0, 'delivery_orders': 0
         })
-        total = float(order.get('total', 0) or 0)
-        subtotal = float(order.get('subtotal', total) or total)
+        total = round_money(order.get('total', 0) or 0)
+        subtotal = round_money(order.get('subtotal', total) or total)
         discount_value = order.get('discount_total')
-        discount = float(max(0, subtotal - total) if discount_value is None else (discount_value or 0))
+        discount = round_money(max(0, subtotal - total) if discount_value is None else (discount_value or 0))
         cash_amount = order.get('cash_amount')
         card_amount = order.get('card_amount')
         if cash_amount is None and card_amount is None:
@@ -3386,8 +3386,8 @@ def financial_report_payload(data, period='daily', date_from='', date_to='', cas
             card_amount = total if order.get('payment') == 'بطاقة' else 0
         row['orders'] += 1
         row['sales'] += total
-        row['cash'] += float(cash_amount or 0)
-        row['card'] += float(card_amount or 0)
+        row['cash'] += round_money(cash_amount or 0)
+        row['card'] += round_money(card_amount or 0)
         row['discounts'] += discount
         order_type = order.get('type', 'سفري')
         if order_type == 'صالة':
@@ -3398,9 +3398,9 @@ def financial_report_payload(data, period='daily', date_from='', date_to='', cas
             row['takeaway_orders'] += 1
     cashier_summary = []
     for row in cashier_rows.values():
-        row['average_order'] = round(row['sales'] / row['orders'], 2) if row['orders'] else 0
+        row['average_order'] = round_money(row['sales'] / row['orders']) if row['orders'] else 0
         for key in ('sales', 'cash', 'card', 'discounts'):
-            row[key] = round(row[key], 2)
+            row[key] = round_money(row[key])
         cashier_summary.append(row)
     cashier_summary.sort(key=lambda row: (-row['sales'], row['cashier']))
     cashbook = [movement for movement in financial_cash_movements(data, period, date_from, date_to)
@@ -3414,9 +3414,9 @@ def financial_report_payload(data, period='daily', date_from='', date_to='', cas
         'cashier_summary': cashier_summary, 'orders': orders,
         'cashbook': [normalized_cash_movement(data, row) for row in sorted(cashbook, key=lambda row: str(row.get('timestamp', '')), reverse=True)],
         'summary': {
-            'sales': sum_money(float(order.get('total', 0) or 0) for order in orders), 'orders': len(orders),
-            'cash_in': round(cash_in, 2), 'cash_out': round(cash_out, 2), 'cash_balance': round(cash_in - cash_out, 2),
-            'card_in': round(card_in, 2), 'card_out': round(card_out, 2), 'card_balance': round(card_in - card_out, 2)
+            'sales': sum_money(order.get('total', 0) or 0 for order in orders), 'orders': len(orders),
+            'cash_in': round_money(cash_in), 'cash_out': round_money(cash_out), 'cash_balance': round_money(cash_in - cash_out),
+            'card_in': round_money(card_in), 'card_out': round_money(card_out), 'card_balance': round_money(card_in - card_out)
         }
     }
 
@@ -5482,10 +5482,10 @@ def _cashier_shift_summary(data, username, cutoff=''):
         if order.get('voided') or order.get('cashier_name') != username or (cutoff and stamp <= cutoff):
             continue
         orders.append(order)
-    cash = sum(float(o.get('cash_amount', o.get('total', 0) if o.get('payment') != 'بطاقة' else 0) or 0) for o in orders)
-    card = sum(float(o.get('card_amount', o.get('total', 0) if o.get('payment') == 'بطاقة' else 0) or 0) for o in orders)
+    cash = sum_money(o.get('cash_amount', o.get('total', 0) if o.get('payment') != 'بطاقة' else 0) or 0 for o in orders)
+    card = sum_money(o.get('card_amount', o.get('total', 0) if o.get('payment') == 'بطاقة' else 0) or 0 for o in orders)
     return {'cashier': username, 'from': cutoff or None, 'to': datetime.now().isoformat(), 'orders': len(orders),
-            'sales': round(sum(float(o.get('total', 0) or 0) for o in orders), 2), 'cash': round(cash, 2), 'card': round(card, 2)}
+            'sales': sum_money(o.get('total', 0) or 0 for o in orders), 'cash': cash, 'card': card}
 
 @app.route('/api/shift/users', methods=['GET'])
 def shift_users():
@@ -5518,8 +5518,13 @@ def shift_handover():
     summary = _cashier_shift_summary(data, from_cashier, _shift_cutoff(data, from_cashier))
     actual_cash = payload.get('actual_cash')
     if actual_cash not in (None, ''):
-        try: summary['actual_cash'] = round(float(actual_cash), 2); summary['difference'] = round(summary['actual_cash'] - summary['cash'], 2)
-        except (TypeError, ValueError): return jsonify({'ok': False, 'error': 'النقد الفعلي غير صالح'}), 400
+        try:
+            actual_cash = Decimal(str(actual_cash))
+            if not actual_cash.is_finite() or actual_cash < 0:
+                raise ValueError
+            summary['actual_cash'] = round_money(actual_cash)
+            summary['difference'] = round_money(summary['actual_cash'] - summary['cash'])
+        except (InvalidOperation, TypeError, ValueError): return jsonify({'ok': False, 'error': 'النقد الفعلي غير صالح'}), 400
     handover = {'id': uuid.uuid4().hex[:12], 'time': datetime.now().isoformat(), 'from_cashier': from_cashier,
                 'to_cashier': to_cashier, 'summary': summary, 'note': str(payload.get('note', '') or '')[:300],
                 'created_by': from_cashier}
@@ -5538,9 +5543,9 @@ def current_shift():
         return jsonify(_cashier_shift_summary(data, session.get('username', 'غير محدد'), _shift_cutoff(data, session.get('username', 'غير محدد'))))
     orders = _today_orders(data)
     return jsonify({'date': datetime.now().strftime('%Y-%m-%d'), 'orders': len(orders),
-                    'sales': round(sum(o.get('total', 0) or 0 for o in orders), 2),
-                    'cash': round(sum(o.get('cash_amount', o.get('total', 0) if o.get('payment') != 'بطاقة' else 0) or 0 for o in orders), 2),
-                    'card': round(sum(o.get('card_amount', o.get('total', 0) if o.get('payment') == 'بطاقة' else 0) or 0 for o in orders), 2),
+                    'sales': sum_money(o.get('total', 0) or 0 for o in orders),
+                    'cash': sum_money(o.get('cash_amount', o.get('total', 0) if o.get('payment') != 'بطاقة' else 0) or 0 for o in orders),
+                    'card': sum_money(o.get('card_amount', o.get('total', 0) if o.get('payment') == 'بطاقة' else 0) or 0 for o in orders),
                     'cashier': 'جميع الكاشير قيصرات'})
 
 @app.route('/api/shifts/close', methods=['POST'])
@@ -5548,13 +5553,22 @@ def close_shift_secure():
     if not has_role('manager'):
         return permission_error()
     data = load(); orders = _today_orders(data); payload = request.get_json(silent=True) or {}
-    expected_cash = round(sum(o.get('cash_amount', o.get('total', 0) if o.get('payment') != 'بطاقة' else 0) or 0 for o in orders), 2)
+    expected_cash = sum_money(o.get('cash_amount', o.get('total', 0) if o.get('payment') != 'بطاقة' else 0) or 0 for o in orders)
     actual_cash = payload.get('actual_cash')
+    actual_cash_value = None
+    if actual_cash not in (None, ''):
+        try:
+            actual_cash_value = Decimal(str(actual_cash))
+            if not actual_cash_value.is_finite() or actual_cash_value < 0:
+                raise ValueError
+            actual_cash = round_money(actual_cash_value)
+        except (InvalidOperation, TypeError, ValueError):
+            return jsonify({'ok': False, 'error': 'النقد الفعلي غير صالح'}), 400
     shift = {'id': len(data.get('shifts', [])) + 1, 'date': datetime.now().strftime('%Y-%m-%d'),
              'time': datetime.now().isoformat(), 'orders': len(orders),
-             'sales': round(sum(o.get('total', 0) or 0 for o in orders), 2),
+             'sales': sum_money(o.get('total', 0) or 0 for o in orders),
              'expected_cash': expected_cash, 'actual_cash': actual_cash,
-             'difference': round(float(actual_cash) - expected_cash, 2) if actual_cash is not None else None,
+             'difference': round_money(actual_cash_value - Decimal(str(expected_cash))) if actual_cash_value is not None else None,
              'closed_by': session.get('username', 'manager'), 'reason': str(payload.get('reason', ''))[:300]}
     _store(data, 'shifts').append(shift)
     cut_result = cut_paper_to_printer(data.get('settings', {}).get('printer', {}))
@@ -5900,7 +5914,7 @@ def dine_in_sessions():
     totals, error = dine_in_totals(data, payload)
     if error:
         return jsonify({'ok': False, 'error': error}), 400
-    discount_total = round(totals['subtotal'] - totals['total'], 2)
+    discount_total = round_money(totals['subtotal'] - totals['total'])
     approval_record = None
     needs_approval, _ = manager_approval_required(data, totals['discount_pct'], discount_total)
     if needs_approval:
@@ -5942,7 +5956,7 @@ def dine_in_session_detail(session_id):
     totals, error = dine_in_totals(data, payload)
     if error:
         return jsonify({'ok': False, 'error': error}), 400
-    discount_total = round(totals['subtotal'] - totals['total'], 2)
+    discount_total = round_money(totals['subtotal'] - totals['total'])
     needs_approval, _ = manager_approval_required(data, totals['discount_pct'], discount_total)
     if needs_approval:
         approval_record, approval_error = verify_manager_approval(data, payload, 'تعديل خصم طلب صالة', discount_total, session_id)
@@ -5993,8 +6007,8 @@ def close_dine_in_session(session_id):
     if not session_row or session_row.get('status') != 'open':
         return jsonify({'ok': False, 'error': 'طلب الصالة المفتوح غير موجود'}), 404
     payload = request.get_json(silent=True) or {}
-    total_discount = round(float(session_row.get('subtotal', 0) or 0) - float(session_row.get('total', 0) or 0), 2)
-    needs_approval, _ = manager_approval_required(data, float(session_row.get('discount_pct', 0) or 0), total_discount)
+    total_discount = round_money(Decimal(str(session_row.get('subtotal', 0) or 0)) - Decimal(str(session_row.get('total', 0) or 0)))
+    needs_approval, _ = manager_approval_required(data, round_money(session_row.get('discount_pct', 0) or 0), total_discount)
     if needs_approval and not session_row.get('manager_approval'):
         approval_record, approval_error = verify_manager_approval(data, payload, 'خصم طلب صالة عند الدفع', total_discount, session_id)
         if approval_error:

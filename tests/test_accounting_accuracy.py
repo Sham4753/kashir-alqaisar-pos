@@ -226,6 +226,25 @@ class AccountingAccuracyTests(unittest.TestCase):
         self.assertIsNone(normalized)
         self.assertIsNotNone(error)
 
+    def test_financial_report_uses_decimal_rounding_for_cashier_totals(self):
+        now = datetime.now().isoformat()
+        data = server.load()
+        data['orders'] = [{
+            'id': 'ROUND-1', 'timestamp': now, 'subtotal': '1.005', 'total': '1.005',
+            'items': [], 'payment': 'نقدي', 'cash_amount': '1.005', 'card_amount': 0,
+            'type': 'سفري', 'cashier_name': 'manager'
+        }]
+        server.save(data)
+        report = self.client.get('/api/analytics/financial?period=daily').get_json()
+        self.assertEqual(report['summary']['sales'], 1.01)
+        self.assertEqual(report['cashier_summary'][0]['sales'], 1.01)
+        self.assertEqual(report['cashier_summary'][0]['cash'], 1.01)
+
+    def test_shift_close_rejects_non_finite_actual_cash(self):
+        response = self.client.post('/api/shifts/close', json={'actual_cash': 'NaN'})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('غير صالح', response.get_json()['error'])
+
 
 if __name__ == '__main__':
     unittest.main()
