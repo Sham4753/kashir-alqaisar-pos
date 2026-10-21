@@ -166,7 +166,13 @@ Invoke-PythonModule @("py_compile", (Join-Path $App "server.py"), (Join-Path $Ap
 
 Write-Host "3/6 - Building the OneFolder executable (python -m PyInstaller)..."
 $DataArguments = @("--add-data", ($App + ";app"))
-$HiddenArguments = @("--hidden-import", "app.server", "--hidden-import", "app.permissions", "--collect-all", "webview")
+$HiddenArguments = @(
+    "--hidden-import", "app.server",
+    "--hidden-import", "app.permissions",
+    "--hidden-import", "_cffi_backend",
+    "--collect-all", "cffi",
+    "--collect-all", "webview"
+)
 $PyInstallerArguments = @("PyInstaller", "--noconfirm", "--clean", "--onedir", "--windowed", "--name", "CAESAR_POS", "--icon", $Icon, "--distpath", $Out, "--workpath", $Build, "--specpath", $Build) + $DataArguments + $RuntimeArguments + $LicenseDataArguments + $HiddenArguments + @($Launcher)
 Invoke-PythonModule $PyInstallerArguments
 
