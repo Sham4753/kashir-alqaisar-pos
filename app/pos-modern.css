@@ -1006,3 +1006,19 @@ body.caesar-page-index .print-state { min-height: 17px; margin-top: 3px; font-si
   body.caesar-page-index .cart { min-height: 250px; max-height: 52vh; }
   body.caesar-page-index .cart-item { padding: 8px; }
 }
+
+/* Denser cart presets activate automatically as more meals are added. */
+body.caesar-page-index #cart:has(> .cart-item:nth-child(5)) .cart-item {
+  grid-template-columns: 28px minmax(0,1fr) auto;
+  gap: 6px;
+  margin-bottom: 3px;
+  padding: 5px 6px;
+}
+body.caesar-page-index #cart:has(> .cart-item:nth-child(5)) .cart-symbol { width: 28px; height: 28px; border-radius: 8px; font-size: 10px; }
+body.caesar-page-index #cart:has(> .cart-item:nth-child(5)) .cart-item-name { font-size: 11px; }
+body.caesar-page-index #cart:has(> .cart-item:nth-child(5)) .cart-unit { font-size: 8px; }
+body.caesar-page-index #cart:has(> .cart-item:nth-child(5)) .cart-item .qty { gap: 3px; }
+body.caesar-page-index #cart:has(> .cart-item:nth-child(5)) .cart-item .qty button { width: 24px; min-width: 24px; height: 24px; min-height: 24px; font-size: 13px; }
+body.caesar-page-index #cart:has(> .cart-item:nth-child(5)) .cart-item-total { font-size: 11px; }
+body.caesar-page-index #cart:has(> .cart-item:nth-child(8)) .cart-unit { display: none; }
+body.caesar-page-index #cart:has(> .cart-item:nth-child(8)) .cart-item > div:nth-child(2) { grid-template-areas: "name qty"; }
