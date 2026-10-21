@@ -1022,3 +1022,31 @@ body.caesar-page-index #cart:has(> .cart-item:nth-child(5)) .cart-item .qty butt
 body.caesar-page-index #cart:has(> .cart-item:nth-child(5)) .cart-item-total { font-size: 11px; }
 body.caesar-page-index #cart:has(> .cart-item:nth-child(8)) .cart-unit { display: none; }
 body.caesar-page-index #cart:has(> .cart-item:nth-child(8)) .cart-item > div:nth-child(2) { grid-template-areas: "name qty"; }
+
+/* Cart contrast guard: white text on dark cart surfaces in dark mode. */
+body.caesar-page-index.dark #cart,
+body.caesar-page-index.dark #cart * {
+  color: #f8fafc !important;
+}
+body.caesar-page-index.dark #cart {
+  background: #0f172a !important;
+  border-color: #475569 !important;
+}
+body.caesar-page-index.dark #cart .cart-item {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+}
+body.caesar-page-index.dark #cart .cart-item:hover { background: #263449 !important; }
+body.caesar-page-index.dark #cart .cart-symbol { background: #1e3a70 !important; }
+body.caesar-page-index.dark #cart .qty button {
+  background: #334155 !important;
+  border-color: #64748b !important;
+}
+body.caesar-page-index.light #cart,
+body.caesar-page-index.light #cart * {
+  color: #0f172a !important;
+}
+body.caesar-page-index.light #cart { background: #f8fafc !important; }
+body.caesar-page-index.light #cart .cart-item { background: #fff !important; border-color: #cbd5e1 !important; }
+body.caesar-page-index.light #cart .cart-symbol { background: #eaf1ff !important; }
+body.caesar-page-index.light #cart .qty button { background: #eef3f8 !important; border-color: #cbd5e1 !important; }
