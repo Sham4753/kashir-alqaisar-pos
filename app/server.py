@@ -1663,9 +1663,14 @@ def verify_manager_approval(data, payload, action, amount=0, reference_id=''):
     return record, None
 
 
-def _structured_orders_page(date_from='', date_to='', limit=None, offset=0):
-    """يقرأ صفحة الفواتير مباشرة من SQLite دون تحميل الأرشيف إلى الذاكرة."""
+def _structured_orders_page(date_from='', date_to='', limit=None, offset=0, include_voided=False):
+    """يقرأ صفحة الفواتير مباشرة من SQLite دون تحميل الأرشيف إلى الذاكرة.
+    الطلبات الملغاة تبقى محفوظة للتدقيق، لكنها لا تظهر في قائمة الطلبات
+    التشغيلية إلا عند طلبها صراحةً عبر include_voided.
+    """
     clauses, params = [], []
+    if not include_voided:
+        clauses.append('voided = 0')
     if date_from:
         clauses.append('substr(timestamp, 1, 10) >= ?'); params.append(date_from)
     if date_to:
@@ -1731,7 +1736,8 @@ def orders():
             offset = max(0, int(offset_raw or 0))
         except ValueError:
             return jsonify({'ok': False, 'error': 'limit أو offset غير صالح'}), 400
-        page, total = _structured_orders_page(date_from, date_to, limit, offset)
+        include_voided = request.args.get('include_voided', '').strip().lower() in {'1', 'true', 'yes'}
+        page, total = _structured_orders_page(date_from, date_to, limit, offset, include_voided)
         if limit is not None:
             return jsonify({'orders': page, 'total': total, 'offset': offset,
                             'limit': limit, 'has_more': offset + len(page) < total,
@@ -1804,7 +1810,10 @@ def orders():
             o['cash_drawer_status'] = drawer_result
         save(data, [o['id']]); backup()
         return jsonify({'ok': True, 'id': o['id'], 'total': total, 'print': {'receipt': receipt_print, 'kitchen': kitchen_print}, 'drawer': drawer_result})
+    include_voided = request.args.get('include_voided', '').strip().lower() in {'1', 'true', 'yes'}
     all_orders = data.get('orders', []) + data.get('orders_archive', [])
+    if not include_voided:
+        all_orders = [o for o in all_orders if not o.get('voided')]
     date_from = request.args.get('from', '').strip()
     date_to = request.args.get('to', '').strip()
     scope = request.args.get('scope', '').strip().lower()
@@ -6185,8 +6194,10 @@ def dashboard_counters():
     أما 'sales_today' فهو إجمالي مبيعات اليوم الفعلي ويجب ألا يتأثر بتصفير العداد،
     لذلك يُحسب من الطلبات الحالية + المؤرشفة اليوم معاً عبر _today_orders()."""
     data = load()
-    active_orders = [row for row in data.get('orders', []) if not row.get('voided')]
     today_orders = _today_orders(data)
+    # تعرض شاشة الكاشير أرقام اليوم المتاحة للتشغيل، لا بقايا الطلبات
+    # القديمة الموجودة في الوردية أو في snapshot الحالي فقط.
+    active_orders = today_orders
     payload = {
         'role': session.get('role'),
         'orders': len(active_orders),

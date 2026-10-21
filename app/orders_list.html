@@ -102,7 +102,7 @@ function jsArg(value){return JSON.stringify(String(value??''));}
                 if (from) params.set('from', from);
                 if (to) params.set('to', to);
                 if (!from && !to) params.set('scope', 'today');
-                const r = await fetch('/api/orders?' + params.toString());
+                const r = await fetch('/api/orders?' + params.toString(), { cache: 'no-store' });
                 const payload = await r.json();
                 if (!r.ok || !payload || !Array.isArray(payload.orders)) throw new Error(payload.error || 'تعذر تحميل الطلبات');
                 allOrders = reset ? payload.orders : allOrders.concat(payload.orders);
@@ -291,6 +291,11 @@ function jsArg(value){return JSON.stringify(String(value??''));}
                 const data = await res.json();
                 if (data.ok) {
                     showToast(' تم إلغاء الطلب');
+                    // الإلغاء يبقى محفوظاً في سجل التدقيق، لكن لا يبقى ظاهراً
+                    // في القائمة التشغيلية بعد نجاح العملية.
+                    allOrders = allOrders.filter(order => String(order.id) !== String(orderId));
+                    lastFilteredOrders = lastFilteredOrders.filter(order => String(order.id) !== String(orderId));
+                    renderOrders();
                     await loadOrders();
                 } else {
                     showToast(' ' + (data.error || 'تعذر الإلغاء'));

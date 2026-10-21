@@ -22,3 +22,16 @@ def test_cancel_confirmation_keeps_audit_and_manager_session_approval():
     assert "getManagerCreds(true)" in source
     assert "payload.manager_approval" in source
     assert "سجل التدقيق" in source
+
+
+def test_cancel_refreshes_operational_list_and_bypasses_browser_cache():
+    source = ORDERS_PAGE.read_text(encoding="utf-8")
+    assert "cache: 'no-store'" in source
+    assert "allOrders = allOrders.filter(order => String(order.id) !== String(orderId))" in source
+    assert "await loadOrders()" in source
+
+
+def test_dashboard_counters_use_today_orders_for_cashier_view():
+    source = (ROOT / "app" / "server.py").read_text(encoding="utf-8")
+    assert "today_orders = _today_orders(data)" in source
+    assert "active_orders = today_orders" in source
