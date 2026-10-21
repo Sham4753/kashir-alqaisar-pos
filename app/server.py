@@ -2228,8 +2228,7 @@ def add_debt():
         data['debts'] = []
     new_id = (max([d['id'] for d in data['debts']], default=0)) + 1
     payload = request.get_json(silent=True) or {}
-    try: amount = round(float(payload.get('amount', 0)), 2)
-    except (TypeError, ValueError): amount = 0
+    amount = as_money(payload.get('amount'), 0)
     if not payload.get('name') or amount <= 0:
         return jsonify({'ok': False, 'error': 'اسم العميل والمبلغ مطلوبان'}), 400
     snap = currency_snapshot(data, payload)
@@ -2250,9 +2249,8 @@ def update_debt(did):
         if d['id'] == did:
             payload = request.get_json(silent=True) or {}
             d['name'] = payload.get('name', d['name'])
-            try: new_amount = round(float(payload.get('amount', d['amount'])), 2)
-            except (TypeError, ValueError): new_amount = d['amount']
-            if new_amount < (d.get('paid', 0) or 0) or new_amount <= 0:
+            new_amount = as_money(payload.get('amount', d['amount']), None)
+            if new_amount is None or new_amount < as_money(d.get('paid', 0), 0) or new_amount <= 0:
                 return jsonify({'ok': False, 'error': 'المبلغ لا يمكن أن يكون أقل من المدفوع'}), 400
             d['amount'] = new_amount
             d['note'] = payload.get('note', d.get('note', ''))
@@ -2268,15 +2266,14 @@ def pay_debt(did):
     for d in data.get('debts', []):
         if d['id'] == did:
             payload = request.get_json(silent=True) or {}
-            try: amount = round(float(payload.get('amount', 0)), 2)
-            except (TypeError, ValueError): amount = 0
+            amount = as_money(payload.get('amount'), 0)
             method = payload.get('method', 'نقدي')
             if method not in ('نقدي', 'بطاقة'):
                 method = 'نقدي'
-            remaining_before = round(float(d.get('amount', 0)) - float(d.get('paid', 0) or 0), 2)
+            remaining_before = round_money(as_money(d.get('amount'), 0) - as_money(d.get('paid'), 0))
             if amount <= 0 or amount > remaining_before:
                 return jsonify({'ok': False, 'error': 'مبلغ الدفعة غير صالح أو أكبر من المتبقي'}), 400
-            d['paid'] = round(d.get('paid', 0) + amount, 2)
+            d['paid'] = round_money(as_money(d.get('paid'), 0) + amount)
             snap = currency_snapshot(data, d)
             payment = {'amount': amount, 'method': method, 'date': datetime.now().isoformat(), 'currency': snap['currency'], 'exchange_rate': snap['exchange_rate']}
             d.setdefault('payments', []).append(payment)
@@ -2370,8 +2367,7 @@ def expenses_api():
         if date_to: rows = [x for x in rows if x.get('date', '')[:10] <= date_to]
         return jsonify(rows)
     payload = request.get_json(silent=True) or {}
-    try: amount = round(float(payload.get('amount', 0)), 2)
-    except (TypeError, ValueError): amount = 0
+    amount = as_money(payload.get('amount'), 0)
     if amount <= 0 or not payload.get('note'):
         return jsonify({'ok': False, 'error': 'الوصف والمبلغ مطلوبان'}), 400
     snap = currency_snapshot(data, payload)
@@ -2674,14 +2670,14 @@ def supplier_summary(data):
     for supplier in suppliers:
         sid = supplier.get('id')
         rows = [m for m in purchases if m.get('supplier_id') == sid and not m.get('voided')]
-        purchase_total = round(sum(float(m.get('price', 0) or 0) for m in rows), 2)
-        purchase_paid = round(sum(float(m.get('paid_amount', m.get('price', 0)) or 0) for m in rows), 2)
+        purchase_total = sum_money(m.get('price', 0) or 0 for m in rows)
+        purchase_paid = sum_money(m.get('paid_amount', m.get('price', 0)) or 0 for m in rows)
         later_payments = supplier_payment_rows(data, sid)
-        later_paid = round(sum(float(row.get('amount', 0) or 0) for row in later_payments), 2)
-        paid_total = round(purchase_paid + later_paid, 2)
+        later_paid = sum_money(row.get('amount', 0) or 0 for row in later_payments)
+        paid_total = sum_money((purchase_paid, later_paid))
         result.append({**supplier, 'purchase_total': purchase_total, 'paid_at_purchase': purchase_paid,
                        'later_paid': later_paid, 'paid_total': paid_total,
-                       'due_total': max(0, round(purchase_total - paid_total, 2)),
+                       'due_total': max(0, round_money(purchase_total - paid_total)),
                        'purchase_count': len(rows), 'payment_count': len(later_payments)})
     return result
 
@@ -6316,7 +6312,7 @@ def loyalty_redeem():
 def gift_cards_api():
     data = load()
     if request.method == 'GET': return jsonify(data.get('gift_cards', []))
-    payload = request.get_json(silent=True) or {}; code = payload.get('code', '').strip(); balance = float(payload.get('balance', 0) or 0)
+    payload = request.get_json(silent=True) or {}; code = payload.get('code', '').strip(); balance = as_money(payload.get('balance'), 0)
     if not code or balance <= 0: return jsonify({'ok': False, 'error': 'بيانات البطاقة غير صالحة'}), 400
     card = {'code': code, 'balance': balance, 'created_at': datetime.now().isoformat()}; _store(data, 'gift_cards').append(card); save(data); return jsonify({'ok': True, 'card': card})
 

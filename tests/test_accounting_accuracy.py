@@ -245,6 +245,31 @@ class AccountingAccuracyTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn('غير صالح', response.get_json()['error'])
 
+    def test_non_finite_financial_inputs_are_rejected(self):
+        cases = [
+            ('/api/debts', {'name': 'عميل', 'amount': 'NaN'}),
+            ('/api/expenses', {'note': 'مصروف اختبار', 'amount': 'Infinity'}),
+            ('/api/gift-cards', {'code': 'GIFT-1', 'balance': 'NaN'}),
+        ]
+        for path, payload in cases:
+            with self.subTest(path=path):
+                response = self.client.post(path, json=payload)
+                self.assertEqual(response.status_code, 400)
+
+    def test_supplier_summary_uses_decimal_money_sums(self):
+        data = server.load()
+        data['suppliers'] = [{'id': 1, 'name': 'مورد'}]
+        data['materials'] = [
+            {'id': 1, 'supplier_id': 1, 'price': '0.10', 'paid_amount': '0.10'},
+            {'id': 2, 'supplier_id': 1, 'price': '0.20', 'paid_amount': '0.10'},
+        ]
+        data['supplier_payments'] = [{'id': 1, 'supplier_id': 1, 'amount': '0.10'}]
+        server.save(data)
+        summary = self.client.get('/api/suppliers/summary').get_json()['suppliers'][0]
+        self.assertEqual(summary['purchase_total'], 0.30)
+        self.assertEqual(summary['paid_total'], 0.30)
+        self.assertEqual(summary['due_total'], 0)
+
 
 if __name__ == '__main__':
     unittest.main()
