@@ -72,6 +72,7 @@ function esc(value){return String(value??'').replace(/[&<>\"']/g,ch=>({'&':'&amp
 function jsArg(value){return JSON.stringify(String(value??''));}
 
         let allOrders = [];
+        let currentRole = '';
         let currentCurrency = 'SYP', usdRate = 0, eurRate = 0;
 
         async function loadCurrency() {
@@ -195,7 +196,7 @@ function jsArg(value){return JSON.stringify(String(value??''));}
                         ${o.note ? `<div class="text-xs text-gray-400 mt-2"> ${esc(o.note)}</div>` : ''}
                         ${o.voided
                             ? `<div class="text-xs text-red-500 mt-2">سبب الإلغاء: ${esc(o.void_reason || 'بدون سبب')}</div>`
-                            : `<button type="button" data-order-action="void-order" data-order-id="${esc(o.id)}" class="mt-2 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100">إلغاء الطلب</button>`}
+                            : (currentRole === 'manager' ? `<button type="button" data-order-action="void-order" data-order-id="${esc(o.id)}" class="mt-2 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100">إلغاء الطلب</button>` : '')}
                     </div>`;
                 }).join('');
             }
@@ -272,6 +273,7 @@ function jsArg(value){return JSON.stringify(String(value??''));}
         }
 
         async function voidOrder(orderId) {
+            if (currentRole !== 'manager') return showToast('إلغاء الطلب متاح للمدير فقط.');
             const creds = await getManagerCreds(true);
             if (!creds.ok) return;
             const reason = prompt('سبب إلغاء الطلب؟ (اختياري)') || '';
@@ -336,7 +338,17 @@ function jsArg(value){return JSON.stringify(String(value??''));}
             setTimeout(() => toast.classList.add('hidden'), 2500);
         }
 
-        loadOrders();
+        async function initializeOrdersPage() {
+            try {
+                const response = await fetch('/api/auth/me', { cache: 'no-store' });
+                const sessionInfo = await response.json();
+                if (response.ok) currentRole = sessionInfo.role || '';
+            } catch (_) {
+                currentRole = '';
+            }
+            await loadOrders();
+        }
+        initializeOrdersPage();
     </script>
 </body>
 </html>

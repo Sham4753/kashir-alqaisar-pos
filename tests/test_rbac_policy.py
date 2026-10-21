@@ -18,6 +18,11 @@ class RbacPolicyTests(unittest.TestCase):
         self.assertFalse(role_can_access("POST", "/api/category", "cashier"))
         self.assertFalse(role_can_access("POST", "/api/settings/users", "cashier"))
 
+    def test_only_manager_can_void_an_order(self):
+        self.assertTrue(role_can_access("POST", "/api/orders/123/void", "manager"))
+        self.assertFalse(role_can_access("POST", "/api/orders/123/void", "cashier"))
+        self.assertFalse(role_can_access("POST", "/api/orders/123/void", "supervisor"))
+
     def test_manager_can_access_management(self):
         self.assertTrue(role_can_access("GET", "/api/analytics", "manager"))
         self.assertTrue(role_can_access("POST", "/api/category", "manager"))

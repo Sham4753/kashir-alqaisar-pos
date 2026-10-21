@@ -11,6 +11,8 @@ def test_order_actions_use_delegated_data_attributes_not_out_of_scope_row_vars()
     assert 'data-order-action="edit-item"' in source
     assert "button[data-order-action]" in source
     assert "voidOrder(orderId)" in source
+    assert "currentRole === 'manager'" in source
+    assert "إلغاء الطلب متاح للمدير فقط" in source
     assert 'onclick="voidOrder(jsArg(o.id))"' not in source
     assert 'onclick="editOrderItem(jsArg(o.id)' not in source
 
