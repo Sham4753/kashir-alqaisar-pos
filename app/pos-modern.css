@@ -518,3 +518,29 @@ body.caesar-page-index .quick-pay-btn { min-height: 80px !important; border-radi
   body.caesar-page-index #productsPanel { width: 100% !important; height: auto !important; overflow: visible !important; }
   body.caesar-page-index .cart-panel { height: 68vh !important; max-height: 68vh !important; width: 100% !important; }
 }
+
+/* Theme-aware register surfaces: keep cart and quick actions legible in both modes. */
+body.caesar-page-index .cart-panel { border-color: var(--q-line-strong) !important; background: var(--q-surface) !important; box-shadow: var(--q-shadow) !important; }
+body.caesar-page-index .cart-head { border-color: var(--q-line) !important; background: var(--q-surface-soft) !important; }
+body.caesar-page-index .cart-head h3, body.caesar-page-index .cart-head > p { color: var(--q-ink) !important; }
+body.caesar-page-index #cartItems { border-color: var(--q-line) !important; background: var(--q-surface) !important; }
+body.caesar-page-index .cart-empty { border-color: var(--q-line-strong); background: var(--q-surface-soft); color: var(--q-muted); }
+body.caesar-page-index .cart-empty p { color: var(--q-ink) !important; }
+body.caesar-page-index .cart-item { border-color: var(--q-line) !important; background: var(--q-surface-soft) !important; }
+body.caesar-page-index .cart-footer { border-color: var(--q-line) !important; background: var(--q-surface) !important; box-shadow: 0 -12px 22px rgba(0,0,0,.12); }
+body.caesar-page-index .quick-pay-btn { border-color: var(--q-line) !important; background: var(--q-brand-soft) !important; }
+body.caesar-page-index .quick-pay-btn:hover { border-color: var(--q-brand) !important; background: var(--q-surface-muted) !important; }
+body.caesar-page-index .quick-pay-btn .font-bold { color: var(--q-brand-strong) !important; }
+body.caesar-page-index .product-card { border-radius: var(--q-radius-lg) !important; }
+body.caesar-page-index #menuPanel { background: var(--q-surface) !important; border-color: var(--q-line) !important; }
+body.caesar-page-index #menuPanel .menu-panel-header { border-color: var(--q-line); }
+body.caesar-page-index #menuPanel .menu-group { border-color: var(--q-line); background: var(--q-surface-soft) !important; }
+body.caesar-page-index #menuPanel .menu-group summary { color: var(--q-ink) !important; background: var(--q-surface-muted); }
+body.caesar-page-index #menuPanel .menu-group-links a, body.caesar-page-index #menuPanel .menu-group-links button { color: var(--q-ink-soft); }
+body.caesar-page-index #menuPanel .menu-group-links a:hover { background: var(--q-brand-soft); color: var(--q-brand-strong); }
+body.caesar-page-index #toast { color: var(--q-ink); border-color: var(--q-line); background: var(--q-surface) !important; }
+body.caesar-page-index.light .top-field { color: #111827 !important; background: #fff !important; }
+@media (max-width: 620px) {
+  body.caesar-page-index .cart-panel { max-height: none; }
+  body.caesar-page-index .cart-footer { position: sticky; bottom: 0; }
+}

@@ -363,3 +363,51 @@ body.caesar-ui.light.caesar-page-settings .brand strong,
 body.caesar-ui.light.caesar-page-settings .intro h1,
 body.caesar-ui.light.caesar-page-settings .card h2,
 body.caesar-ui.light.caesar-page-settings .field label { color: var(--q-ink) !important; }
+
+/* ── Unified POS design-system finishing layer ──────────────────────────── */
+:root {
+  color-scheme: dark;
+  --q-font-body: Tajawal, "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+  --q-font-mono: "Cascadia Mono", "Segoe UI", Tahoma, sans-serif;
+  --q-control-height: 44px;
+  --q-radius-xl: 16px;
+}
+body.light { color-scheme: light; }
+body.caesar-ui { font-family: var(--q-font-body) !important; }
+body.caesar-ui :is(input, select, textarea, button) { font-size: 14px; }
+body.caesar-ui :is(input, select, textarea) { min-height: var(--q-control-height); padding-inline: 12px; }
+body.caesar-ui textarea { min-height: 96px; padding-block: 10px; }
+body.caesar-ui :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--q-blue) 72%, white) !important;
+  outline-offset: 2px;
+}
+body.caesar-ui :is(.text-gray-900, .text-gray-800, .text-slate-900, .text-slate-800, .text-gray-700, .text-slate-700) { color: var(--q-ink) !important; }
+body.caesar-ui :is(.text-gray-600, .text-gray-500, .text-slate-600, .text-slate-500, .text-gray-400, .text-slate-400) { color: var(--q-muted) !important; }
+body.caesar-ui :is(.text-blue-700, .text-blue-800, .text-indigo-700, .text-indigo-800) { color: var(--q-brand-strong) !important; }
+body.caesar-ui :is(.text-green-700, .text-emerald-700) { color: var(--q-success) !important; }
+body.caesar-ui :is(.text-red-700, .text-rose-700) { color: var(--q-danger) !important; }
+body.caesar-ui :is(.text-amber-700, .text-orange-700) { color: var(--q-warning) !important; }
+body.caesar-ui :is(.bg-white, [class*="bg-gray-50"], [class*="bg-slate-50"]) { color: var(--q-ink); }
+body.caesar-ui :is(.bg-gray-100, .bg-slate-100, .bg-gray-200, .bg-slate-200) { color: var(--q-ink); }
+body.caesar-ui :is(.bg-gray-100, .bg-slate-100, .bg-gray-200, .bg-slate-200) { border-color: var(--q-line) !important; }
+body.caesar-ui :is(.money, .amount, .currency-value, [data-money], [class*="amount"], [class*="total"], [class*="price"], [class*="balance"]) {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+body.caesar-ui :is(th, td) { vertical-align: middle; }
+body.caesar-ui tbody tr:nth-child(even) { background-color: color-mix(in srgb, var(--q-surface-soft) 55%, transparent); }
+body.caesar-ui .q-appbar { position: relative; z-index: 5; }
+body.caesar-ui .q-appbar a.q-appbar-link { min-height: 42px; font-size: 12px; }
+body.caesar-ui .q-theme-toggle { width: 46px; height: 46px; border-radius: 14px !important; }
+body.caesar-ui .ctx-menu { color: var(--q-ink); border-color: var(--q-line); background: var(--q-surface); }
+body.caesar-ui .ctx-menu-item { min-height: 40px; color: var(--q-ink); border-radius: 8px; }
+body.caesar-ui .ctx-menu-item:hover { color: var(--q-ink); background: var(--q-surface-muted); }
+body.caesar-ui :is(.toast, #toast) { color: var(--q-ink); }
+@media (max-width: 760px) {
+  body.caesar-ui:not(.caesar-page-index) > main { padding: 12px !important; }
+  body.caesar-ui table th, body.caesar-ui table td { padding: 10px !important; }
+  body.caesar-ui .q-theme-toggle { width: 44px; height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.caesar-ui *, body.caesar-ui *::before, body.caesar-ui *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
