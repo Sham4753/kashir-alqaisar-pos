@@ -193,10 +193,28 @@ function jsArg(value){return JSON.stringify(String(value??''));}
                 filtered.length > 0 ? ` عدد الطلبات: ${filtered.length}` : '';
         }
 
-        async function getManagerCreds() {
-            const usersRes = await fetch('/api/settings/users');
-            const users = await usersRes.json();
-            if (!users || users.length === 0) return { username: '', password: '', ok: true };
+        async function getManagerCreds(allowSessionManager = false) {
+            try {
+                const sessionRes = await fetch('/api/auth/me', { cache: 'no-store' });
+                const current = await sessionRes.json();
+                if (allowSessionManager && sessionRes.ok && current.role === 'manager') {
+                    return { ok: true, sessionManager: true, username: current.username || '' };
+                }
+            } catch (_) {}
+
+            let users = [];
+            try {
+                const usersRes = await fetch('/api/settings/users', { cache: 'no-store' });
+                users = await usersRes.json();
+                if (!usersRes.ok || !Array.isArray(users)) {
+                    showToast((users && users.error) || 'تعذر التحقق من صلاحية المدير. أعد تسجيل الدخول ثم حاول مجدداً.');
+                    return { ok: false };
+                }
+            } catch (_) {
+                showToast('تعذر الاتصال للتحقق من موافقة المدير.');
+                return { ok: false };
+            }
+            if (users.length === 0) return { username: '', password: '', ok: true };
             const username = prompt('اسم مستخدم المدير لاعتماد العملية:') || '';
             if (!username) return { ok: false };
             const password = prompt('كلمة مرور المدير:') || '';
@@ -241,15 +259,19 @@ function jsArg(value){return JSON.stringify(String(value??''));}
         }
 
         async function voidOrder(orderId) {
-            const creds = await getManagerCreds();
+            const creds = await getManagerCreds(true);
             if (!creds.ok) return;
             const reason = prompt('سبب إلغاء الطلب؟ (اختياري)') || '';
-            if (!confirm('تأكيد إلغاء الطلب رقم ' + orderId + '؟')) return;
+            if (!confirm('هل تريد إلغاء الطلب رقم ' + orderId + '؟ سيُستبعد من المبيعات ويُسجّل الإلغاء في سجل التدقيق.')) return;
             try {
+                const payload = { reason };
+                if (!creds.sessionManager && creds.username) {
+                    payload.manager_approval = { username: creds.username, password: creds.password };
+                }
                 const res = await fetch('/api/orders/' + orderId + '/void', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ reason, manager_approval: {username: creds.username, password: creds.password} })
+                    body: JSON.stringify(payload)
                 });
                 const data = await res.json();
                 if (data.ok) {
@@ -259,7 +281,7 @@ function jsArg(value){return JSON.stringify(String(value??''));}
                     showToast(' ' + (data.error || 'تعذر الإلغاء'));
                 }
             } catch (e) {
-                showToast(' خطأ بالإلغاء');
+                showToast((e && e.message) || 'تعذر الاتصال بالخادم أثناء إلغاء الطلب');
             }
         }
 

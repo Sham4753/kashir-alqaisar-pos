@@ -1050,3 +1050,30 @@ body.caesar-page-index.light #cart { background: #f8fafc !important; }
 body.caesar-page-index.light #cart .cart-item { background: #fff !important; border-color: #cbd5e1 !important; }
 body.caesar-page-index.light #cart .cart-symbol { background: #eaf1ff !important; }
 body.caesar-page-index.light #cart .qty button { background: #eef3f8 !important; border-color: #cbd5e1 !important; }
+
+/* Bring the three live counters back above search without letting them dominate. */
+body.caesar-page-index .main > .topbar { order: 0; }
+body.caesar-page-index .main > .counter-strip {
+  order: 1;
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 9px;
+  margin: 10px 0 12px;
+}
+body.caesar-page-index .main > .counter-strip .counter-card {
+  min-height: 62px;
+  padding: 9px 13px;
+  border-radius: 13px;
+}
+body.caesar-page-index .main > .counter-strip .counter-card span { font-size: 10px; }
+body.caesar-page-index .main > .counter-strip .counter-card strong { font-size: 17px; }
+body.caesar-page-index .main > .search { order: 2; }
+body.caesar-page-index .main > .category-bar { order: 3; }
+body.caesar-page-index .main > .catalog-head { order: 4; }
+body.caesar-page-index .main > .products { order: 5; }
+@media (max-width: 520px) {
+  body.caesar-page-index .main > .counter-strip { gap: 5px; margin: 8px 0; }
+  body.caesar-page-index .main > .counter-strip .counter-card { min-height: 54px; padding: 7px 6px; }
+  body.caesar-page-index .main > .counter-strip .counter-card span { font-size: 9px; }
+  body.caesar-page-index .main > .counter-strip .counter-card strong { font-size: 14px; }
+}
