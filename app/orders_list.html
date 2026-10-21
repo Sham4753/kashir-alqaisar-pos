@@ -116,6 +116,19 @@ function jsArg(value){return JSON.stringify(String(value??''));}
 
         let lastFilteredOrders = [];
 
+        document.getElementById('ordersList').addEventListener('click', event => {
+            const button = event.target.closest('button[data-order-action]');
+            if (!button) return;
+            const orderId = button.dataset.orderId;
+            if (!orderId) return showToast('رقم الطلب غير متوفر. أعد تحميل القائمة.');
+            if (button.dataset.orderAction === 'void-order') {
+                voidOrder(orderId).catch(error => showToast(error.message || 'تعذر إلغاء الطلب'));
+            } else if (button.dataset.orderAction === 'edit-item') {
+                const itemIdx = Number(button.dataset.itemIndex);
+                if (Number.isInteger(itemIdx)) editOrderItem(orderId, itemIdx);
+            }
+        });
+
         function renderOrders() {
             const q = document.getElementById('searchBox').value.toLowerCase();
             const dateFrom = document.getElementById('dateFrom').value;
@@ -152,7 +165,7 @@ function jsArg(value){return JSON.stringify(String(value??''));}
                     const items = (o.items || []).map((item, itemIdx) => `
                         <div class="text-sm text-gray-600 flex justify-between items-center">
                             <span>• ${esc(item.name)} ×${item.quantity || 1}</span>
-                            ${!o.voided ? `<button onclick="editOrderItem(jsArg(o.id), ${itemIdx})" class="text-xs text-blue-500 hover:text-blue-700"></button>` : ''}
+                            ${!o.voided ? `<button type="button" data-order-action="edit-item" data-order-id="${esc(o.id)}" data-item-index="${itemIdx}" aria-label="تعديل كمية ${esc(item.name)}" class="text-xs text-blue-500 hover:text-blue-700">تعديل</button>` : ''}
                         </div>`
                     ).join('');
 
@@ -182,7 +195,7 @@ function jsArg(value){return JSON.stringify(String(value??''));}
                         ${o.note ? `<div class="text-xs text-gray-400 mt-2"> ${esc(o.note)}</div>` : ''}
                         ${o.voided
                             ? `<div class="text-xs text-red-500 mt-2">سبب الإلغاء: ${esc(o.void_reason || 'بدون سبب')}</div>`
-                            : `<button onclick="voidOrder(jsArg(o.id))" class="mt-2 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100"> إلغاء الطلب</button>`}
+                            : `<button type="button" data-order-action="void-order" data-order-id="${esc(o.id)}" class="mt-2 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100">إلغاء الطلب</button>`}
                     </div>`;
                 }).join('');
             }
