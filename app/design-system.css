@@ -411,3 +411,139 @@ body.caesar-ui :is(.toast, #toast) { color: var(--q-ink); }
 @media (prefers-reduced-motion: reduce) {
   body.caesar-ui *, body.caesar-ui *::before, body.caesar-ui *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* ── Unified interaction and information hierarchy across all app pages ─── */
+:root {
+  --q-brand: #2563eb;
+  --q-brand-strong: #1d4ed8;
+  --q-blue: #2563eb;
+  --q-blue-soft: #182d4d;
+  --q-radius: 12px;
+  --q-radius-md: 14px;
+  --q-radius-lg: 18px;
+  --q-control-height: 46px;
+}
+body.light {
+  --q-brand: #2563eb;
+  --q-brand-strong: #1d4ed8;
+  --q-blue: #2563eb;
+  --q-blue-soft: #eaf1ff;
+  --q-radius: 12px;
+  --q-radius-md: 14px;
+  --q-radius-lg: 18px;
+}
+body.caesar-ui { font-size: 14px; line-height: 1.55; }
+body.caesar-ui :is(main, main > .container, .container, .mx-auto) { min-width: 0; }
+body.caesar-ui:not(.caesar-page-index) main > .container { padding-inline: clamp(16px,3vw,30px) !important; }
+body.caesar-ui :is(main > h1, main > .container > h1, .page-title) { margin-block: 0 20px; font-weight: 900; }
+body.caesar-ui :is(.bg-white, [class*="bg-gray-50"], [class*="bg-slate-50"], .card) {
+  border: 1px solid var(--q-line);
+  border-radius: var(--q-radius-lg);
+  box-shadow: var(--q-shadow-soft);
+}
+body.caesar-ui :is(button, a[role="button"], input[type="button"], input[type="submit"]) {
+  min-height: 44px;
+  padding-inline: 14px;
+  border-radius: var(--q-radius) !important;
+  font-size: 13px;
+  font-weight: 800 !important;
+}
+body.caesar-ui :is(button[aria-label], button.icon-button, .icon-button) {
+  min-width: 44px;
+  min-height: 44px;
+  padding-inline: 10px;
+}
+body.caesar-ui :is(button, a[role="button"], input[type="button"], input[type="submit"]):hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+body.caesar-ui :is(button, a[role="button"], input[type="button"], input[type="submit"]):active:not(:disabled) {
+  transform: translateY(0) scale(.985);
+}
+body.caesar-ui :is(button:disabled, input:disabled) { cursor: not-allowed; opacity: .52; }
+body.caesar-ui :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  min-height: 46px;
+  padding-inline: 13px !important;
+  border: 1px solid var(--q-line-strong) !important;
+  border-radius: var(--q-radius) !important;
+  background: var(--q-surface) !important;
+  color: var(--q-ink) !important;
+  font-size: 14px;
+}
+body.caesar-ui textarea { min-height: 100px; padding-block: 11px !important; }
+body.caesar-ui :is(input, select, textarea):focus-visible {
+  outline: 3px solid color-mix(in srgb,var(--q-brand) 30%,transparent) !important;
+  outline-offset: 1px;
+  border-color: var(--q-brand) !important;
+}
+body.caesar-ui :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid color-mix(in srgb,var(--q-brand) 58%,white) !important;
+  outline-offset: 2px;
+}
+/* Action intent: danger remains red, confirmation green, neutral actions subdued. */
+body.caesar-ui :is(button, a)[class*="bg-red"],
+body.caesar-ui :is(button, a).danger,
+body.caesar-ui :is(button, a)[data-action="delete"],
+body.caesar-ui :is(button, a)[data-action="cancel-order"] {
+  background: var(--q-danger) !important;
+  border-color: var(--q-danger) !important;
+  color: #fff !important;
+}
+body.caesar-ui :is(button, a)[class*="bg-green"],
+body.caesar-ui :is(button, a)[class*="bg-emerald"],
+body.caesar-ui :is(button, a)[data-action="confirm"] {
+  background: var(--q-success) !important;
+  border-color: var(--q-success) !important;
+  color: #fff !important;
+}
+body.caesar-ui :is(button, a)[class*="bg-blue"],
+body.caesar-ui :is(button, a)[class*="bg-indigo"],
+body.caesar-ui :is(button, a)[data-action="primary"] {
+  background: var(--q-brand) !important;
+  border-color: var(--q-brand) !important;
+  color: #fff !important;
+}
+body.caesar-ui :is(button, a)[class*="bg-amber"],
+body.caesar-ui :is(button, a)[class*="bg-orange"] {
+  background: var(--q-warning) !important;
+  border-color: var(--q-warning) !important;
+  color: #17212c !important;
+}
+body.caesar-ui table {
+  width: 100%;
+  border: 1px solid var(--q-line) !important;
+  border-radius: var(--q-radius-md) !important;
+  border-collapse: separate !important;
+  border-spacing: 0;
+  background: var(--q-surface) !important;
+  overflow: hidden;
+}
+body.caesar-ui thead { background: var(--q-surface-muted) !important; }
+body.caesar-ui :is(th, td) {
+  padding: 13px 14px !important;
+  border-color: var(--q-line) !important;
+  vertical-align: middle;
+}
+body.caesar-ui th { color: var(--q-ink-soft) !important; font-size: 12px; font-weight: 900 !important; white-space: nowrap; }
+body.caesar-ui td { color: var(--q-ink); font-size: 13px; }
+body.caesar-ui tbody tr:hover { background: var(--q-brand-soft) !important; }
+body.caesar-ui :is(.money, .amount, .numeric, .currency-value, [data-money], [class*="amount"], [class*="price"], [class*="total"], [class*="balance"]) {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-weight: 900;
+}
+body.caesar-ui :is(.money, .amount, .numeric, .currency-value, [data-money]) { direction: ltr; text-align: end; white-space: nowrap; }
+body.caesar-ui .q-appbar { margin-block: 12px; border-radius: var(--q-radius-lg); }
+body.caesar-ui .q-appbar a.q-appbar-link { min-height: 44px; padding-inline: 12px; font-size: 12px; }
+body.caesar-ui .q-settings-tabs { border-radius: var(--q-radius-lg); padding: 12px; }
+body.caesar-ui .q-settings-tab { min-height: 46px; padding-inline: 12px; border-radius: 11px; font-size: 12px; }
+body.caesar-ui .q-settings-content > .bg-white { padding: 4px; }
+body.caesar-ui .q-settings-content > .bg-white > button:first-child { min-height: 58px; }
+body.caesar-ui .q-theme-toggle { border-radius: 14px !important; }
+body.caesar-ui [class*="overflow-x-auto"] { scrollbar-color: var(--q-line-strong) transparent; }
+@media (max-width: 760px) {
+  body.caesar-ui:not(.caesar-page-index) > main { padding: 12px !important; }
+  body.caesar-ui :is(th, td) { padding: 10px !important; }
+  body.caesar-ui .q-settings-layout { gap: 12px; }
+  body.caesar-ui .q-settings-tab { min-height: 44px; }
+}

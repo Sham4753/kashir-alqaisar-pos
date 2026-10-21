@@ -637,3 +637,88 @@ body.caesar-page-index :is(button,input,select):focus-visible { outline-color: v
   body.caesar-page-index .order-panel { border-top: 1px solid var(--line); }
   body.caesar-page-index .product, body.caesar-page-index .product-card { min-height: 185px; }
 }
+
+/* ── Workflow redesign: checkout first, kitchen/table actions secondary ──── */
+body.caesar-page-index.dark {
+  --blue: #2563eb;
+  --blue-bright: #60a5fa;
+  --blue-soft: #182d4d;
+  --panel: #172235;
+  --panel-soft: #1c2a3f;
+  --panel-muted: #24354b;
+  --bg: #0d1522;
+  --bg-deep: #0a111d;
+  --line: #2d3e54;
+}
+body.caesar-page-index.light {
+  --blue: #2563eb;
+  --blue-bright: #1d4ed8;
+  --blue-soft: #eaf1ff;
+}
+body.caesar-page-index .compact-action-bar {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  grid-template-rows: auto auto;
+  gap: 9px;
+  margin-top: 12px;
+}
+body.caesar-page-index .action-secondary-row { display: contents; }
+body.caesar-page-index #paymentButton {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  min-height: 60px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg,#3b82f6,#1d4ed8);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(37,99,235,.28);
+  font-size: 16px;
+  font-weight: 900;
+}
+body.caesar-page-index #paymentButton:hover:not(:disabled) { background: linear-gradient(135deg,#60a5fa,#2563eb); color: #fff; transform: translateY(-1px); }
+body.caesar-page-index #paymentButton:disabled { opacity: .45; box-shadow: none; }
+body.caesar-page-index #checkoutButton {
+  grid-column: 1;
+  grid-row: 2;
+  min-height: 48px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--panel-muted);
+  color: var(--text-soft);
+  box-shadow: none;
+  font-size: 12px;
+}
+body.caesar-page-index #tableButton { grid-column: 2; grid-row: 2; }
+body.caesar-page-index .action-secondary { font-size: 12px; font-weight: 800; }
+body.caesar-page-index .summary { display: flex; flex-direction: column; gap: 2px; }
+body.caesar-page-index .summary > .field-label { margin-top: 13px; }
+body.caesar-page-index .product, body.caesar-page-index .product-card {
+  min-height: 220px;
+  border-radius: 18px;
+  padding: 12px;
+}
+body.caesar-page-index .product-image {
+  height: 126px;
+  padding: 7px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--panel-soft);
+}
+body.caesar-page-index .product-foot { align-items: center; padding-top: 10px; }
+body.caesar-page-index .product-price { font-size: 16px; font-weight: 900; }
+body.caesar-page-index .add { width: 42px; height: 42px; border-radius: 13px; }
+body.caesar-page-index .topbar { padding: 4px 2px 12px; border-bottom: 1px solid var(--line); }
+body.caesar-page-index .catalog-head { margin: 4px 0 14px; }
+body.caesar-page-index .catalog-head h2 { font-size: 16px; }
+body.caesar-page-index .field-label { margin-top: 14px; font-size: 11px; }
+body.caesar-page-index #orderType, body.caesar-page-index #paymentType { gap: 7px; }
+body.caesar-page-index .nav { gap: 15px; }
+body.caesar-page-index .nav-group { gap: 7px; }
+body.caesar-page-index .nav a { min-height: 48px; font-size: 13px; }
+body.caesar-page-index .cart-heading { margin: 16px 0 8px; }
+body.caesar-page-index .total-row strong { font-size: 28px; }
+@media (max-width: 520px) {
+  body.caesar-page-index .compact-action-bar { grid-template-columns: 1fr 1fr; }
+  body.caesar-page-index #paymentButton { min-height: 56px; }
+  body.caesar-page-index #checkoutButton, body.caesar-page-index #tableButton { min-height: 48px; }
+}
