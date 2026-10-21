@@ -722,3 +722,16 @@ body.caesar-page-index .total-row strong { font-size: 28px; }
   body.caesar-page-index #paymentButton { min-height: 56px; }
   body.caesar-page-index #checkoutButton, body.caesar-page-index #tableButton { min-height: 48px; }
 }
+
+/* Sell-first content order: search/catalog outrank dashboard counters. */
+body.caesar-page-index .main { display: flex; flex-direction: column; }
+body.caesar-page-index .main > .topbar { order: 0; }
+body.caesar-page-index .main > .search { order: 1; margin: 0 0 12px; }
+body.caesar-page-index .main > .category-bar { order: 2; margin-bottom: 12px; }
+body.caesar-page-index .main > .catalog-head { order: 3; }
+body.caesar-page-index .main > .products { order: 4; }
+body.caesar-page-index .main > .counter-strip { order: 5; margin-top: 20px; }
+body.caesar-page-index .main > .counter-strip .counter-card { min-height: 76px; }
+@media (min-width: 821px) {
+  body.caesar-page-index .main > .products { grid-template-columns: repeat(auto-fill,minmax(185px,1fr)); gap: 16px; }
+}
