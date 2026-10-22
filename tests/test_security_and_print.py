@@ -22,7 +22,9 @@ class SecurityAndPrintTests(unittest.TestCase):
         server.DATA_FILE = str(vault / 'data.json')
         server.FLASH_BACKUP = str(vault / 'data_backup.json')
         server.BACKUP_DIR = str(vault / 'backups')
+        server.COLD_ARCHIVE_DIR = str(vault / 'archive_cold')
         Path(server.BACKUP_DIR).mkdir(parents=True, exist_ok=True)
+        Path(server.COLD_ARCHIVE_DIR).mkdir(parents=True, exist_ok=True)
         fixture = {
             'menu': {'السندويشات': [{'id': 1, 'name': 'سندويش اختبار', 'price': 10, 'recipe': []}]},
             'orders': [], 'orders_archive': [], 'order_counter': 0, 'shifts': [], 'audit_log': [],
@@ -290,6 +292,97 @@ class SecurityAndPrintTests(unittest.TestCase):
         reset = self.client.post('/api/shifts/reset-counter', json={'confirmation': 'RESET_COUNTER'})
         self.assertEqual(reset.status_code, 200)
         self.assertEqual(server.load()['order_counter'], 0)
+
+    def test_only_manager_can_hard_delete_or_purge_orders(self):
+        payload = {'confirmation': 'DELETE ORD-0001'}
+        for username, password in (('cashier', 'cashier-pass'), ('supervisor', 'supervisor-pass')):
+            self.login(username, password)
+            with self.subTest(role=username, action='single'):
+                self.assertEqual(self.client.delete('/api/orders/ORD-0001', json=payload).status_code, 403)
+            with self.subTest(role=username, action='all'):
+                self.assertEqual(self.client.delete('/api/orders', json={'confirmation': 'DELETE_ALL_TEST_ORDERS'}).status_code, 403)
+
+    def test_hard_delete_removes_one_order_and_preserves_menu_settings_and_recovery_copy(self):
+        data = server.load()
+        data['_maintenance'] = {'last_compaction': server.datetime.now().strftime('%Y-%m-%d')}
+        data['menu']['السندويشات'][0]['recipe'] = [{'material': 'طحين', 'qty': 2}]
+        data['inventory'] = [{'id': 1, 'name': 'طحين', 'unit': 'كغ', 'stock': 10, 'low_stock_threshold': 0}]
+        menu_before = json.loads(json.dumps(data['menu'], ensure_ascii=False))
+        printer_before = dict(data['settings']['printer'])
+        server.save(data)
+        self.login('cashier', 'cashier-pass')
+        sale = self.client.post('/api/orders', json={
+            'items': [{'product_id': 1, 'quantity': 1}], 'payment': 'نقدي', 'type': 'سفري'
+        })
+        self.assertEqual(sale.status_code, 200)
+        order_id = sale.get_json()['id']
+        self.assertEqual(server.load()['inventory'][0]['stock'], 8)
+
+        self.login('manager', 'manager-pass')
+        response = self.client.delete('/api/orders/' + order_id, json={'confirmation': 'DELETE ' + order_id})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()['ok'])
+        current = server.load()
+        self.assertEqual(current['orders'], [])
+        self.assertEqual(current['orders_archive'], [])
+        self.assertEqual(current['inventory'][0]['stock'], 10)
+        self.assertEqual(current['inventory_movements'], [])
+        self.assertEqual(current['cash_movements'], [])
+        self.assertEqual(current['menu'], menu_before)
+        self.assertEqual(current['settings']['printer'], printer_before)
+        self.assertEqual(self.client.get('/api/orders?limit=10&offset=0').get_json()['total'], 0)
+        backup_path = Path(server.VAULT_DIR) / 'order_cleanup_backups' / response.get_json()['recovery_backup']
+        recovery = json.loads(backup_path.read_text(encoding='utf-8'))
+        self.assertEqual(recovery['orders'][0]['id'], order_id)
+
+    def test_bulk_cleanup_removes_sales_and_cold_archive_but_keeps_debt_receipts(self):
+        data = server.load()
+        data['_maintenance'] = {'last_compaction': server.datetime.now().strftime('%Y-%m-%d')}
+        data['menu']['السندويشات'][0]['recipe'] = [{'material': 'طحين', 'qty': 2}]
+        data['inventory'] = [{'id': 1, 'name': 'طحين', 'unit': 'كغ', 'stock': 7, 'low_stock_threshold': 0}]
+        active = {'id': 'ORD-0001', 'timestamp': '2026-10-22T10:00:00', 'items': [{'product_id': 1, 'name': 'سندويش اختبار', 'quantity': 1}], 'total': 10, 'cash_amount': 10, 'card_amount': 0, 'type': 'سفري'}
+        voided = {'id': 'ORD-0002', 'timestamp': '2026-10-21T10:00:00', 'items': [{'product_id': 1, 'name': 'سندويش اختبار', 'quantity': 1}], 'total': 10, 'cash_amount': 10, 'card_amount': 0, 'type': 'سفري', 'voided': True}
+        debt_receipt = {'id': 'DEBT-0001', 'timestamp': '2026-10-21T11:00:00', 'items': [], 'total': 5, 'cash_amount': 5, 'card_amount': 0, 'type': 'تسديد دين', 'accounting_type': 'debt_payment'}
+        cold_sale = {'id': 'ORD-0003', 'timestamp': '2025-01-05T10:00:00', 'items': [{'product_id': 1, 'name': 'سندويش اختبار', 'quantity': 1}], 'total': 10, 'cash_amount': 10, 'card_amount': 0, 'type': 'سفري'}
+        data['orders'] = [active, debt_receipt]
+        data['orders_archive'] = [voided]
+        data['order_counter'] = 42
+        data['cash_movements'] = [
+            {'reference_type': 'order', 'reference_id': 'ORD-0001'},
+            {'reference_type': 'order', 'reference_id': 'ORD-0002'},
+            {'reference_type': 'void_order', 'reference_id': 'ORD-0002'},
+            {'reference_type': 'order', 'reference_id': 'ORD-0003'},
+            {'reference_type': 'debt_payment', 'reference_id': 'DEBT-0001'},
+        ]
+        data['inventory_movements'] = [
+            {'reference_type': 'order', 'reference_id': 'ORD-0001', 'type': 'sale_consumption', 'material': 'طحين', 'unit': 'كغ', 'quantity': -2},
+            {'reference_type': 'order', 'reference_id': 'ORD-0002', 'type': 'sale_consumption', 'material': 'طحين', 'unit': 'كغ', 'quantity': -3},
+            {'reference_type': 'void_order', 'reference_id': 'ORD-0002', 'type': 'void_return', 'material': 'طحين', 'unit': 'كغ', 'quantity': 3},
+            {'reference_type': 'order', 'reference_id': 'ORD-0003', 'type': 'sale_consumption', 'material': 'طحين', 'unit': 'كغ', 'quantity': -1},
+        ]
+        data['kitchen_prep_log'] = [{'order_id': oid} for oid in ('ORD-0001', 'ORD-0002', 'ORD-0003')]
+        server.save(data, ['ORD-0001', 'ORD-0002', 'DEBT-0001'])
+        cold_path = Path(server._cold_archive_path('2025-01'))
+        server.atomic_write_json(str(cold_path), [cold_sale])
+
+        self.login('manager', 'manager-pass')
+        response = self.client.delete('/api/orders', json={'confirmation': 'DELETE_ALL_TEST_ORDERS'})
+        self.assertEqual(response.status_code, 200)
+        result = response.get_json()
+        self.assertEqual(result['deleted_orders'], 3)
+        current = server.load()
+        self.assertEqual([order['id'] for order in current['orders']], ['DEBT-0001'])
+        self.assertEqual(current['orders_archive'], [])
+        self.assertEqual(current['order_counter'], 42)
+        self.assertEqual(current['inventory'][0]['stock'], 10)
+        self.assertEqual(current['cash_movements'], [{'reference_type': 'debt_payment', 'reference_id': 'DEBT-0001'}])
+        self.assertEqual(current['inventory_movements'], [])
+        self.assertEqual(current['kitchen_prep_log'], [])
+        self.assertFalse(cold_path.exists())
+        self.assertEqual(self.client.get('/api/orders?limit=10&offset=0').get_json()['total'], 1)
+        backup_path = Path(server.VAULT_DIR) / 'order_cleanup_backups' / result['recovery_backup']
+        recovery = json.loads(backup_path.read_text(encoding='utf-8'))
+        self.assertEqual({row['id'] for row in recovery['orders_archive']}, {'ORD-0002', 'ORD-0003'})
 
     def test_page_role_matrix_covers_all_registered_html_pages(self):
         operational_pages = ('index.html', 'orders_list.html', 'kitchen.html', 'tables.html', 'customers.html', 'delivery.html', 'waiting_screen.html', 'daily_guide.html', 'attendance.html', 'employees.html', 'raw_materials.html', 'mobile.html')

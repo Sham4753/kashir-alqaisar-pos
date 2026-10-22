@@ -4,6 +4,8 @@ import { runInNewContext } from 'node:vm';
 
 const indexPath = resolve(process.cwd(), 'app', 'index.html');
 const html = readFileSync(indexPath, 'utf8');
+const posCssPath = resolve(process.cwd(), 'app', 'pos-modern.css');
+const posCss = readFileSync(posCssPath, 'utf8');
 const retryPath = resolve(process.cwd(), 'app', 'pos-retry.js');
 const retryScript = readFileSync(retryPath, 'utf8');
 const currencyPath = resolve(process.cwd(), 'app', 'currency-manager.js');
@@ -19,6 +21,12 @@ if (!html.includes('id="lockButton"') || !html.includes('/api/auth/unlock')) {
 }
 if (!html.includes('/api/orders') || !html.includes('printState')) {
   throw new Error('تدفق الدفع أو حالة الإرسال إلى الطابعة غير مكتمل في الواجهة');
+}
+for (const counterId of ['counterOrders', 'counterReady', 'counterSales']) {
+  if (!html.includes(`id="${counterId}"`)) throw new Error(`عداد نقطة البيع ${counterId} غير موجود في القالب`);
+}
+if (!html.includes('/api/dashboard/counters') || !posCss.includes('.counter-strip { display: grid !important;')) {
+  throw new Error('تحميل عدادات نقطة البيع أو قاعدة إبقائها ظاهرة غير موجودة');
 }
 if (!html.includes('/pos-retry.js') || !retryScript.includes('/api/printer/orders/')) {
   throw new Error('تدفق إعادة محاولة الإيصال غير مرتبط بالواجهة');

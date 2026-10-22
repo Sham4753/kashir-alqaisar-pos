@@ -113,6 +113,8 @@ ROUTE_POLICIES = (
     ("POST", "/api/shifts/reset-counter", MANAGER_ONLY),
     ("POST", "/api/orders/archive", MANAGER_ONLY),
     ("POST", "/api/orders/<order_id>/void", MANAGER_ONLY),
+    ("DELETE", "/api/orders", MANAGER_ONLY),
+    ("DELETE", "/api/orders/<order_id>", MANAGER_ONLY),
     ("GET", "/api/debts", MANAGEMENT_ROLES),
     ("POST", "/api/debts", MANAGEMENT_ROLES),
     ("PUT", "/api/debts/<did>", MANAGEMENT_ROLES),

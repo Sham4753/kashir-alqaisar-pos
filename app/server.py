@@ -1980,6 +1980,216 @@ def void_order(order_id):
                 return jsonify({"ok": True})
     return jsonify({"ok": False, "error": "الطلب غير موجود"}), 404
 
+def _is_debt_receipt_order(order):
+    return order.get('type') == 'تسديد دين' or order.get('accounting_type') == 'debt_payment'
+
+
+def _read_cold_order_archives():
+    archives = []
+    for month in list_cold_months():
+        path = _cold_archive_path(month)
+        with open(path, 'r', encoding='utf-8') as handle:
+            rows = json.load(handle)
+        if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+            raise ValueError('أحد ملفات أرشيف الطلبات غير صالح؛ أُوقف التنظيف لحماية البيانات')
+        archives.append((path, rows))
+    return archives
+
+
+def _save_pre_cleanup_order_backup(data, cold_archives):
+    backup_dir = os.path.join(VAULT_DIR, 'order_cleanup_backups')
+    os.makedirs(backup_dir, exist_ok=True)
+    snapshot = dict(data)
+    snapshot['orders_archive'] = list(data.get('orders_archive', [])) + [
+        row for _path, rows in cold_archives for row in rows
+    ]
+    snapshot.pop('_pending_order_sync_ids', None)
+    snapshot['_order_cleanup_backup'] = {
+        'created_at': datetime.now().isoformat(),
+        'purpose': 'نسخة استرجاع قبل حذف فواتير الاختبار',
+    }
+    filename = 'orders_before_cleanup_' + datetime.now().strftime('%Y%m%d_%H%M%S_%f') + '.json'
+    atomic_write_json(os.path.join(backup_dir, filename), snapshot)
+    return filename
+
+
+def _restore_inventory_for_hard_deleted_order(data, order):
+    """يعيد استهلاك المخزون المسجل للبيع؛ الطلب الملغى سبق أن أعاد مخزونه."""
+    if order.get('voided'):
+        return
+    order_id = str(order.get('id', ''))
+    movements = [row for row in data.get('inventory_movements', [])
+                 if str(row.get('reference_id', '')) == order_id
+                 and row.get('reference_type') == 'order'
+                 and row.get('type') == 'sale_consumption']
+    if movements:
+        for movement in movements:
+            try:
+                quantity = float(movement.get('quantity', 0) or 0)
+            except (TypeError, ValueError):
+                continue
+            if quantity < 0:
+                sync_inventory_add(data, movement.get('material', ''), movement.get('unit', ''), -quantity)
+        return
+    # توافق مع الفواتير القديمة التي سبقت دفتر حركات المخزون.
+    recipes = build_item_recipes(data)
+    for item in order.get('items', []) or []:
+        recipe = recipes.get(item.get('product_id', item.get('id'))) or recipes.get(item.get('name', ''))
+        if not recipe:
+            continue
+        try:
+            sold = float(item.get('quantity', item.get('qty', 1)) or 0)
+        except (TypeError, ValueError):
+            continue
+        for ingredient in recipe:
+            try:
+                quantity = float(ingredient.get('qty', 0) or 0) * sold
+            except (TypeError, ValueError):
+                continue
+            sync_inventory_add(data, ingredient.get('material', ''), '', quantity)
+
+
+def _remove_order_operational_records(data, order_ids):
+    ids = {str(value) for value in order_ids}
+    if not ids:
+        return
+    for key in ('cash_movements', 'cashbook'):
+        if isinstance(data.get(key), list):
+            data[key] = [row for row in data[key]
+                         if str(row.get('reference_id', row.get('order_id', ''))) not in ids]
+    if isinstance(data.get('inventory_movements'), list):
+        data['inventory_movements'] = [row for row in data['inventory_movements']
+                                       if str(row.get('reference_id', row.get('order_id', ''))) not in ids]
+    if isinstance(data.get('kitchen_prep_log'), list):
+        data['kitchen_prep_log'] = [row for row in data['kitchen_prep_log']
+                                    if str(row.get('order_id', '')) not in ids]
+    if isinstance(data.get('dine_in_sessions'), list):
+        data['dine_in_sessions'] = [row for row in data['dine_in_sessions']
+                                    if str(row.get('closed_order_id', '')) not in ids]
+
+
+def _rewrite_cold_archives_without_orders(cold_archives, order_ids):
+    ids = {str(value) for value in order_ids}
+    changed_paths = []
+    try:
+        for path, rows in cold_archives:
+            remaining = [row for row in rows if str(row.get('id', '')) not in ids]
+            if len(remaining) == len(rows):
+                continue
+            if remaining:
+                atomic_write_json(path, remaining)
+            else:
+                os.remove(path)
+            changed_paths.append((path, rows))
+    except OSError:
+        for path, rows in changed_paths:
+            try:
+                atomic_write_json(path, rows)
+            except OSError:
+                pass
+        raise
+
+
+def _hard_delete_sales_orders(data, orders_to_delete, cold_archives, reset_counter=False):
+    unique_orders = {}
+    for order in orders_to_delete:
+        if order.get('id'):
+            unique_orders.setdefault(str(order['id']), order)
+    orders_to_delete = list(unique_orders.values())
+    order_ids = set(unique_orders)
+    if not order_ids:
+        return 0
+    for order in orders_to_delete:
+        _restore_inventory_for_hard_deleted_order(data, order)
+    _remove_order_operational_records(data, order_ids)
+    data['orders'] = [row for row in data.get('orders', []) if str(row.get('id', '')) not in order_ids]
+    data['orders_archive'] = [row for row in data.get('orders_archive', []) if str(row.get('id', '')) not in order_ids]
+    remaining_cold = [row for _path, rows in cold_archives for row in rows if str(row.get('id', '')) not in order_ids]
+    if reset_counter and not (data['orders'] or data['orders_archive'] or remaining_cold):
+        data['order_counter'] = 0
+        data.setdefault('settings', {})['last_order_date'] = datetime.now().strftime('%Y-%m-%d')
+    _rewrite_cold_archives_without_orders(cold_archives, order_ids)
+    try:
+        save(data, sorted(order_ids))
+    except Exception:
+        for path, rows in cold_archives:
+            try:
+                atomic_write_json(path, rows)
+            except OSError:
+                error_logger.error('تعذر استعادة ملف أرشيف الطلبات بعد فشل حذف الفواتير: %s', path, exc_info=True)
+        raise
+    try:
+        backup(force=True)
+    except Exception:
+        error_logger.error('نجح حذف فواتير الاختبار لكن تعذر أخذ نسخة تلقائية بعد التنظيف', exc_info=True)
+    return len(order_ids)
+
+
+@app.route('/api/orders/<order_id>', methods=['DELETE'])
+def hard_delete_order(order_id):
+    """يحذف فاتورة بيع من السجلات التشغيلية؛ لا يُستخدم بدلاً من الإلغاء المحاسبي."""
+    if not has_role('manager'):
+        return permission_error()
+    payload = request.get_json(silent=True) or {}
+    if payload.get('confirmation') != 'DELETE ' + str(order_id):
+        return jsonify({'ok': False, 'error': 'اكتب تأكيد الحذف المطلوب أولاً'}), 400
+    data = load()
+    try:
+        cold_archives = _read_cold_order_archives()
+    except (OSError, ValueError, json.JSONDecodeError):
+        return jsonify({'ok': False, 'error': 'تعذر قراءة أرشيف الطلبات بأمان؛ لم يُحذف شيء'}), 500
+    all_orders = data.get('orders', []) + data.get('orders_archive', []) + [
+        row for _path, rows in cold_archives for row in rows
+    ]
+    order = next((row for row in all_orders if str(row.get('id', '')) == str(order_id)), None)
+    if not order:
+        return jsonify({'ok': False, 'error': 'الطلب غير موجود'}), 404
+    if _is_debt_receipt_order(order):
+        return jsonify({'ok': False, 'error': 'لا يمكن حذف تحصيل دين كفاتورة بيع؛ صحح سجل الدين من صفحة الديون'}), 409
+    approval, approval_error = verify_manager_approval(data, payload, 'حذف نهائي لفاتورة بيع', reference_id=order_id)
+    if approval_error:
+        return approval_error
+    approval['reference_id'] = str(order_id)
+    try:
+        backup_name = _save_pre_cleanup_order_backup(data, cold_archives)
+        deleted = _hard_delete_sales_orders(data, [order], cold_archives)
+    except Exception:
+        error_logger.error('فشل الحذف النهائي للفاتورة %s', order_id, exc_info=True)
+        return jsonify({'ok': False, 'error': 'تعذر حفظ الحذف أو تحديث الأرشيف؛ راجع النسخة الاحتياطية'}), 500
+    return jsonify({'ok': True, 'deleted_orders': deleted, 'recovery_backup': backup_name})
+
+
+@app.route('/api/orders', methods=['DELETE'])
+def purge_test_orders():
+    """ينظف فواتير البيع التجريبية ويبقي المنيو والإعدادات وسجلات الديون."""
+    if not has_role('manager'):
+        return permission_error()
+    payload = request.get_json(silent=True) or {}
+    if payload.get('confirmation') != 'DELETE_ALL_TEST_ORDERS':
+        return jsonify({'ok': False, 'error': 'تأكيد التنظيف غير صحيح'}), 400
+    data = load()
+    try:
+        cold_archives = _read_cold_order_archives()
+    except (OSError, ValueError, json.JSONDecodeError):
+        return jsonify({'ok': False, 'error': 'تعذر قراءة أرشيف الطلبات بأمان؛ لم يُحذف شيء'}), 500
+    all_orders = data.get('orders', []) + data.get('orders_archive', []) + [
+        row for _path, rows in cold_archives for row in rows
+    ]
+    sales_orders = [row for row in all_orders if not _is_debt_receipt_order(row)]
+    if not sales_orders:
+        return jsonify({'ok': True, 'deleted_orders': 0, 'recovery_backup': None})
+    approval, approval_error = verify_manager_approval(data, payload, 'تنظيف فواتير البيع التجريبية')
+    if approval_error:
+        return approval_error
+    approval['reference_id'] = 'all-test-sales-orders'
+    try:
+        backup_name = _save_pre_cleanup_order_backup(data, cold_archives)
+        deleted = _hard_delete_sales_orders(data, sales_orders, cold_archives, reset_counter=True)
+    except Exception:
+        error_logger.error('فشل تنظيف فواتير البيع التجريبية', exc_info=True)
+        return jsonify({'ok': False, 'error': 'تعذر حفظ التنظيف أو تحديث الأرشيف؛ راجع النسخة الاحتياطية'}), 500
+    return jsonify({'ok': True, 'deleted_orders': deleted, 'recovery_backup': backup_name})
+
 @app.route('/api/orders/<order_id>/edit-items', methods=['POST'])
 def edit_order_items(order_id):
     """يعدّل أصناف الفاتورة بأسعار المنيو، ويضبط الخصم والتحصيل والمخزون بسجلات عكسية."""

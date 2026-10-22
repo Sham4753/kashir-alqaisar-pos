@@ -47,6 +47,23 @@ if (-not (Test-Path -LiteralPath $Launcher)) { throw "caesar_desktop.py was not 
 if (-not (Test-Path -LiteralPath $Icon)) { throw "app\caesar_icon.ico was not found." }
 if (-not (Test-Path -LiteralPath (Join-Path $App "server.py"))) { throw "app\server.py was not found." }
 
+$PosHtmlPath = Join-Path $App "index.html"
+$PosCssPath = Join-Path $App "pos-modern.css"
+if (-not (Test-Path -LiteralPath $PosHtmlPath) -or -not (Test-Path -LiteralPath $PosCssPath)) {
+    throw "POS page or modern stylesheet is missing from app; refusing to build a stale interface."
+}
+$PosHtml = Get-Content -LiteralPath $PosHtmlPath -Raw
+$PosCss = Get-Content -LiteralPath $PosCssPath -Raw
+foreach ($CounterId in @('counterOrders', 'counterReady', 'counterSales')) {
+    if (-not $PosHtml.Contains("id=`"$CounterId`"")) {
+        throw "POS counter '$CounterId' is missing from app\index.html; refusing to build an incomplete interface."
+    }
+}
+if (-not $PosHtml.Contains('/api/dashboard/counters') -or -not $PosCss.Contains('.counter-strip { display: grid !important;')) {
+    throw "POS counter loading/visibility checks are missing; refusing to build an incomplete interface."
+}
+Write-Host "POS counter markup, API binding, and visibility fallback verified."
+
 # Run a native command without treating ordinary stderr warnings as terminating
 # PowerShell errors. The actual success signal is the process exit code.
 function Invoke-Native([string]$Exe, [string[]]$Arguments) {
@@ -187,6 +204,20 @@ Invoke-PythonModule $PyInstallerArguments
 $ProductDir = Join-Path $Out "CAESAR_POS"
 $Exe = Join-Path $ProductDir "CAESAR_POS.exe"
 if (-not (Test-Path -LiteralPath $Exe)) { throw "CAESAR_POS.exe was not created." }
+$BundledIndex = Get-ChildItem -LiteralPath $ProductDir -Filter "index.html" -File -Recurse | Where-Object { $_.Directory.Name -eq "app" } | Select-Object -First 1
+if (-not $BundledIndex) { throw "Bundled POS app\index.html was not found inside the executable package." }
+$BundledAppDir = $BundledIndex.Directory.FullName
+$BundledHtml = Get-Content -LiteralPath $BundledIndex.FullName -Raw
+$BundledCss = Get-Content -LiteralPath (Join-Path $BundledAppDir "pos-modern.css") -Raw
+foreach ($CounterId in @('counterOrders', 'counterReady', 'counterSales')) {
+    if (-not $BundledHtml.Contains("id=`"$CounterId`"")) {
+        throw "Bundled POS counter '$CounterId' is missing from the built package."
+    }
+}
+if (-not $BundledHtml.Contains('/api/dashboard/counters') -or -not $BundledCss.Contains('.counter-strip { display: grid !important;')) {
+    throw "Bundled POS counter API binding or visibility fallback is missing from the built package."
+}
+Write-Host "Built package contains all three visible POS counter cards."
 
 Write-Host "4/6 - Copying the standalone license generator..."
 Copy-Item -LiteralPath (Join-Path $ScriptDir "generate_license.py") -Destination (Join-Path $Out "generate_license.py") -Force

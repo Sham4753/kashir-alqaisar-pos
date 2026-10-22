@@ -35,3 +35,31 @@ def test_dashboard_counters_use_today_orders_for_cashier_view():
     source = (ROOT / "app" / "server.py").read_text(encoding="utf-8")
     assert "today_orders = _today_orders(data)" in source
     assert "active_orders = today_orders" in source
+
+
+def test_counter_cards_and_build_gate_keep_windows_interface_current():
+    html = (ROOT / "app" / "index.html").read_text(encoding="utf-8")
+    css = (ROOT / "app" / "pos-modern.css").read_text(encoding="utf-8")
+    build = (ROOT / "Setup_CAESAR_OneFile.ps1").read_text(encoding="utf-8")
+    for counter_id in ("counterOrders", "counterReady", "counterSales"):
+        assert f'id="{counter_id}"' in html
+        assert counter_id in build
+    assert "/api/dashboard/counters" in html
+    assert ".counter-strip { display: grid !important;" in css
+    assert "refusing to build an incomplete interface" in build
+    assert 'Get-ChildItem -LiteralPath $ProductDir -Filter "index.html"' in build
+    assert "Built package contains all three visible POS counter cards." in build
+
+
+def test_manager_can_hard_delete_order_or_clean_sales_but_not_debt_receipts():
+    source = ORDERS_PAGE.read_text(encoding="utf-8")
+    backend = (ROOT / "app" / "server.py").read_text(encoding="utf-8")
+    assert 'data-order-action="delete-order"' in source
+    assert "hardDeleteOrder(orderId)" in source
+    assert "DELETE_ALL_TEST_ORDERS" in source
+    assert "اكتب رقم الفاتورة كما هو" in source
+    assert "orderMaintenance').hidden = currentRole !== 'manager'" in source
+    assert "@app.route('/api/orders/<order_id>', methods=['DELETE'])" in backend
+    assert "@app.route('/api/orders', methods=['DELETE'])" in backend
+    assert "_is_debt_receipt_order(order)" in backend
+    assert "_save_pre_cleanup_order_backup" in backend

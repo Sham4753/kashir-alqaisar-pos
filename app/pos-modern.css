@@ -1051,6 +1051,12 @@ body.caesar-page-index.light #cart .cart-item { background: #fff !important; bor
 body.caesar-page-index.light #cart .cart-symbol { background: #eaf1ff !important; }
 body.caesar-page-index.light #cart .qty button { background: #eef3f8 !important; border-color: #cbd5e1 !important; }
 
+/* Fail-safe visibility for the three cashier counters in desktop/WebView builds. */
+.counter-strip { display: grid !important; visibility: visible !important; opacity: 1 !important; }
+.counter-strip .counter-card { display: block !important; visibility: visible !important; opacity: 1 !important; }
+.counter-strip .counter-card span,
+.counter-strip .counter-card strong { display: block !important; visibility: visible !important; opacity: 1 !important; }
+
 /* Bring the three live counters back above search without letting them dominate. */
 body.caesar-page-index .main > .topbar { order: 0; }
 body.caesar-page-index .main > .counter-strip {
