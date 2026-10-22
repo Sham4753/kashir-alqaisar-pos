@@ -243,7 +243,7 @@
         document.title = document.title.replace('كاشير قيصر قيصر', name);
       }
       if (!logo.startsWith('data:image/')) return;
-      document.querySelectorAll('.q-appbar-brand-mark, .brand-mark, [data-restaurant-logo]').forEach((mark) => {
+      document.querySelectorAll('.q-appbar-brand-mark, .brand-mark, .mark, [data-restaurant-logo]').forEach((mark) => {
         if (mark.dataset.restaurantLogoApplied === 'true') return;
         mark.textContent = '';
         const image = document.createElement('img');
