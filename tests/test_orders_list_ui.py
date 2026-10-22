@@ -63,3 +63,11 @@ def test_manager_can_hard_delete_order_or_clean_sales_but_not_debt_receipts():
     assert "@app.route('/api/orders', methods=['DELETE'])" in backend
     assert "_is_debt_receipt_order(order)" in backend
     assert "_save_pre_cleanup_order_backup" in backend
+
+
+def test_embedded_windows_cffi_repair_wheels_are_available():
+    wheelhouse = ROOT / "offline_wheels"
+    wheels = {path.name for path in wheelhouse.glob("*.whl")}
+    assert "cffi-2.1.1-cp312-cp312-win_amd64.whl" in wheels
+    assert "pycparser-3.0-py3-none-any.whl" in wheels
+    assert (wheelhouse / "SHA256SUMS.txt").is_file()
