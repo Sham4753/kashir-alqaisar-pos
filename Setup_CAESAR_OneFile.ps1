@@ -94,7 +94,7 @@ Write-Host ("Embedded package manifest found: " + $PackageManifest)
 $RequiredPackages = @(
     @{ Package = "pyinstaller"; Import = "PyInstaller" },
     @{ Package = "pywebview"; Import = "webview" },
-    @{ Package = "cffi"; Import = "cffi" },
+    @{ Package = "cffi"; Import = "_cffi_backend" },
     @{ Package = "Flask"; Import = "flask" },
     @{ Package = "Pillow"; Import = "PIL" },
     @{ Package = "reportlab"; Import = "reportlab" },
