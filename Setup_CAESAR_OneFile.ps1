@@ -110,6 +110,11 @@ $RequiredPackages = @(
     @{ Package = "proxy-tools"; Import = "proxy_tools" },
     @{ Package = "pywin32-ctypes"; Import = "win32ctypes" }
 )
+$CffiBackend = Get-ChildItem -LiteralPath $EmbeddedSitePackages -Filter "_cffi_backend*.pyd" -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $CffiBackend) {
+    throw "Embedded CFFI native backend (_cffi_backend*.pyd) was not found under '$EmbeddedSitePackages'."
+}
+Write-Host ("CFFI native backend found: " + $CffiBackend.FullName)
 $MissingPackages = @()
 foreach ($Requirement in $RequiredPackages) {
     if (Test-PythonImport $Requirement.Import) {
@@ -173,7 +178,8 @@ $HiddenArguments = @(
     "--collect-all", "cffi",
     "--collect-all", "webview"
 )
-$PyInstallerArguments = @("PyInstaller", "--noconfirm", "--clean", "--onedir", "--windowed", "--name", "CAESAR_POS", "--icon", $Icon, "--distpath", $Out, "--workpath", $Build, "--specpath", $Build) + $DataArguments + $RuntimeArguments + $LicenseDataArguments + $HiddenArguments + @($Launcher)
+$NativeArguments = @("--add-binary", ($CffiBackend.FullName + ";."))
+$PyInstallerArguments = @("PyInstaller", "--noconfirm", "--clean", "--onedir", "--windowed", "--name", "CAESAR_POS", "--icon", $Icon, "--distpath", $Out, "--workpath", $Build, "--specpath", $Build) + $DataArguments + $RuntimeArguments + $LicenseDataArguments + $HiddenArguments + $NativeArguments + @($Launcher)
 Invoke-PythonModule $PyInstallerArguments
 
 $ProductDir = Join-Path $Out "CAESAR_POS"
