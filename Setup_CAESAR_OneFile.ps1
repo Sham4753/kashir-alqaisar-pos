@@ -137,7 +137,7 @@ if ($MissingPackages.Count -eq 0) {
             throw ("Embedded package '" + $Requirement.Package + "' is missing and no matching wheel was found in '" + $Wheelhouse + "'.")
         }
         Write-Host ("Installing missing package " + $Requirement.Package + " from offline_wheels...")
-        $code = Invoke-Native $Python @("-m", "pip", "install", "--no-index", "--find-links", $Wheelhouse, "--disable-pip-version-check", "--no-input", $Requirement.Package)
+        $code = Invoke-Native $Python @("-m", "pip", "install", "--no-index", "--find-links", $Wheelhouse, "--disable-pip-version-check", "--no-input", "--upgrade", "--force-reinstall", "--target", $EmbeddedSitePackages, $Requirement.Package)
         if ($code -ne 0 -or -not (Test-PythonImport $Requirement.Import)) {
             throw ("Offline installation failed for missing package " + $Requirement.Package + ".")
         }
