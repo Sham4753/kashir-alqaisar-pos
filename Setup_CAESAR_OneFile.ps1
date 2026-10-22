@@ -94,6 +94,7 @@ Write-Host ("Embedded package manifest found: " + $PackageManifest)
 $RequiredPackages = @(
     @{ Package = "pyinstaller"; Import = "PyInstaller" },
     @{ Package = "pywebview"; Import = "webview" },
+    @{ Package = "cffi"; Import = "cffi" },
     @{ Package = "Flask"; Import = "flask" },
     @{ Package = "Pillow"; Import = "PIL" },
     @{ Package = "reportlab"; Import = "reportlab" },
@@ -110,11 +111,6 @@ $RequiredPackages = @(
     @{ Package = "proxy-tools"; Import = "proxy_tools" },
     @{ Package = "pywin32-ctypes"; Import = "win32ctypes" }
 )
-$CffiBackend = Get-ChildItem -LiteralPath $EmbeddedSitePackages -Filter "_cffi_backend*.pyd" -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-if (-not $CffiBackend) {
-    throw "Embedded CFFI native backend (_cffi_backend*.pyd) was not found under '$EmbeddedSitePackages'."
-}
-Write-Host ("CFFI native backend found: " + $CffiBackend.FullName)
 $MissingPackages = @()
 foreach ($Requirement in $RequiredPackages) {
     if (Test-PythonImport $Requirement.Import) {
@@ -147,6 +143,12 @@ if ($MissingPackages.Count -eq 0) {
         }
     }
 }
+
+$CffiBackend = Get-ChildItem -LiteralPath $EmbeddedSitePackages -Filter "_cffi_backend*.pyd" -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $CffiBackend) {
+    throw "Embedded CFFI native backend (_cffi_backend*.pyd) was not found under '$EmbeddedSitePackages' after package repair."
+}
+Write-Host ("CFFI native backend found: " + $CffiBackend.FullName)
 
 Write-Host "1/6 - Checking the WebView2 runtime..."
 $RuntimeArguments = @()
