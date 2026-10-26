@@ -596,3 +596,24 @@ input[type="submit"]:disabled {
   border-color: var(--color-border) !important;
   color: var(--color-text-disabled) !important;
 }
+
+/* POS-specific controls use the same button contract even when they are
+   custom components or styled links rather than utility-class buttons. */
+html body.caesar-page-index :is(.icon-button, .segment, .action-main, .action-secondary, .menu-toggle, .lock-button, .modal-close, .qty button, .move, .continue, .dine-action, .receipt-preset, .thermal-mode-toggle, .layout-move) {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-text-on-primary) !important;
+}
+html body.caesar-page-index :is(.icon-button, .segment, .action-main, .action-secondary, .menu-toggle, .lock-button, .modal-close, .qty button, .move, .continue, .dine-action, .receipt-preset, .thermal-mode-toggle, .layout-move) * {
+  color: inherit !important;
+}
+html body.caesar-page-index :is(.icon-button.danger, .danger, .discard, .remove-cart-item) {
+  background: var(--color-danger) !important;
+  border-color: var(--color-danger) !important;
+  color: #ffffff !important;
+}
+html body.caesar-page-index :is(.lateMuteButton, .warning) {
+  background: var(--color-warning) !important;
+  border-color: var(--color-warning) !important;
+  color: #ffffff !important;
+}
