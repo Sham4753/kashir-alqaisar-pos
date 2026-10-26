@@ -196,3 +196,48 @@ body.caesar-ui :is(.bg-blue-50,.bg-blue-100,.bg-indigo-50,.bg-indigo-100,.bg-sky
 body.caesar-ui :is(.border-gray-200,.border-gray-300,.border-slate-200,.border-slate-300) {
   border-color: var(--q-line-strong) !important;
 }
+
+
+/* ── Calm monochrome UI ─────────────────────────────────────────────────────
+   Keep the application visually quiet: one brand color, neutral surfaces,
+   and color only when it communicates warning or danger. */
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-blue-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-indigo-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-sky-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-violet-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-purple-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-teal-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-emerald-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-green-"] {
+  background: var(--q-surface-muted) !important;
+  color: var(--q-ink-soft) !important;
+  border-color: var(--q-line) !important;
+}
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-blue-"] :is(.text-blue-600,.text-blue-700,.text-blue-800,.text-indigo-600,.text-indigo-700,.text-indigo-800),
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-indigo-"] :is(.text-blue-600,.text-blue-700,.text-indigo-600,.text-indigo-700),
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-emerald-"] :is(.text-emerald-600,.text-emerald-700,.text-emerald-800,.text-green-600,.text-green-700),
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-green-"] :is(.text-green-600,.text-green-700,.text-emerald-600,.text-emerald-700) {
+  color: var(--q-brand-strong) !important;
+}
+body.caesar-ui :is(.text-blue-600,.text-blue-700,.text-blue-800,.text-indigo-600,.text-indigo-700,.text-indigo-800,.text-sky-600,.text-sky-700,.text-violet-600,.text-violet-700,.text-purple-600,.text-purple-700,.text-teal-600,.text-teal-700,.text-emerald-600,.text-emerald-700,.text-green-600,.text-green-700) {
+  color: var(--q-brand-strong) !important;
+}
+/* Keep buttons consistent; reserve red and amber for irreversible/risky actions. */
+body.caesar-ui :is(button,a)[class*="bg-blue-"],
+body.caesar-ui :is(button,a)[class*="bg-indigo-"],
+body.caesar-ui :is(button,a)[class*="bg-sky-"],
+body.caesar-ui :is(button,a)[class*="bg-violet-"],
+body.caesar-ui :is(button,a)[class*="bg-purple-"],
+body.caesar-ui :is(button,a)[class*="bg-teal-"],
+body.caesar-ui :is(button,a)[class*="bg-emerald-"],
+body.caesar-ui :is(button,a)[class*="bg-green-"] {
+  background: var(--q-brand) !important; border-color: var(--q-brand) !important; color: #fff !important;
+}
+body.caesar-ui :is(button,a)[class*="bg-gray-"],
+body.caesar-ui :is(button,a)[class*="bg-slate-"] {
+  background: var(--q-surface-muted) !important; border-color: var(--q-line-strong) !important; color: var(--q-ink) !important;
+}
+body.caesar-ui :is(button,a)[class*="bg-orange-"],
+body.caesar-ui :is(button,a)[class*="bg-amber-"] {
+  background: var(--q-warning) !important; border-color: var(--q-warning) !important; color: #fff !important;
+}
