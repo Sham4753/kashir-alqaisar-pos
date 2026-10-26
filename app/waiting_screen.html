@@ -1,6 +1,5 @@
 <!doctype html>
 <html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>الطلبات الجاهزة — كاشير قيصر قيصر</title><link rel="stylesheet" href="tailwind.css"><script defer src="design-system.js"></script><script defer src="currency-manager.js"></script>  <link rel="stylesheet" href="design-system.css">
-  <link rel="stylesheet" href="ux-v2.css">
 </head>
 <body class="min-h-screen bg-slate-950 text-white"><main class="mx-auto max-w-7xl p-6"><header class="mb-8 flex items-center justify-between gap-4"><div><h1 class="text-3xl font-black">طلباتك جاهزة</h1><p class="mt-2 text-slate-300">اعرض هذه الشاشة للزبائن على شاشة منفصلة داخل المطعم</p></div><div class="text-left"><div id="clock" class="text-2xl font-bold"></div><a href="index.html" class="mt-2 inline-block text-sm text-slate-300 underline">لوحة الكاشير قيصر</a></div></header><section id="readyGrid" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"></section></main><script>
 const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
