@@ -561,3 +561,38 @@ body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="b
   border-color: var(--color-border) !important;
   color: var(--color-text-disabled) !important;
 }
+
+/* Global fallback for legacy pages that do not load design-system.js. */
+button:not(.q-theme-toggle),
+input[type="button"],
+input[type="submit"] {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-text-on-primary) !important;
+}
+button:not(.q-theme-toggle) *,
+input[type="button"] *,
+input[type="submit"] * {
+  color: inherit !important;
+}
+button:not(.q-theme-toggle):is([class*="bg-red-"], [class*="bg-rose-"], .danger),
+input[type="button"]:is([class*="bg-red-"], [class*="bg-rose-"], .danger),
+input[type="submit"]:is([class*="bg-red-"], [class*="bg-rose-"], .danger) {
+  background: var(--color-danger) !important;
+  border-color: var(--color-danger) !important;
+  color: #ffffff !important;
+}
+button:not(.q-theme-toggle):is([class*="bg-amber-"], [class*="bg-orange-"], [class*="bg-yellow-"], .warning),
+input[type="button"]:is([class*="bg-amber-"], [class*="bg-orange-"], [class*="bg-yellow-"], .warning),
+input[type="submit"]:is([class*="bg-amber-"], [class*="bg-orange-"], [class*="bg-yellow-"], .warning) {
+  background: var(--color-warning) !important;
+  border-color: var(--color-warning) !important;
+  color: #ffffff !important;
+}
+button:not(.q-theme-toggle):disabled,
+input[type="button"]:disabled,
+input[type="submit"]:disabled {
+  background: var(--color-surface-muted) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-disabled) !important;
+}
