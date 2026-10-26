@@ -718,3 +718,78 @@ body.caesar-page-index .payment-button.active {
   body.caesar-ui:not(.caesar-page-index) > main { padding: 14px !important; }
   body.caesar-ui :is(button, a[role="button"], input[type="button"], input[type="submit"]) { min-height: 48px; }
 }
+
+/* ── Final identity pass: ivory, emerald and warm gold ────────────────────
+   Some legacy pages still carry Tailwind color classes or small inline
+   layouts. Keep their behaviour intact while mapping presentation to the
+   approved restaurant palette in one place. */
+body.caesar-ui :is(button, a)[class*="bg-blue"],
+body.caesar-ui :is(button, a)[class*="bg-indigo"],
+body.caesar-ui :is(button, a)[class*="bg-green"],
+body.caesar-ui :is(button, a)[class*="bg-emerald"],
+body.caesar-ui :is(button, a)[class*="bg-teal"] {
+  background: var(--q-brand) !important;
+  border-color: var(--q-brand) !important;
+  color: #fff !important;
+}
+body.caesar-ui :is(button, a)[class*="bg-blue"]:hover,
+body.caesar-ui :is(button, a)[class*="bg-indigo"]:hover,
+body.caesar-ui :is(button, a)[class*="bg-green"]:hover,
+body.caesar-ui :is(button, a)[class*="bg-emerald"]:hover,
+body.caesar-ui :is(button, a)[class*="bg-teal"]:hover {
+  background: var(--q-brand-strong) !important;
+}
+body.caesar-ui :is(button, a)[class*="bg-amber"],
+body.caesar-ui :is(button, a)[class*="bg-orange"],
+body.caesar-ui :is(button, a)[class*="bg-yellow"] {
+  background: var(--q-warning) !important;
+  border-color: var(--q-warning) !important;
+  color: #fff !important;
+}
+body.caesar-ui :is(button, a)[class*="bg-gray"],
+body.caesar-ui :is(button, a)[class*="bg-slate"] {
+  background: var(--q-ink-soft) !important;
+  border-color: var(--q-ink-soft) !important;
+  color: #fff !important;
+}
+body.caesar-ui :is(.text-blue-600, .text-blue-700, .text-blue-800,
+  .text-indigo-600, .text-indigo-700, .text-indigo-800,
+  .text-green-600, .text-green-700, .text-emerald-600, .text-emerald-700,
+  .text-teal-600, .text-teal-700) { color: var(--q-brand-strong) !important; }
+body.caesar-ui :is(.border-blue-200, .border-blue-300, .border-indigo-100,
+  .border-indigo-200, .border-indigo-300, .border-green-200,
+  .border-emerald-100, .border-emerald-200) { border-color: var(--q-line-strong) !important; }
+body.caesar-ui :is(.focus\:ring-blue-500, .focus\:ring-green-500,
+  .focus\:ring-indigo-500, .focus\:border-blue-500) { --tw-ring-color: color-mix(in srgb, var(--q-brand) 24%, transparent) !important; }
+
+/* Gold is reserved for attention, filters and secondary actions. */
+body.caesar-ui :is(.bg-amber-50, .bg-orange-50, .bg-yellow-50) {
+  background: var(--q-warning-soft) !important;
+  color: var(--q-warning) !important;
+  border-color: color-mix(in srgb, var(--q-warning) 28%, var(--q-line)) !important;
+}
+body.caesar-ui :is(.text-amber-600, .text-amber-700, .text-amber-800,
+  .text-orange-600, .text-orange-700, .text-orange-800,
+  .text-yellow-700) { color: var(--q-warning) !important; }
+
+/* The settings page has a small standalone header with legacy blue values. */
+body.caesar-page-settings .mark {
+  background: linear-gradient(135deg, var(--q-brand), var(--q-warning)) !important;
+}
+body.caesar-page-settings .toplinks a:hover,
+body.caesar-page-settings .logout:hover { border-color: var(--q-brand) !important; color: var(--q-brand-strong) !important; }
+body.caesar-page-settings .tab.active { color: var(--q-brand-strong) !important; }
+body.caesar-page-settings .secondary {
+  background: var(--q-warning-soft) !important;
+  color: var(--q-warning) !important;
+  border: 1px solid color-mix(in srgb, var(--q-warning) 28%, var(--q-line)) !important;
+}
+body.caesar-page-settings .notice {
+  background: var(--q-brand-soft) !important;
+  color: var(--q-brand-strong) !important;
+  border-inline-start: 4px solid var(--q-brand) !important;
+}
+body.caesar-page-settings .status {
+  background: var(--q-success-soft) !important;
+  color: var(--q-brand-strong) !important;
+}
