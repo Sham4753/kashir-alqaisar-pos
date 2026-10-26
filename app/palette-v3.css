@@ -113,3 +113,44 @@ body.caesar-page-index .cart-summary,
 body.caesar-page-index .summary { background: linear-gradient(135deg, #123b2d, #16845f) !important; border-color: var(--q-warning) !important; }
 body.caesar-page-index .remove-cart-item,
 body.caesar-page-index .danger { background: var(--q-danger) !important; border-color: var(--q-danger) !important; color: #fff !important; }
+
+/* Covers Tailwind opacity forms such as bg-emerald-50/60 and text-sky-700. */
+body.caesar-ui [class*="bg-blue-"],
+body.caesar-ui [class*="bg-indigo-"],
+body.caesar-ui [class*="bg-sky-"],
+body.caesar-ui [class*="bg-violet-"] { background-color: var(--q-blue-soft) !important; }
+body.caesar-ui [class*="bg-emerald-"],
+body.caesar-ui [class*="bg-green-"] { background-color: var(--q-success-soft) !important; }
+body.caesar-ui [class*="bg-amber-"],
+body.caesar-ui [class*="bg-orange-"],
+body.caesar-ui [class*="bg-yellow-"] { background-color: var(--q-warning-soft) !important; }
+body.caesar-ui [class*="bg-rose-"],
+body.caesar-ui [class*="bg-red-"] { background-color: var(--q-danger-soft) !important; }
+body.caesar-ui [class*="text-blue-"],
+body.caesar-ui [class*="text-indigo-"],
+body.caesar-ui [class*="text-sky-"],
+body.caesar-ui [class*="text-violet-"] { color: var(--q-brand-strong) !important; }
+body.caesar-ui [class*="text-emerald-"],
+body.caesar-ui [class*="text-green-"] { color: var(--q-success) !important; }
+body.caesar-ui [class*="text-amber-"],
+body.caesar-ui [class*="text-orange-"],
+body.caesar-ui [class*="text-yellow-"] { color: var(--q-warning) !important; }
+body.caesar-ui [class*="text-rose-"],
+body.caesar-ui [class*="text-red-"] { color: var(--q-danger) !important; }
+body.caesar-ui [class*="border-blue-"],
+body.caesar-ui [class*="border-indigo-"],
+body.caesar-ui [class*="border-emerald-"],
+body.caesar-ui [class*="border-green-"],
+body.caesar-ui [class*="border-slate-"],
+body.caesar-ui [class*="border-gray-"] { border-color: var(--q-line-strong) !important; }
+body.caesar-ui .ctx-menu { background: var(--q-surface) !important; border-color: var(--q-line-strong) !important; box-shadow: var(--q-shadow) !important; }
+body.caesar-ui .ctx-menu-item { background: var(--q-surface) !important; color: var(--q-ink) !important; }
+body.caesar-ui .ctx-menu-item:hover { background: var(--q-brand-soft) !important; color: var(--q-brand-strong) !important; }
+body.caesar-ui :is(button,a)[class*="bg-blue-"],
+body.caesar-ui :is(button,a)[class*="bg-indigo-"],
+body.caesar-ui :is(button,a)[class*="bg-emerald-"],
+body.caesar-ui :is(button,a)[class*="bg-green-"] { background-color: var(--q-brand) !important; color: #fff !important; border-color: var(--q-brand) !important; }
+body.caesar-ui :is(button,a)[class*="bg-red-"],
+body.caesar-ui :is(button,a)[class*="bg-rose-"] { background-color: var(--q-danger) !important; color: #fff !important; border-color: var(--q-danger) !important; }
+body.caesar-ui :is(button,a)[class*="bg-amber-"],
+body.caesar-ui :is(button,a)[class*="bg-orange-"] { background-color: var(--q-warning) !important; color: #fff !important; border-color: var(--q-warning) !important; }

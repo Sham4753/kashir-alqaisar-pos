@@ -563,6 +563,31 @@ body.caesar-page-index .cart.cart-density-compact .cart-symbol { width: 31px; he
 body.caesar-page-index .cart.cart-density-compact .cart-item-name { font-size: 11px; line-height: 1.3; }
 body.caesar-page-index .cart.cart-density-compact .cart-unit { margin-top: 1px; font-size: 8px; }
 body.caesar-page-index .cart.cart-density-compact .qty { margin-top: 3px; }
+
+/* Interaction fix: keep the navigation usable on desktop; use the curtain only on mobile. */
+@media (min-width: 1081px) {
+  body.caesar-page-index .app {
+    grid-template-columns: 246px minmax(500px, 1fr) minmax(360px, 414px) !important;
+    grid-template-areas: "sidebar main order" !important;
+  }
+  body.caesar-page-index .sidebar {
+    position: relative !important;
+    inset: auto !important;
+    width: auto !important;
+    min-height: 100vh !important;
+    transform: none !important;
+    overflow-y: auto !important;
+    pointer-events: auto !important;
+  }
+  body.caesar-page-index .nav-scrim { display: none !important; pointer-events: none !important; }
+  body.caesar-page-index .menu-toggle { display: none !important; }
+  body.caesar-page-index .nav,
+  body.caesar-page-index .nav a { pointer-events: auto !important; }
+}
+@media (max-width: 1080px) {
+  body.caesar-page-index .sidebar { pointer-events: auto !important; }
+  body.caesar-page-index.nav-open .nav-scrim { pointer-events: auto !important; }
+}
 body.caesar-page-index .cart.cart-density-compact .qty button { width: 22px; height: 22px; font-size: 14px; }
 body.caesar-page-index .cart.cart-density-compact .qty span,
 body.caesar-page-index .cart.cart-density-compact .cart-item-total { font-size: 10px; }
