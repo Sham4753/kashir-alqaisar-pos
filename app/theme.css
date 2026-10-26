@@ -815,3 +815,31 @@ html body.caesar-page-index :is(.counter-card::before, .counter-card::after,
   .product-card::before, .product-card::after, .summary::before, .summary::after) {
   background: var(--three-burgundy) !important;
 }
+
+/* Absolute final palette guard: no legacy selector may reintroduce green/black. */
+html body * {
+  background-color: var(--three-burgundy) !important;
+  color: var(--three-white) !important;
+  border-color: var(--three-yellow) !important;
+}
+html body *::before,
+html body *::after {
+  background-color: var(--three-burgundy) !important;
+  background-image: none !important;
+  color: var(--three-white) !important;
+  border-color: var(--three-yellow) !important;
+  box-shadow: none !important;
+}
+html body a,
+html body a * {
+  color: var(--three-yellow) !important;
+}
+html body :is(button, input, select, textarea),
+html body :is(button, input, select, textarea) * {
+  color: var(--three-white) !important;
+}
+html body :is(button, input, select, textarea):hover,
+html body :is(button, input, select, textarea):hover * {
+  background-color: var(--three-yellow) !important;
+  color: var(--three-burgundy) !important;
+}
