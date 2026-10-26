@@ -708,3 +708,25 @@ body.caesar-page-index .category-bar::-webkit-scrollbar-thumb { border-radius: 9
   body.caesar-page-index .order-panel { min-height: 680px; }
   body.caesar-page-index .cart { min-height: 180px; max-height: min(64vh, 520px); }
 }
+
+/* Keep product cards in separate grid tracks, including at browser zoom levels. */
+@media (min-width: 761px) {
+  body.caesar-page-index .products {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)) !important;
+    column-gap: 16px !important;
+    row-gap: 16px !important;
+    align-items: stretch;
+  }
+}
+body.caesar-page-index .products > .product-card {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+}
+body.caesar-page-index .products > .product-card:hover,
+body.caesar-page-index .products > .product-card:focus-visible {
+  z-index: auto;
+  transform: none !important;
+}
