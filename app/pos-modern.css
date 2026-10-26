@@ -692,3 +692,19 @@ body.caesar-page-index .category-bar::-webkit-scrollbar-thumb { border-radius: 9
     overscroll-behavior: contain;
   }
 }
+
+/* Give the order workspace enough width for readable item names and controls. */
+@media (min-width: 1261px) {
+  body.caesar-page-index .app {
+    grid-template-columns: 246px minmax(500px, 1fr) minmax(420px, min(34vw, 520px)) !important;
+  }
+}
+@media (min-width: 1081px) and (max-width: 1260px) {
+  body.caesar-page-index .app {
+    grid-template-columns: 220px minmax(400px, 1fr) minmax(360px, min(34vw, 440px)) !important;
+  }
+}
+@media (max-width: 760px) {
+  body.caesar-page-index .order-panel { min-height: 680px; }
+  body.caesar-page-index .cart { min-height: 180px; max-height: min(64vh, 520px); }
+}

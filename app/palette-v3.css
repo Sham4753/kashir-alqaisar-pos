@@ -62,7 +62,7 @@ body.caesar-page-index .quick-pay-btn,
 body.caesar-page-index .secondary-action,
 body.caesar-page-index .action-secondary { background: var(--q-brand-soft) !important; border-color: var(--q-line-strong) !important; color: var(--q-brand-strong) !important; }
 body.caesar-page-index .cart-summary,
-body.caesar-page-index .summary { background: linear-gradient(135deg, var(--q-brand-strong), var(--q-brand)) !important; border-color: var(--q-warning) !important; }
+body.caesar-page-index .summary { background: transparent !important; border-color: var(--q-line) !important; }
 body.caesar-page-index .remove-cart-item,
 body.caesar-page-index .danger { background: var(--q-danger) !important; border-color: var(--q-danger) !important; color: #fff !important; }
 
@@ -446,3 +446,49 @@ body.caesar-page-index .admin-link {
   background: var(--q-warning-soft) !important;
   border-color: var(--q-warning) !important;
 }
+
+/* Distinct category and product accents improve scanning without changing meaning. */
+body.caesar-page-index .category:nth-child(6n + 1),
+body.caesar-page-index .products > .product-card:nth-child(6n + 1) { --pos-accent: #68152b; --pos-accent-soft: #f5e7eb; }
+body.caesar-page-index .category:nth-child(6n + 2),
+body.caesar-page-index .products > .product-card:nth-child(6n + 2) { --pos-accent: #1d4ed8; --pos-accent-soft: #eaf1ff; }
+body.caesar-page-index .category:nth-child(6n + 3),
+body.caesar-page-index .products > .product-card:nth-child(6n + 3) { --pos-accent: #0f766e; --pos-accent-soft: #e4fbf5; }
+body.caesar-page-index .category:nth-child(6n + 4),
+body.caesar-page-index .products > .product-card:nth-child(6n + 4) { --pos-accent: #6d28d9; --pos-accent-soft: #f3e8ff; }
+body.caesar-page-index .category:nth-child(6n + 5),
+body.caesar-page-index .products > .product-card:nth-child(6n + 5) { --pos-accent: #c2410c; --pos-accent-soft: #fff1e6; }
+body.caesar-page-index .category:nth-child(6n),
+body.caesar-page-index .products > .product-card:nth-child(6n) { --pos-accent: #2f7d5a; --pos-accent-soft: #e1f1e8; }
+
+body.caesar-page-index.dark .category:nth-child(6n + 1),
+body.caesar-page-index.dark .products > .product-card:nth-child(6n + 1) { --pos-accent: #f6b4c4; --pos-accent-soft: #4a1e2b; }
+body.caesar-page-index.dark .category:nth-child(6n + 2),
+body.caesar-page-index.dark .products > .product-card:nth-child(6n + 2) { --pos-accent: #93c5fd; --pos-accent-soft: #172f62; }
+body.caesar-page-index.dark .category:nth-child(6n + 3),
+body.caesar-page-index.dark .products > .product-card:nth-child(6n + 3) { --pos-accent: #5eead4; --pos-accent-soft: #123d38; }
+body.caesar-page-index.dark .category:nth-child(6n + 4),
+body.caesar-page-index.dark .products > .product-card:nth-child(6n + 4) { --pos-accent: #c4b5fd; --pos-accent-soft: #30204c; }
+body.caesar-page-index.dark .category:nth-child(6n + 5),
+body.caesar-page-index.dark .products > .product-card:nth-child(6n + 5) { --pos-accent: #fdba74; --pos-accent-soft: #422f0b; }
+body.caesar-page-index.dark .category:nth-child(6n),
+body.caesar-page-index.dark .products > .product-card:nth-child(6n) { --pos-accent: #6fc49a; --pos-accent-soft: #1e4a36; }
+
+body.caesar-page-index .category:not(.active) {
+  color: var(--pos-accent) !important;
+  border-color: color-mix(in srgb, var(--pos-accent) 30%, var(--q-line)) !important;
+  background: var(--pos-accent-soft) !important;
+}
+body.caesar-page-index .category:not(.active):hover {
+  color: var(--pos-accent) !important;
+  border-color: var(--pos-accent) !important;
+  background: color-mix(in srgb, var(--pos-accent-soft) 76%, var(--pos-accent) 24%) !important;
+}
+body.caesar-page-index .category.active {
+  color: #fff !important;
+  border-color: var(--q-brand) !important;
+  background: var(--q-brand) !important;
+}
+body.caesar-page-index .products > .product-card::before { background: var(--pos-accent-soft) !important; }
+body.caesar-page-index .products > .product-card:hover { border-color: var(--pos-accent) !important; }
+body.caesar-page-index .products > .product-card .q-product-price { color: var(--pos-accent) !important; }
