@@ -842,3 +842,86 @@ body.caesar-ui .q-theme-toggle {
   border-color: color-mix(in srgb, var(--q-brand) 22%, var(--q-line)) !important;
 }
 body.caesar-ui .q-theme-toggle .q-line-icon { width: 18px !important; height: 18px !important; }
+
+
+/* ── CAESAR v8 application shell: shared admin experience ───────────────── */
+body.caesar-ui:not(.caesar-page-index) .q-appbar {
+  max-width: 1480px;
+  margin-inline: auto;
+  padding: 9px 14px;
+  background: var(--q-surface) !important;
+  border-color: var(--q-line) !important;
+}
+body.caesar-ui:not(.caesar-page-index) .q-appbar-brand-mark {
+  background: linear-gradient(145deg, var(--q-brand), var(--q-warning)) !important;
+  border-radius: 12px !important;
+}
+body.caesar-ui:not(.caesar-page-index) .q-appbar-link {
+  min-height: 42px !important;
+  border-radius: 11px !important;
+}
+body.caesar-ui:not(.caesar-page-index) main > header,
+body.caesar-ui:not(.caesar-page-index) main > .container > .flex.items-center.justify-between:first-child {
+  background: var(--q-surface) !important;
+  border-color: var(--q-line) !important;
+  box-shadow: var(--q-shadow-soft) !important;
+}
+body.caesar-ui:not(.caesar-page-index) main > header h1,
+body.caesar-ui:not(.caesar-page-index) main > .container > .flex.items-center.justify-between:first-child h1 {
+  color: var(--q-ink) !important;
+}
+body.caesar-ui:not(.caesar-page-index) main > header p,
+body.caesar-ui:not(.caesar-page-index) main > .container > .flex.items-center.justify-between:first-child p {
+  color: var(--q-muted) !important;
+}
+body.caesar-ui:not(.caesar-page-index) .container.max-w-lg,
+body.caesar-ui:not(.caesar-page-index) .container.max-w-md {
+  max-width: 1240px !important;
+}
+body.caesar-ui:not(.caesar-page-index) :is(#kpis, #ordersList, #alerts, #stock, #prep) {
+  min-width: 0;
+}
+body.caesar-ui:not(.caesar-page-index) #kpis > article {
+  min-height: 112px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid var(--q-line) !important;
+  border-radius: 16px !important;
+  background: var(--q-surface) !important;
+  box-shadow: var(--q-shadow-soft) !important;
+}
+body.caesar-ui:not(.caesar-page-index) #kpis > article > div:last-child {
+  font-variant-numeric: tabular-nums;
+}
+body.caesar-ui:not(.caesar-page-index) :is(#alerts, #stock, #prep) > :is(div, p) {
+  border: 1px solid var(--q-line) !important;
+  border-radius: 12px !important;
+}
+body.caesar-ui:not(.caesar-page-index) #ordersList > div {
+  border: 1px solid var(--q-line) !important;
+  border-radius: 14px !important;
+  background: var(--q-surface) !important;
+  box-shadow: var(--q-shadow-soft) !important;
+}
+body.caesar-ui:not(.caesar-page-index) #ordersList > div:hover {
+  border-color: color-mix(in srgb, var(--q-brand) 35%, var(--q-line)) !important;
+}
+body.caesar-ui:not(.caesar-page-index) :is(#searchBox, #dateFrom, #dateTo, #typeFilter) {
+  min-height: 48px !important;
+}
+body.caesar-ui:not(.caesar-page-index) #orderMaintenance {
+  border-inline-start: 4px solid var(--q-warning) !important;
+}
+body.caesar-ui:not(.caesar-page-index) :is(button, a)[class*="bg-red"] {
+  box-shadow: none !important;
+}
+@media (max-width: 760px) {
+  body.caesar-ui:not(.caesar-page-index) .q-appbar { margin-inline: 8px; }
+  body.caesar-ui:not(.caesar-page-index) main > header { gap: 10px !important; }
+  body.caesar-ui:not(.caesar-page-index) #kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.caesar-ui *, body.caesar-ui *::before, body.caesar-ui *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
