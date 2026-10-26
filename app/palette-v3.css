@@ -7,21 +7,22 @@ body.caesar-page-index.light {
   --q-surface-soft: #fbfdfb;
   --q-surface-muted: #eef6f0;
   --q-ink: #183229;
-  --q-ink-soft: #36564a;
-  --q-muted: #6c8177;
-  --q-line: #dce9df;
-  --q-line-strong: #c5d8ca;
+  /* High-contrast light palette: muted text remains readable on solid cards. */
+  --q-ink-soft: #29463a;
+  --q-muted: #4f675b;
+  --q-line: #bfd3c4;
+  --q-line-strong: #91b09b;
   --q-brand: #16845f;
   --q-brand-strong: #0d684b;
   --q-brand-soft: #e5f5ec;
   --q-blue: #16845f;
   --q-blue-soft: #e5f5ec;
-  --q-success: #16845f;
-  --q-success-soft: #e5f5ec;
-  --q-warning: #c58a20;
-  --q-warning-soft: #fff6df;
-  --q-danger: #c83d4d;
-  --q-danger-soft: #fff0f2;
+  --q-success: #08734e;
+  --q-success-soft: #d9f1e5;
+  --q-warning: #875400;
+  --q-warning-soft: #ffefc2;
+  --q-danger: #a9283a;
+  --q-danger-soft: #ffe0e5;
   --q-shadow: 0 18px 42px rgba(24,50,41,.08);
   --q-shadow-soft: 0 7px 20px rgba(24,50,41,.055);
 }
@@ -32,21 +33,22 @@ body.caesar-page-index.dark {
   --q-surface-soft: #142a22;
   --q-surface-muted: #214236;
   --q-ink: #f1faf4;
-  --q-ink-soft: #c6ded0;
-  --q-muted: #9cb7a8;
-  --q-line: #2d5141;
-  --q-line-strong: #3e6a54;
+  /* Keep secondary text and separators distinct on dark green surfaces. */
+  --q-ink-soft: #d9f0e2;
+  --q-muted: #b7d2c2;
+  --q-line: #3d6853;
+  --q-line-strong: #56866b;
   --q-brand: #35b982;
   --q-brand-strong: #75d8a9;
   --q-brand-soft: #1e4937;
   --q-blue: #35b982;
   --q-blue-soft: #1e4937;
-  --q-success: #35b982;
-  --q-success-soft: #1e4937;
-  --q-warning: #e8b84d;
-  --q-warning-soft: #4c3b18;
-  --q-danger: #f0717e;
-  --q-danger-soft: #4b222a;
+  --q-success: #63d9a2;
+  --q-success-soft: #1d513c;
+  --q-warning: #ffd36b;
+  --q-warning-soft: #5a4318;
+  --q-danger: #ff9aa4;
+  --q-danger-soft: #5a2730;
 }
 body.caesar-ui { background: var(--q-bg) !important; color: var(--q-ink) !important; }
 body.caesar-ui a { color: var(--q-brand) !important; }
@@ -173,3 +175,24 @@ body.caesar-ui .tabs { background: var(--q-surface-muted) !important; }
 body.caesar-ui .tab.active { background: var(--q-surface) !important; color: var(--q-brand-strong) !important; }
 body.caesar-ui .receipt-preview-shell { background: var(--q-surface-muted) !important; border-color: var(--q-line-strong) !important; }
 body.caesar-ui .template-row { background: var(--q-surface) !important; border-color: var(--q-line) !important; }
+
+/* Accessibility guardrails: use opaque status surfaces and strong text/border pairs.
+   This prevents Tailwind utility colors from visually merging with the card behind them. */
+body.caesar-ui :is(.text-gray-400,.text-gray-500,.text-gray-600,.text-slate-400,.text-slate-500,.text-slate-600) {
+  color: var(--q-muted) !important;
+}
+body.caesar-ui :is(.bg-emerald-50,.bg-emerald-100,.bg-green-50,.bg-green-100) {
+  background-color: var(--q-success-soft) !important; color: var(--q-success) !important;
+}
+body.caesar-ui :is(.bg-amber-50,.bg-amber-100,.bg-orange-50,.bg-yellow-50) {
+  background-color: var(--q-warning-soft) !important; color: var(--q-warning) !important;
+}
+body.caesar-ui :is(.bg-rose-50,.bg-red-50,.bg-red-100) {
+  background-color: var(--q-danger-soft) !important; color: var(--q-danger) !important;
+}
+body.caesar-ui :is(.bg-blue-50,.bg-blue-100,.bg-indigo-50,.bg-indigo-100,.bg-sky-50) {
+  background-color: var(--q-blue-soft) !important; color: var(--q-brand-strong) !important;
+}
+body.caesar-ui :is(.border-gray-200,.border-gray-300,.border-slate-200,.border-slate-300) {
+  border-color: var(--q-line-strong) !important;
+}
