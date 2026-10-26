@@ -255,3 +255,122 @@ body.caesar-ui :is([class*="bg-green-"],[class*="bg-emerald-"]) svg {
   color: #ffffff !important;
   stroke: currentColor !important;
 }
+
+/* ── CAESAR Professional Theme v1 ───────────────────────────────────────────
+   A restrained product palette: slate neutrals + one teal action color.
+   Amber and red are reserved for meaning, not decoration. */
+body.caesar-ui.light,
+body.caesar-ui:not(.dark) {
+  --q-bg: #f5f7f9;
+  --q-surface: #ffffff;
+  --q-surface-soft: #f8fafb;
+  --q-surface-muted: #edf2f4;
+  --q-ink: #17212b;
+  --q-ink-soft: #334454;
+  --q-muted: #5c6b78;
+  --q-line: #d8e0e5;
+  --q-line-strong: #afbdc6;
+  --q-brand: #0f766e;
+  --q-brand-strong: #115e59;
+  --q-brand-soft: #e5f3f1;
+  --q-blue: #0f766e;
+  --q-blue-soft: #e5f3f1;
+  --q-success: #0f766e;
+  --q-success-soft: #e5f3f1;
+  --q-warning: #a16207;
+  --q-warning-soft: #fff5d6;
+  --q-danger: #b42318;
+  --q-danger-soft: #ffebe9;
+  --q-shadow: 0 10px 28px rgba(23, 33, 43, .08);
+  --q-shadow-soft: 0 4px 14px rgba(23, 33, 43, .06);
+}
+body.caesar-ui.dark {
+  --q-bg: #111a21;
+  --q-surface: #19252e;
+  --q-surface-soft: #16212a;
+  --q-surface-muted: #22323d;
+  --q-ink: #f3f7f8;
+  --q-ink-soft: #d2e0e3;
+  --q-muted: #abc0c5;
+  --q-line: #344853;
+  --q-line-strong: #526b75;
+  --q-brand: #36b5a8;
+  --q-brand-strong: #75d6cc;
+  --q-brand-soft: #163d3a;
+  --q-blue: #36b5a8;
+  --q-blue-soft: #163d3a;
+  --q-success: #59c9a1;
+  --q-success-soft: #174437;
+  --q-warning: #f2c35b;
+  --q-warning-soft: #4a3918;
+  --q-danger: #ff9b91;
+  --q-danger-soft: #542724;
+  --q-shadow: 0 12px 32px rgba(0, 0, 0, .24);
+  --q-shadow-soft: 0 5px 18px rgba(0, 0, 0, .18);
+}
+
+/* Neutralize decorative utility colors on content surfaces. */
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-blue-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-indigo-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-sky-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-violet-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-purple-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-teal-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-green-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-emerald-"] {
+  background: var(--q-brand-soft) !important;
+  color: var(--q-brand-strong) !important;
+  border-color: var(--q-line) !important;
+}
+body.caesar-ui :is(.bg-white\/70,.bg-white\/80,.bg-white\/90) {
+  background: var(--q-surface) !important;
+}
+body.caesar-ui :is(.text-blue-600,.text-blue-700,.text-blue-800,.text-indigo-600,.text-indigo-700,.text-indigo-800,.text-sky-600,.text-sky-700,.text-violet-600,.text-violet-700,.text-purple-600,.text-purple-700,.text-teal-600,.text-teal-700,.text-green-600,.text-green-700,.text-emerald-600,.text-emerald-700) {
+  color: var(--q-brand-strong) !important;
+}
+
+/* One visual language for normal actions. */
+body.caesar-ui :is(button,a)[class*="bg-blue-"],
+body.caesar-ui :is(button,a)[class*="bg-indigo-"],
+body.caesar-ui :is(button,a)[class*="bg-sky-"],
+body.caesar-ui :is(button,a)[class*="bg-violet-"],
+body.caesar-ui :is(button,a)[class*="bg-purple-"],
+body.caesar-ui :is(button,a)[class*="bg-teal-"],
+body.caesar-ui :is(button,a)[class*="bg-green-"],
+body.caesar-ui :is(button,a)[class*="bg-emerald-"] {
+  background: var(--q-brand) !important;
+  border-color: var(--q-brand) !important;
+  color: #fff !important;
+}
+body.caesar-ui :is(button,a)[class*="bg-gray-"],
+body.caesar-ui :is(button,a)[class*="bg-slate-"] {
+  background: var(--q-surface-muted) !important;
+  border-color: var(--q-line-strong) !important;
+  color: var(--q-ink) !important;
+}
+body.caesar-ui :is(button,a)[class*="bg-amber-"],
+body.caesar-ui :is(button,a)[class*="bg-orange-"] {
+  background: var(--q-warning) !important;
+  border-color: var(--q-warning) !important;
+  color: #fff !important;
+}
+body.caesar-ui :is(button,a)[class*="bg-red-"],
+body.caesar-ui :is(button,a)[class*="bg-rose-"] {
+  background: var(--q-danger) !important;
+  border-color: var(--q-danger) !important;
+  color: #fff !important;
+}
+
+/* Status surfaces remain meaningful but visually restrained. */
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-amber-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-orange-"] {
+  background: var(--q-warning-soft) !important;
+  color: var(--q-warning) !important;
+  border-color: #e8c879 !important;
+}
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-red-"],
+body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-rose-"] {
+  background: var(--q-danger-soft) !important;
+  color: var(--q-danger) !important;
+  border-color: #e4a49e !important;
+}
