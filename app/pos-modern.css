@@ -616,3 +616,45 @@ body.caesar-page-index .cart.cart-density-dense .cart-item-total { max-width: 68
 @media (prefers-reduced-motion: reduce) {
   body.caesar-page-index .sidebar { transition-duration: .01ms !important; }
 }
+
+/* Final navigation behavior: hidden until requested, then fully scrollable. */
+body.caesar-page-index .app {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 414px) !important;
+  grid-template-areas: "main order" !important;
+}
+body.caesar-page-index .sidebar {
+  position: fixed !important;
+  z-index: 120 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: auto !important;
+  width: min(292px, 88vw) !important;
+  min-height: 100vh !important;
+  max-height: 100vh !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  transform: translateX(-106%) !important;
+  pointer-events: none !important;
+}
+body.caesar-page-index.nav-open .sidebar {
+  transform: translateX(0) !important;
+  pointer-events: auto !important;
+}
+body.caesar-page-index .nav-scrim {
+  position: fixed !important;
+  z-index: 110 !important;
+  inset: 0 !important;
+  display: block !important;
+  pointer-events: none !important;
+}
+body.caesar-page-index.nav-open .nav-scrim { pointer-events: auto !important; }
+body.caesar-page-index .nav-scrim[hidden] { display: none !important; }
+body.caesar-page-index .menu-toggle {
+  display: inline-flex !important;
+  pointer-events: auto !important;
+}
+@media (max-width: 1080px) {
+  body.caesar-page-index .app { grid-template-columns: 1fr !important; grid-template-areas: "main" "order" !important; }
+}
