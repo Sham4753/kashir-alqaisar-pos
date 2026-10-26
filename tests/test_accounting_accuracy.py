@@ -40,6 +40,23 @@ class AccountingAccuracyTests(unittest.TestCase):
         analytics = self.client.get('/api/analytics?period=daily').get_json()
         self.assertEqual(analytics['total_expenses'], 150000)
 
+    def test_foreign_debt_collection_is_normalized_and_not_counted_as_sales(self):
+        data = server.load()
+        data['settings']['usd_rate'] = 15000
+        data['debts'] = [{'id': 7, 'name': 'عميل بالدولار', 'amount': 10, 'paid': 0,
+                          'currency': 'USD', 'exchange_rate': 15000, 'payments': [], 'note': ''}]
+        server.save(data)
+
+        response = self.client.post('/api/debts/7/pay', json={'amount': 2, 'method': 'نقدي'})
+        self.assertEqual(response.status_code, 200)
+        movement = server.load()['cash_movements'][0]
+        self.assertEqual(movement['amount'], 2)
+        self.assertEqual(movement['amount_base'], 30000)
+        self.assertEqual(self.client.get('/api/cashbook/summary').get_json()['cash_in'], 30000)
+        analytics = self.client.get('/api/analytics?period=daily').get_json()
+        self.assertEqual(analytics['total_debts'], 120000)
+        self.assertEqual(analytics['total_sales'], 0)
+
     def test_discount_is_allocated_to_filtered_product_and_cashier_summary(self):
         now = datetime.now().isoformat()
         data = server.load()

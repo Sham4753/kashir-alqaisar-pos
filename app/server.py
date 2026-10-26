@@ -2511,11 +2511,15 @@ def pay_debt(did):
                 'timestamp': datetime.now().isoformat()
             }
             data.setdefault('orders', []).append(payment_order)
+            payment_base_amount = amount_in_base(data, amount, snap['currency'], snap['exchange_rate'])
+            if payment_base_amount is None:
+                return jsonify({'ok': False, 'error': 'سعر صرف الدين غير صالح'}), 400
             record_cash_movement(data, 'in', amount, 'تحصيل دين',
                                  channel='card' if method == 'بطاقة' else 'cash',
                                  reference_type='debt_payment', reference_id=payment_order['id'],
                                  note='تسديد دين: ' + str(d.get('name', '')),
-                                 base_amount=amount)
+                                 currency=snap['currency'], exchange_rate=snap['exchange_rate'],
+                                 base_amount=payment_base_amount)
             save(data, [payment_order['id']]); backup()
             return jsonify({"ok": True, "paid": d['paid'], "remaining": d['amount'] - d['paid']})
     return jsonify({"ok": False}), 404
@@ -3403,7 +3407,11 @@ def get_analytics():
     net_profit = operating_profit
 
     # 5. الديون المتراكمة (المتبقي غير المسدد فقط، وليس المبلغ الأصلي الكامل)
-    total_debts = sum(d.get('amount', 0) - d.get('paid', 0) for d in data.get('debts', []))
+    total_debts = sum_money(
+        amount_in_base(data, round_money(as_money(d.get('amount'), 0) - as_money(d.get('paid'), 0)),
+                       d.get('currency', 'SYP'), d.get('exchange_rate')) or 0
+        for d in data.get('debts', [])
+    )
 
     # تفصيل الكاش الفعلي مقابل البطاقة (مهم لجرد الكاش بالدرج مقابل ما يذهب للبنك مباشرة).
     # الطلبات القديمة قبل هذا التحديث ما فيها cash_amount/card_amount فبنرجع لتخمين من حقل payment النصي.
