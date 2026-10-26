@@ -458,3 +458,75 @@ tbody tr:last-child td {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* Legacy utility compatibility: all pages now resolve these classes through
+   the same semantic tokens instead of keeping unrelated color families. */
+:is(.bg-white, [class*="bg-gray-50"], [class*="bg-slate-50"]) {
+  background-color: var(--color-surface) !important;
+  color: var(--color-text) !important;
+}
+:is([class*="bg-gray-100"], [class*="bg-gray-200"], [class*="bg-slate-100"], [class*="bg-slate-200"]) {
+  background-color: var(--color-surface-muted) !important;
+  color: var(--color-text) !important;
+}
+:is([class*="bg-blue-"], [class*="bg-indigo-"], [class*="bg-sky-"], [class*="bg-violet-"], [class*="bg-purple-"], [class*="bg-teal-"], [class*="bg-green-"], [class*="bg-emerald-"]):not(button):not(a) {
+  background-color: var(--color-primary-soft) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-primary-hover) !important;
+}
+:is([class*="bg-amber-"], [class*="bg-orange-"], [class*="bg-yellow-"]):not(button):not(a) {
+  background-color: var(--color-warning-soft) !important;
+  border-color: var(--color-warning) !important;
+  color: var(--color-warning) !important;
+}
+:is([class*="bg-red-"], [class*="bg-rose-"]):not(button):not(a) {
+  background-color: var(--color-danger-soft) !important;
+  border-color: var(--color-danger) !important;
+  color: var(--color-danger) !important;
+}
+:is(button, a)[class*="bg-blue-"],
+:is(button, a)[class*="bg-indigo-"],
+:is(button, a)[class*="bg-sky-"],
+:is(button, a)[class*="bg-violet-"],
+:is(button, a)[class*="bg-purple-"],
+:is(button, a)[class*="bg-teal-"],
+:is(button, a)[class*="bg-green-"],
+:is(button, a)[class*="bg-emerald-"] {
+  background-color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-text-on-primary) !important;
+}
+:is(button, a)[class*="bg-gray-"],
+:is(button, a)[class*="bg-slate-"] {
+  background-color: var(--color-surface-muted) !important;
+  border-color: var(--color-border-strong) !important;
+  color: var(--color-text) !important;
+}
+:is(button, a)[class*="bg-amber-"],
+:is(button, a)[class*="bg-orange-"],
+:is(button, a)[class*="bg-yellow-"] {
+  background-color: var(--color-warning) !important;
+  border-color: var(--color-warning) !important;
+  color: #ffffff !important;
+}
+:is(button, a)[class*="bg-red-"],
+:is(button, a)[class*="bg-rose-"] {
+  background-color: var(--color-danger) !important;
+  border-color: var(--color-danger) !important;
+  color: #ffffff !important;
+}
+:is([class*="text-blue-"], [class*="text-indigo-"], [class*="text-sky-"], [class*="text-violet-"], [class*="text-purple-"], [class*="text-teal-"], [class*="text-green-"], [class*="text-emerald-"]) {
+  color: var(--color-primary-hover) !important;
+}
+:is([class*="text-gray-400"], [class*="text-gray-500"], [class*="text-gray-600"], [class*="text-slate-400"], [class*="text-slate-500"], [class*="text-slate-600"]) {
+  color: var(--color-text-muted) !important;
+}
+:is([class*="text-amber-"], [class*="text-orange-"], [class*="text-yellow-"]) {
+  color: var(--color-warning) !important;
+}
+:is([class*="text-red-"], [class*="text-rose-"]) {
+  color: var(--color-danger) !important;
+}
+:is([class*="border-gray-"], [class*="border-slate-"], [class*="border-blue-"], [class*="border-indigo-"], [class*="border-green-"], [class*="border-emerald-"]) {
+  border-color: var(--color-border) !important;
+}
