@@ -158,3 +158,18 @@ body.caesar-page-index .category-bar { background: var(--q-surface) !important; 
 body.caesar-page-index .category { background: var(--q-surface) !important; border-color: var(--q-line-strong) !important; color: var(--q-ink-soft) !important; }
 body.caesar-page-index .category:hover { background: var(--q-brand-soft) !important; border-color: var(--q-brand) !important; color: var(--q-brand-strong) !important; }
 body.caesar-page-index .category.active { background: var(--q-brand) !important; border-color: var(--q-brand) !important; color: #fff !important; }
+body.caesar-ui .mark,
+body.caesar-ui .q-appbar-brand-mark { background: linear-gradient(135deg, var(--q-brand), var(--q-warning)) !important; }
+body.caesar-ui .primary,
+body.caesar-ui .dine-primary { background: var(--q-brand) !important; color: #fff !important; }
+body.caesar-ui .primary:hover,
+body.caesar-ui .dine-primary:hover { background: var(--q-brand-strong) !important; }
+body.caesar-ui .secondary { background: var(--q-brand-soft) !important; color: var(--q-brand-strong) !important; border-color: var(--q-line-strong) !important; }
+body.caesar-ui .danger { background: var(--q-danger-soft) !important; color: var(--q-danger) !important; border-color: color-mix(in srgb, var(--q-danger) 28%, var(--q-line)) !important; }
+body.caesar-ui .notice { background: var(--q-brand-soft) !important; color: var(--q-brand-strong) !important; border-color: var(--q-line-strong) !important; }
+body.caesar-ui .status { background: var(--q-success-soft) !important; color: var(--q-success) !important; }
+body.caesar-ui .status.error { background: var(--q-danger-soft) !important; color: var(--q-danger) !important; }
+body.caesar-ui .tabs { background: var(--q-surface-muted) !important; }
+body.caesar-ui .tab.active { background: var(--q-surface) !important; color: var(--q-brand-strong) !important; }
+body.caesar-ui .receipt-preview-shell { background: var(--q-surface-muted) !important; border-color: var(--q-line-strong) !important; }
+body.caesar-ui .template-row { background: var(--q-surface) !important; border-color: var(--q-line) !important; }
