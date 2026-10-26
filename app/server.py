@@ -4538,6 +4538,24 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
         text = str(value or '')
         return text.center(width) if align_center else text
 
+    def receipt_amount(value):
+        try:
+            number = float(value or 0)
+        except (TypeError, ValueError):
+            number = 0
+        return f'{number:,.2f}'.rstrip('0').rstrip('.')
+
+    def receipt_item_line(item):
+        name = str(item.get('name', '') or '')
+        try:
+            quantity = float(item.get('quantity', item.get('qty', 1)) or 0)
+        except (TypeError, ValueError):
+            quantity = 0
+        quantity_text = str(int(quantity)) if quantity.is_integer() else receipt_amount(quantity)
+        unit_price = item.get('price', item.get('unit_price', 0)) or 0
+        line_total = float(unit_price or 0) * quantity
+        return f'{name} × {quantity_text} | سعر: {receipt_amount(unit_price)} | الإجمالي: {receipt_amount(line_total)}'
+
     if ticket_type == 'kitchen':
         lines = [format_line(restaurant_name), format_line(caption), divider, format_line('طلب مطبخ'), f"الطلب: {order.get('id', '')}", f"النوع: {order.get('type', 'سفري')}"]
         if order.get('table'):
@@ -4556,7 +4574,7 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
         safe_date = raw_date.replace('T', ' ')
         isolated_date = '\u200e' + safe_date + '\u200e' if safe_date else ''
         detail_lines = [f"الفاتورة: {order.get('id', '')}", f"التاريخ: {isolated_date}", divider]
-        item_lines = [f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', [])] + [divider]
+        item_lines = [receipt_item_line(item) for item in order.get('items', [])] + [divider]
         total_lines = ['الإجمالي: ' + str(order.get('total', 0)), 'الدفع: ' + str(order.get('payment', ''))]
         footer_lines = []
         if printer.get('receipt_show_cashier', True) and order.get('cashier_name'):
