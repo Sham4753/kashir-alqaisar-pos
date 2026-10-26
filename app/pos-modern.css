@@ -678,3 +678,15 @@ body.caesar-page-index .category-bar::-webkit-scrollbar-thumb { border-radius: 9
 @media (max-width: 760px) {
   body.caesar-page-index .category-bar { height: 116px !important; max-height: 116px !important; }
 }
+
+/* Give the desktop catalog a real scroll viewport instead of allowing the grid to grow past it. */
+@media (min-width: 1081px) {
+  body.caesar-page-index .app { height: 100vh !important; min-height: 100vh !important; }
+  body.caesar-page-index .main {
+    height: 100vh !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+  }
+}
