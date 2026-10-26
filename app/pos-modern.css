@@ -6,8 +6,8 @@
 
 :root {
   /* POS aliases: keep the custom layout on the shared q-* palette. */
-  --pos-forest: #115e59;
-  --pos-forest-2: #0f4542;
+  --pos-forest: var(--q-brand-strong);
+  --pos-forest-2: #2f0a18;
   --pos-emerald: var(--q-brand);
   --pos-emerald-strong: var(--q-brand-strong);
   --pos-emerald-soft: var(--q-brand-soft);
@@ -88,7 +88,7 @@ body.caesar-page-index .brand-mark {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, .24);
   border-radius: 15px;
-  background: linear-gradient(145deg, #30b47e, #c58a20);
+  background: linear-gradient(145deg, var(--q-warning), var(--q-brand));
   color: #fff;
   box-shadow: 0 8px 20px rgba(0, 0, 0, .18);
   font-size: 18px;
@@ -134,8 +134,8 @@ body.caesar-page-index .nav a {
   transition: background .16s ease, color .16s ease, border-color .16s ease, transform .16s ease;
 }
 body.caesar-page-index .nav a:hover { color: #fff; background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .13); transform: translateX(-2px); }
-body.caesar-page-index .nav a.active { color: #fff; background: rgba(52, 185, 130, .21); border-color: rgba(117, 216, 169, .34); box-shadow: inset -3px 0 0 #65d69f; }
-body.caesar-page-index .nav-icon { display: grid; place-items: center; width: 22px; height: 22px; flex: 0 0 22px; color: #77d5a5; }
+body.caesar-page-index .nav a.active { color: var(--q-brand-strong); background: var(--q-warning); border-color: var(--q-warning); box-shadow: inset -3px 0 0 var(--q-brand-strong); }
+body.caesar-page-index .nav-icon { display: grid; place-items: center; width: 22px; height: 22px; flex: 0 0 22px; color: var(--q-warning); }
 body.caesar-page-index .nav-icon svg,
 body.caesar-page-index .button-icon svg,
 body.caesar-page-index .icon-button svg,
@@ -544,7 +544,7 @@ body.caesar-page-index .menu-toggle {
   font-size: 11px;
   font-weight: 900;
 }
-body.caesar-page-index .menu-toggle:hover { border-color: #78b998; background: #e5f5ec; }
+body.caesar-page-index .menu-toggle:hover { border-color: var(--q-warning); background: var(--q-warning-soft); }
 body.caesar-page-index .menu-toggle svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 2; }
 body.caesar-page-index .sidebar .brand-copy,
 body.caesar-page-index .sidebar .nav-label,
