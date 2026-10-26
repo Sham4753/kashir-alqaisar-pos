@@ -310,3 +310,112 @@ body.caesar-ui :is(div,section,article,span,p,td,th,li)[class*="bg-rose-"] {
   color: var(--q-danger) !important;
   border-color: #e4a49e !important;
 }
+
+/* ── Final page-level palette bridge ────────────────────────────────────────
+   A few older screens keep small inline style blocks for their custom widgets.
+   These rules bring those widgets onto the same q-* semantic palette without
+   changing their layout or intentionally monochrome thermal-print preview. */
+body.caesar-page-mobile {
+  background: var(--q-bg) !important;
+  color: var(--q-ink) !important;
+}
+body.caesar-page-mobile .hero {
+  background: linear-gradient(135deg, var(--q-brand-strong), var(--q-brand)) !important;
+  color: #fff !important;
+  box-shadow: var(--q-shadow) !important;
+}
+body.caesar-page-mobile .card {
+  background: var(--q-surface) !important;
+  border-color: var(--q-line) !important;
+  box-shadow: var(--q-shadow-soft) !important;
+}
+body.caesar-page-settings .topbar,
+body.caesar-page-settings .card,
+body.caesar-page-settings .field input,
+body.caesar-page-settings .field select,
+body.caesar-page-settings .field textarea,
+body.caesar-page-settings .template-row {
+  background: var(--q-surface) !important;
+  border-color: var(--q-line) !important;
+}
+body.caesar-page-settings .mark {
+  background: linear-gradient(135deg, var(--q-brand), var(--q-brand-strong)) !important;
+}
+body.caesar-page-settings .tabs { background: var(--q-surface-muted) !important; }
+body.caesar-page-settings .tab.active,
+body.caesar-page-settings .primary { background: var(--q-brand) !important; color: #fff !important; }
+body.caesar-page-settings .secondary {
+  background: var(--q-brand-soft) !important;
+  color: var(--q-brand-strong) !important;
+}
+body.caesar-page-settings .danger {
+  background: var(--q-danger-soft) !important;
+  color: var(--q-danger) !important;
+}
+body.caesar-page-settings .notice {
+  background: var(--q-blue-soft) !important;
+  color: var(--q-brand-strong) !important;
+}
+body.caesar-page-settings .field input:focus,
+body.caesar-page-settings .field select:focus,
+body.caesar-page-settings .field textarea:focus {
+  border-color: var(--q-brand) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--q-brand) 20%, transparent) !important;
+}
+body.caesar-page-printer_settings :is(.receipt-preset,.layout-item,.thermal-mode-toggle) {
+  border-color: var(--q-line) !important;
+  background: var(--q-surface) !important;
+  color: var(--q-ink) !important;
+}
+body.caesar-page-printer_settings :is(.receipt-preset:hover,.receipt-preset:focus,.layout-move) {
+  border-color: var(--q-brand) !important;
+  background: var(--q-brand-soft) !important;
+  color: var(--q-brand-strong) !important;
+}
+body.caesar-page-printer_settings .receipt-preview-shell {
+  background: var(--q-surface-muted) !important;
+  border-color: var(--q-line) !important;
+}
+body.caesar-page-printer_settings .receipt-paper:not(.thermal-sim),
+body.caesar-page-printer_settings .print-loading-card {
+  background: var(--q-surface) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-ink) !important;
+}
+body.caesar-page-printer_settings .thermal-mode-toggle.active {
+  background: var(--q-brand) !important;
+  border-color: var(--q-brand) !important;
+  color: #fff !important;
+}
+body.caesar-page-printer_settings .receipt-paper:not(.thermal-sim) {
+  filter: none !important;
+}
+body.caesar-page-printer_settings .range-control { accent-color: var(--q-brand) !important; }
+body.caesar-page-daily_guide .guide-step {
+  border-color: var(--q-line) !important;
+  background: var(--q-surface) !important;
+}
+body.caesar-page-daily_guide .guide-step.done {
+  border-color: var(--q-line-strong) !important;
+  background: var(--q-success-soft) !important;
+}
+body.caesar-page-daily_guide .guide-dot {
+  background: var(--q-surface-muted) !important;
+}
+body.caesar-page-daily_guide .guide-step.done .guide-dot {
+  background: var(--q-success) !important;
+  color: #fff !important;
+}
+body.caesar-page-daily_guide .guide-link { color: var(--q-brand-strong) !important; }
+body.caesar-page-setup {
+  background: linear-gradient(135deg, var(--q-brand-strong), var(--q-bg)) !important;
+}
+body.caesar-page-setup .card { box-shadow: var(--q-shadow) !important; }
+body.caesar-page-welcome .welcome-identity svg,
+body.caesar-page-welcome .profile-icon svg { stroke: var(--q-brand-strong) !important; }
+body.caesar-page-welcome .profile-icon {
+  background: var(--q-brand-soft) !important;
+}
+body.caesar-page-welcome .profile-card:hover {
+  border-color: var(--q-brand) !important;
+}
