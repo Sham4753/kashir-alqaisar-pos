@@ -734,3 +734,60 @@ body.caesar-ui .lock-mark {
   background: var(--three-yellow) !important;
   color: var(--three-burgundy) !important;
 }
+
+/* Global three-color fallback for legacy pages without caesar-ui. */
+body {
+  background: var(--three-burgundy) !important;
+  color: var(--three-white) !important;
+}
+body :is([class*="bg-green-"], [class*="bg-emerald-"], [class*="bg-blue-"], [class*="bg-indigo-"], [class*="bg-purple-"], [class*="bg-violet-"], [class*="bg-gray-"], [class*="bg-slate-"], .bg-white) {
+  background: var(--three-burgundy) !important;
+  color: var(--three-white) !important;
+}
+body :is([class*="text-black"], [class*="text-gray-"], [class*="text-slate-"], [class*="text-green-"], [class*="text-emerald-"], [class*="text-blue-"], [class*="text-indigo-"], [class*="text-purple-"], [class*="text-violet-"]) {
+  color: var(--three-white) !important;
+}
+body :is(button, input[type="button"], input[type="submit"], a[role="button"]) {
+  background: var(--three-burgundy) !important;
+  border-color: var(--three-yellow) !important;
+  color: var(--three-white) !important;
+}
+body :is(button, input[type="button"], input[type="submit"], a[role="button"]) * {
+  color: inherit !important;
+}
+body :is(button, input[type="button"], input[type="submit"], a[role="button"]):hover {
+  background: var(--three-yellow) !important;
+  color: var(--three-burgundy) !important;
+}
+
+/* Legacy POS tokens are remapped to the same three colors. */
+:root {
+  --pos-ivory: var(--three-burgundy);
+  --pos-card: var(--three-burgundy);
+  --pos-ink: var(--three-white);
+  --pos-ink-soft: var(--three-white);
+  --pos-muted: var(--three-white);
+  --pos-line: var(--three-yellow);
+  --pos-line-strong: var(--three-yellow);
+  --pos-emerald: var(--three-yellow);
+  --pos-emerald-strong: var(--three-yellow);
+  --pos-emerald-soft: var(--three-burgundy);
+  --pos-gold: var(--three-yellow);
+  --pos-gold-soft: var(--three-burgundy);
+  --pos-danger: var(--three-burgundy);
+}
+
+/* Direct legacy color literals in the POS stylesheet. */
+html body.caesar-page-index :is(.product-name, .cart-item-name, .cart-unit,
+  .summary-row, .counter-card, .page-heading, .page-subtitle,
+  .order-head, .field-label, .field-hint, .total-row, .print-state,
+  .operator-copy, .sidebar-footnote, .category, .icon-button, .segment,
+  .action-secondary, .menu-toggle, .lock-button, .modal-close) {
+  color: var(--three-white) !important;
+}
+html body.caesar-page-index :is(.product-card, .cart-panel, .order-panel,
+  .sidebar, .counter-card, .category-bar, .cart, .action-secondary,
+  .icon-button, .segment, .modal-close) {
+  background: var(--three-burgundy) !important;
+  border-color: var(--three-yellow) !important;
+}
