@@ -241,3 +241,17 @@ body.caesar-ui :is(button,a)[class*="bg-orange-"],
 body.caesar-ui :is(button,a)[class*="bg-amber-"] {
   background: var(--q-warning) !important; border-color: var(--q-warning) !important; color: #fff !important;
 }
+
+/* Fix legacy utility collisions: green surfaces must never inherit black text. */
+body.caesar-ui :is([class*="bg-green-"],[class*="bg-emerald-"]) {
+  background: var(--q-brand) !important;
+  border-color: var(--q-brand) !important;
+  color: #ffffff !important;
+}
+body.caesar-ui :is([class*="bg-green-"],[class*="bg-emerald-"]) :is(*, .text-black, .text-gray-900, .text-gray-800, .text-slate-900, .text-slate-800, [class*="text-green-"], [class*="text-emerald-"]) {
+  color: #ffffff !important;
+}
+body.caesar-ui :is([class*="bg-green-"],[class*="bg-emerald-"]) svg {
+  color: #ffffff !important;
+  stroke: currentColor !important;
+}
