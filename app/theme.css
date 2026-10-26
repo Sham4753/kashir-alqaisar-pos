@@ -617,3 +617,120 @@ html body.caesar-page-index :is(.lateMuteButton, .warning) {
   border-color: var(--color-warning) !important;
   color: #ffffff !important;
 }
+
+/* ── CAESAR Three-Color Contract ─────────────────────────────────────────────
+   Only three visual colors are permitted across the application:
+   white text, fiery yellow accents, and burgundy surfaces/actions. */
+:root {
+  --three-white: #ffffff;
+  --three-yellow: #ffb000;
+  --three-burgundy: #68152b;
+  --color-bg: var(--three-burgundy);
+  --color-surface: var(--three-burgundy);
+  --color-surface-soft: var(--three-burgundy);
+  --color-surface-muted: var(--three-burgundy);
+  --color-surface-raised: var(--three-burgundy);
+  --color-text: var(--three-white);
+  --color-text-secondary: var(--three-white);
+  --color-text-muted: var(--three-white);
+  --color-text-disabled: var(--three-white);
+  --color-text-on-primary: var(--three-white);
+  --color-border: var(--three-yellow);
+  --color-border-strong: var(--three-yellow);
+  --color-focus: var(--three-yellow);
+  --color-primary: var(--three-burgundy);
+  --color-primary-hover: var(--three-burgundy);
+  --color-primary-active: var(--three-burgundy);
+  --color-primary-soft: var(--three-burgundy);
+  --color-success: var(--three-yellow);
+  --color-success-soft: var(--three-burgundy);
+  --color-warning: var(--three-yellow);
+  --color-warning-soft: var(--three-burgundy);
+  --color-danger: var(--three-burgundy);
+  --color-danger-soft: var(--three-burgundy);
+  --color-info: var(--three-yellow);
+  --color-info-soft: var(--three-burgundy);
+}
+
+body,
+body.caesar-ui,
+body.caesar-ui.light,
+body.caesar-ui.dark {
+  background: var(--three-burgundy) !important;
+  color: var(--three-white) !important;
+}
+
+body.caesar-ui :is(*, *::before, *::after) {
+  border-color: var(--three-yellow) !important;
+}
+body.caesar-ui :is(h1,h2,h3,h4,h5,h6,p,small,label,span,strong,b,td,th,li,div) {
+  color: var(--three-white) !important;
+}
+body.caesar-ui a {
+  color: var(--three-yellow) !important;
+}
+body.caesar-ui a:hover {
+  color: var(--three-white) !important;
+}
+
+/* All surfaces use burgundy; yellow is reserved for clear accents. */
+body.caesar-ui :is(.bg-white, [class*="bg-gray-"], [class*="bg-slate-"],
+  [class*="bg-blue-"], [class*="bg-indigo-"], [class*="bg-sky-"],
+  [class*="bg-violet-"], [class*="bg-purple-"], [class*="bg-teal-"],
+  [class*="bg-green-"], [class*="bg-emerald-"], [class*="bg-amber-"],
+  [class*="bg-orange-"], [class*="bg-yellow-"], [class*="bg-red-"],
+  [class*="bg-rose-"]) {
+  background: var(--three-burgundy) !important;
+  color: var(--three-white) !important;
+}
+
+/* All normal controls are burgundy with a fiery-yellow outline. */
+body.caesar-ui :is(button, input, select, textarea, a[role="button"],
+  .btn, .icon-button, .segment, .action-main, .action-secondary,
+  .dine-action, .continue, .move, .receipt-preset, .thermal-mode-toggle) {
+  background: var(--three-burgundy) !important;
+  border-color: var(--three-yellow) !important;
+  color: var(--three-white) !important;
+}
+body.caesar-ui :is(button, input, select, textarea, a[role="button"],
+  .btn, .icon-button, .segment, .action-main, .action-secondary,
+  .dine-action, .continue, .move, .receipt-preset, .thermal-mode-toggle) * {
+  color: inherit !important;
+}
+body.caesar-ui :is(button, input, select, textarea):focus,
+body.caesar-ui :is(button, input, select, textarea):focus-visible {
+  outline: none !important;
+  border-color: var(--three-yellow) !important;
+  box-shadow: 0 0 0 3px var(--three-yellow) !important;
+}
+body.caesar-ui :is(button, a[role="button"]):hover {
+  background: var(--three-yellow) !important;
+  color: var(--three-burgundy) !important;
+}
+body.caesar-ui :is(button, a[role="button"]):hover * {
+  color: var(--three-burgundy) !important;
+}
+
+/* Yellow is the only status/accent color. */
+body.caesar-ui :is(.status, .badge, .notice, .q-appbar-status, .q-appbar-link.active,
+  .category.active, .tab.active, .segment.active, .connection-chip) {
+  background: var(--three-yellow) !important;
+  border-color: var(--three-yellow) !important;
+  color: var(--three-burgundy) !important;
+}
+body.caesar-ui :is(.status, .badge, .notice, .q-appbar-status, .q-appbar-link.active,
+  .category.active, .tab.active, .segment.active, .connection-chip) * {
+  color: var(--three-burgundy) !important;
+}
+
+/* Keep icons, logos and decorative marks inside the same three-color system. */
+body.caesar-ui svg {
+  color: var(--three-white) !important;
+  stroke: currentColor !important;
+}
+body.caesar-ui .q-appbar-brand-mark,
+body.caesar-ui .mark,
+body.caesar-ui .lock-mark {
+  background: var(--three-yellow) !important;
+  color: var(--three-burgundy) !important;
+}
