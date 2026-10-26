@@ -530,3 +530,34 @@ tbody tr:last-child td {
 :is([class*="border-gray-"], [class*="border-slate-"], [class*="border-blue-"], [class*="border-indigo-"], [class*="border-green-"], [class*="border-emerald-"]) {
   border-color: var(--color-border) !important;
 }
+
+/* Final button contract: every action button shares one visual language. */
+body.caesar-ui button:not(.q-theme-toggle),
+body.caesar-ui input[type="button"],
+body.caesar-ui input[type="submit"],
+body.caesar-ui a[role="button"] {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-text-on-primary) !important;
+}
+body.caesar-ui button:not(.q-theme-toggle) *,
+body.caesar-ui input[type="button"] *,
+body.caesar-ui input[type="submit"] *,
+body.caesar-ui a[role="button"] * {
+  color: inherit !important;
+}
+body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is([class*="bg-red-"], [class*="bg-rose-"], .danger) {
+  background: var(--color-danger) !important;
+  border-color: var(--color-danger) !important;
+  color: #ffffff !important;
+}
+body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is([class*="bg-amber-"], [class*="bg-orange-"], [class*="bg-yellow-"], .warning) {
+  background: var(--color-warning) !important;
+  border-color: var(--color-warning) !important;
+  color: #ffffff !important;
+}
+body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):disabled {
+  background: var(--color-surface-muted) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-disabled) !important;
+}
