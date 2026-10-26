@@ -16,22 +16,29 @@ if not exist "%ROOT%Lib\site-packages\flask\__init__.py" goto :missing
 if not exist "%APP%\server.py" goto :missing
 if not exist "%APP%\index.html" goto :missing
 
-REM إيقاف خادم كاشير قيصر سابق على المنفذ المحلي فقط.
-for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8080" ^| findstr "LISTENING"') do taskkill /f /pid %%p >nul 2>&1
+REM لا نقتل عملية مجهولة على المنفذ؛ افشل برسالة تشخيصية واضحة بدل قطع خدمة أخرى.
+powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$c=Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue; if($c){exit 1}; exit 0" >nul 2>&1
+if errorlevel 1 goto :port_busy
 
 REM تشغيل الخادم من المصدر الحالي مع تسجيل أي خطأ في app\server_error.log.
 if exist "%LOG%" del /q "%LOG%" >nul 2>&1
 start "" /b "%ROOT%pythonw.exe" "%APP%\server.py" > "%LOG%" 2>&1
 
-powershell.exe -WindowStyle Hidden -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$deadline=(Get-Date).AddSeconds(12); do { $c=Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue; if($c){exit 0}; Start-Sleep -Milliseconds 250 } while((Get-Date) -lt $deadline); exit 1" >nul 2>&1
+powershell.exe -WindowStyle Hidden -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$deadline=(Get-Date).AddSeconds(12); do { $c=Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue; if($c){exit 0}; Start-Sleep -Milliseconds 250 } while((Get-Date) -lt $deadline); exit 1" >nul 2>&1
 if not errorlevel 1 goto :open
-
 echo.
 echo [CAESAR] تعذر تشغيل الخادم.
 echo راجع ملف الخطأ التالي:
 echo %LOG%
 echo.
 if exist "%LOG%" type "%LOG%"
+pause
+exit /b 1
+
+:port_busy
+echo.
+echo [CAESAR] المنفذ 8080 مستخدم من عملية أخرى.
+echo أغلق الخدمة المالكة للمنفذ يدويًا ثم أعد التشغيل؛ لم يتم إيقاف أي عملية تلقائيًا.
 pause
 exit /b 1
 

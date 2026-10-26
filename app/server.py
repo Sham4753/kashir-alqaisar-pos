@@ -4611,12 +4611,26 @@ def _dispatch_print_job(job):
     printer_name = str(printer.get('printer_name') or '').strip()
     font_size = str(printer.get('font_size', 'medium') or 'medium')
     document_text = thermal_receipt_text(data, order, ticket_type)
-    if printer.get('connection_mode') == 'network':
-        return submit_network_raw_print(printer.get('network_host'), printer.get('network_port', 9100), document_text, font_size, printer.get('paper_width', 80), printer)
-    return submit_silent_thermal_print(
-        printer_name, document_text, font_size, printer.get('paper_width', 80),
-        f"CAESAR {'Kitchen' if ticket_type == 'kitchen' else 'Receipt'} {order.get('id', '')}", printer
-    )
+    try:
+        copies = max(1, min(3, int(printer.get('copies', 1) or 1)))
+    except (TypeError, ValueError):
+        copies = 1
+    result = None
+    for copy_number in range(copies):
+        if printer.get('connection_mode') == 'network':
+            result = submit_network_raw_print(printer.get('network_host'), printer.get('network_port', 9100), document_text, font_size, printer.get('paper_width', 80), printer)
+        else:
+            result = submit_silent_thermal_print(
+                printer_name, document_text, font_size, printer.get('paper_width', 80),
+                f"CAESAR {'Kitchen' if ticket_type == 'kitchen' else 'Receipt'} {order.get('id', '')} ({copy_number + 1}/{copies})", printer
+            )
+        if not result.get('ok'):
+            result['copies_sent'] = copy_number
+            result['copies_requested'] = copies
+            return result
+    result['copies_sent'] = copies
+    result['copies_requested'] = copies
+    return result
 
 
 def _print_worker():
@@ -4849,7 +4863,7 @@ def set_printer_settings():
         'paper_orientation': paper_orientation,
         'receipt_length_mode': 'auto',
         'font_size': font_size,
-        'copies': payload.get('copies', existing.get('copies', 1)),
+        'copies': max(1, min(3, int(payload.get('copies', existing.get('copies', 1)) or 1))) if str(payload.get('copies', existing.get('copies', 1)) or '1').lstrip('-').isdigit() else 1,
         'footer_text': str(payload.get('footer_text', existing.get('footer_text', '')) or '')[:160],
         'printer_name': str(payload.get('printer_name', existing.get('printer_name', '')) or '')[:160],
         'connection_mode': str(payload.get('connection_mode', existing.get('connection_mode', 'windows')) or 'windows') if str(payload.get('connection_mode', existing.get('connection_mode', 'windows')) or 'windows') in {'windows','network'} else 'windows',
@@ -5092,6 +5106,11 @@ def retry_failed_print(order_id):
                 and row.get('status') in {'failed', 'timed_out', 'queued'}]
     if not failures:
         return jsonify({'ok': False, 'error': 'لا توجد محاولة طباعة فاشلة غير معالجة لهذا المستند'}), 409
+    # Reserve the rows before dispatch so a second operator cannot retry the
+    # same queued job while its original worker is still active.
+    for failure in failures:
+        failure['status'] = 'retrying'
+        failure['retry_started_at'] = datetime.now().isoformat()
     printer = data.get('settings', {}).get('printer', {})
     if printer.get('connection_mode') == 'network':
         configured_printer = bool(str(printer.get('network_host') or '').strip())
@@ -5111,6 +5130,10 @@ def retry_failed_print(order_id):
             failure['resolved'] = True
             failure['resolved_at'] = now
             failure['resolution'] = 'retry_submitted'
+    else:
+        for failure in failures:
+            failure['status'] = 'failed'
+            failure['message'] = result.get('message', 'فشلت إعادة الطباعة')
     save(data); backup()
     return jsonify({'ok': result.get('status') in {'submitted', 'sent'}, 'print': result, 'unresolved_count': len(unresolved_print_failures(data))})
 
@@ -5127,8 +5150,20 @@ def get_unresolved_print_errors():
 def test_printer():
     """طباعة تجريبية فعلية: ترسل صفحة اختبار حقيقية للطابعة المختارة وتتأكد من نجاح الاتصال،
     بدل الرد بنجاح وهمي دائماً بغض النظر عن وجود طابعة أصلاً."""
+    data = load()
+    printer = data.get('settings', {}).get('printer', {})
+    payload = request.get_json(silent=True) or {}
+    if printer.get('connection_mode') == 'network':
+        host = str(printer.get('network_host') or '').strip()
+        try:
+            port = int(printer.get('network_port', 9100) or 9100)
+            timeout = max(1, min(10, int(printer.get('printer_timeout', 5) or 5)))
+            with socket.create_connection((host, port), timeout=timeout):
+                pass
+            return jsonify({"ok": True, "message": f"تم الاتصال بالطابعة الشبكية {host}:{port}"})
+        except (OSError, ValueError) as exc:
+            return jsonify({"ok": False, "message": f"تعذر الاتصال بالطابعة الشبكية: {str(exc)[:160]}"}), 503
     if sys.platform != 'win32':
-        payload = request.get_json(silent=True) or {}
         width = payload.get('paper_width', 80)
         try:
             width = int(width)
@@ -5137,7 +5172,6 @@ def test_printer():
         if width not in {58, 80, 112}:
             return jsonify({"ok": False, "message": "عرض ورق غير صالح للطباعة التجريبية"}), 400
         return jsonify({"ok": True, "message": f"تشغيل تجريبي لقالب {width}mm (بيئة غير ويندوز) - الاختبار الفعلي متاح فقط عند التشغيل على ويندوز", "paper_width": width})
-    data = load()
     printer_name = data.get('settings', {}).get('printer', {}).get('printer_name') or get_default_windows_printer()
     if not printer_name:
         return jsonify({"ok": False, "message": "ما في طابعة محددة بعد - اختر طابعة من الإعدادات أولاً"})
@@ -5394,7 +5428,9 @@ def enforce_api_access():
     if method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
         origin = request.headers.get('Origin', '').strip().rstrip('/')
         expected_origin = request.host_url.rstrip('/')
-        if origin and origin != expected_origin:
+        mobile_origins = {item.strip().rstrip('/') for item in os.environ.get('CAESAR_MOBILE_ORIGINS', '').split(',') if item.strip()}
+        allowed_origins = ({expected_origin} | mobile_origins) if path.startswith('/api/mobile/') else {expected_origin}
+        if origin and origin not in allowed_origins:
             return jsonify({'ok': False, 'error': 'مصدر الطلب غير مسموح'}), 403
 
     # لا يمكن البيع أو مشاهدة بيانات مطعم قبل إنشاء هوية المطعم والمدير الأول.
@@ -6020,7 +6056,8 @@ def mobile_waiter_login():
         return jsonify({'ok': False, 'error': 'بيانات النادل غير صحيحة'}), 401
     clear_login_failures(data, username, ip_address)
     token = secrets.token_urlsafe(32)
-    expires_at = (datetime.now() + timedelta(days=30)).isoformat()
+    # Keep the mobile bearer session short-lived and consistent with the waiter UI.
+    expires_at = (datetime.now() + timedelta(hours=12)).isoformat()
     tokens = [row for row in data.setdefault('mobile_tokens', []) if row.get('expires_at', '') >= datetime.now().isoformat() and row.get('user_id') != user.get('id')]
     tokens.append({'digest': hashlib.sha256(token.encode('utf-8')).hexdigest(), 'user_id': user['id'], 'expires_at': expires_at, 'created_at': datetime.now().isoformat()})
     data['mobile_tokens'] = tokens[-100:]
@@ -6086,8 +6123,18 @@ def mobile_create_dine_in_session():
     totals, totals_error = dine_in_totals(data, payload)
     if totals_error:
         return jsonify({'ok': False, 'error': totals_error}), 400
+    discount_total = round_money(totals['subtotal'] - totals['total'])
+    needs_approval, _ = manager_approval_required(data, totals['discount_pct'], discount_total)
+    approval_record = None
+    if needs_approval:
+        approval_record, approval_error = verify_manager_approval(data, payload, 'خصم طلب صالة من تطبيق النادل', discount_total)
+        if approval_error:
+            return approval_error
     now = datetime.now().isoformat()
     session_row = {'id': 'DINE-' + uuid.uuid4().hex[:10].upper(), 'status': 'open', 'table_id': str(table['id']), 'table_name': table['name'], **totals, 'note': str(payload.get('note', ''))[:500], 'customer': str(payload.get('customer', ''))[:120], 'kitchen_status': 'new', 'opened_by': waiter['username'], 'created_at': now, 'updated_at': now}
+    if approval_record:
+        approval_record['reference_id'] = session_row['id']
+        session_row['manager_approval'] = approval_record
     data.setdefault('dine_in_sessions', []).append(session_row)
     table['status'] = 'busy'; table['active_session_id'] = session_row['id']; table['active_since'] = now
     save(data); backup()
@@ -6112,7 +6159,17 @@ def mobile_dine_in_session_detail(session_id):
     totals, totals_error = dine_in_totals(data, payload)
     if totals_error:
         return jsonify({'ok': False, 'error': totals_error}), 400
+    discount_total = round_money(totals['subtotal'] - totals['total'])
+    needs_approval, _ = manager_approval_required(data, totals['discount_pct'], discount_total)
+    approval_record = None
+    if needs_approval:
+        approval_record, approval_error = verify_manager_approval(data, payload, 'تعديل خصم طلب صالة من تطبيق النادل', discount_total, session_id)
+        if approval_error:
+            return approval_error
     session_row.update(totals)
+    if approval_record:
+        approval_record['reference_id'] = session_id
+        session_row['manager_approval'] = approval_record
     session_row['note'] = str(payload.get('note', ''))[:500]
     session_row['customer'] = str(payload.get('customer', ''))[:120]
     session_row['updated_at'] = datetime.now().isoformat(); session_row['updated_by'] = waiter['username']; session_row['kitchen_status'] = 'new'
