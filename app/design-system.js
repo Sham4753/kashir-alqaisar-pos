@@ -4,7 +4,8 @@
   const body = document.body;
   const key = 'caesar-ui-theme';
   const savedTheme = localStorage.getItem(key);
-  const prefersDark = savedTheme !== 'light';
+  // يبدأ النظام بالهوية الفاتحة المناسبة لشاشات المطاعم، مع احترام التفضيل المحفوظ.
+  const prefersDark = savedTheme === 'dark';
 
   window.caesarPrepareImage = async function caesarPrepareImage(file, options = {}) {
     const maxDimension = Number(options.maxDimension || 640);
@@ -340,4 +341,3 @@
     menu.style.top = Math.max(4, Math.min(e.clientY, maxY)) + 'px';
   }, true);
 })();
-

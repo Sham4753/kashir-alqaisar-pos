@@ -1083,3 +1083,58 @@ body.caesar-page-index .main > .products { order: 5; }
   body.caesar-page-index .main > .counter-strip .counter-card span { font-size: 9px; }
   body.caesar-page-index .main > .counter-strip .counter-card strong { font-size: 14px; }
 }
+
+/* ── Restaurant modern POS finishing layer ─────────────────────────────── */
+body.caesar-page-index > header {
+  background: linear-gradient(115deg, #123b2d 0%, #16845f 64%, #c58a20 140%) !important;
+  box-shadow: 0 10px 28px rgba(24, 50, 41, .18) !important;
+}
+body.caesar-page-index .brand-mark { background: linear-gradient(135deg, #21a875, #c58a20) !important; }
+body.caesar-page-index .top-field,
+body.caesar-page-index .header-input input { border-color: #b8d0bf !important; background: #fff !important; }
+body.caesar-page-index .nav-link:hover { border-color: #78c69f !important; background: rgba(255,255,255,.12) !important; }
+body.caesar-page-index #categoryPanel .category-active {
+  background: linear-gradient(135deg, #16845f, #0d684b) !important;
+  box-shadow: 0 8px 16px rgba(22,132,95,.2);
+}
+body.caesar-page-index .product-card { border-radius: 16px !important; }
+body.caesar-page-index .product-card:hover,
+body.caesar-page-index .product-card:focus-visible { border-color: #53b987 !important; box-shadow: 0 14px 25px rgba(22,132,95,.14) !important; }
+body.caesar-page-index .product-image { background: #eef6f0 !important; }
+body.caesar-page-index .product-image-placeholder,
+body.caesar-page-index .q-product-price { color: #0d684b !important; }
+body.caesar-page-index .cart-panel { border-color: #bfd7c6 !important; border-radius: 18px !important; }
+body.caesar-page-index .cart-head { background: linear-gradient(135deg, #fff, #f0f8f2) !important; }
+body.caesar-page-index .type-selected,
+body.caesar-page-index .primary-checkout {
+  border-color: #16845f !important;
+  background: #16845f !important;
+  box-shadow: 0 10px 20px rgba(22,132,95,.22) !important;
+}
+body.caesar-page-index #cartItems { background: #fff !important; }
+body.caesar-page-index .cart-empty { border-color: #a8cdb4; background: #f7fcf8; }
+body.caesar-page-index .cart-empty svg,
+body.caesar-page-index .q-payment-icon { stroke: #16845f !important; }
+body.caesar-page-index .cart-item { border-color: #d4e4d8 !important; background: #fbfdfb !important; }
+body.caesar-page-index .cart-summary { background: linear-gradient(135deg, #123b2d, #16845f) !important; }
+body.caesar-page-index .quick-pay-btn { border-color: #c9dfcf !important; background: #e5f5ec !important; }
+body.caesar-page-index .quick-pay-btn:hover { border-color: #16845f !important; background: #d4efdf !important; }
+body.caesar-page-index .quick-pay-btn .font-bold { color: #0d684b !important; }
+body.caesar-page-index #menuPanel { background: #123b2d !important; border-color: #285b45 !important; }
+body.caesar-page-index #menuPanel .menu-group { border-color: #356c53; background: #173f31 !important; }
+body.caesar-page-index #menuPanel .menu-group summary { background: #1b4938; color: #e7f7ec !important; }
+body.caesar-page-index #menuPanel .menu-group-links a:hover { background: #16845f; }
+body.caesar-page-index #toast { border-color: #4e9272; background: #123b2d !important; }
+body.caesar-page-index .counter-strip { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+body.caesar-page-index .counter-card {
+  min-height: 84px;
+  padding: 14px 16px;
+  border: 1px solid #d4e4d8;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 7px 20px rgba(24, 50, 41, .055);
+}
+body.caesar-page-index .counter-card strong { color: #0d684b; font-size: 24px; font-variant-numeric: tabular-nums; }
+@media (max-width: 620px) {
+  body.caesar-page-index .counter-strip { grid-template-columns: 1fr; }
+}
