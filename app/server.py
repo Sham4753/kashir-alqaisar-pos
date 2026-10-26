@@ -2784,13 +2784,44 @@ def clock_employee():
 def positive_amount(value, default=None):
     amount = as_money(value, default)
     return amount if amount is not None and amount > 0 else default
-
-
 def inventory_item_by_name(data, name):
     normalized = str(name or '').strip()
     return next((item for item in data.get('inventory', []) if item.get('name', '').strip() == normalized), None)
+def inventory_alerts(data):
+    """يعيد المواد النافدة أو التي وصلت إلى حد إعادة الطلب.
 
-
+    الصفر في حد التنبيه يعني عدم تفعيل تنبيه الانخفاض، مع إبقاء تنبيه
+    النفاد فعالًا دائمًا. تدعم القراءة مفاتيح المخزون الحالية والمفاتيح
+    القديمة حتى لا تتعطل النسخ المرحّلة من data.json.
+    """
+    alerts = []
+    for item in data.get('inventory', []):
+        if not isinstance(item, dict):
+            continue
+        try:
+            stock = float(item.get('stock', item.get('quantity', 0)) or 0)
+            threshold = float(item.get(
+                'low_stock_threshold',
+                item.get('reorder_point', item.get('min_stock', 0)),
+            ) or 0)
+        except (TypeError, ValueError):
+            continue
+        if stock <= 0:
+            status = 'out'
+        elif threshold > 0 and stock <= threshold:
+            status = 'low'
+        else:
+            continue
+        alerts.append({
+            'id': item.get('id'),
+            'name': str(item.get('name', '')).strip(),
+            'unit': str(item.get('unit', '')).strip(),
+            'stock': round(stock, 4),
+            'quantity': round(stock, 4),
+            'threshold': round(max(0, threshold), 4),
+            'status': status,
+        })
+    return alerts
 def record_inventory_movement(data, material_name, quantity, movement_type, *, unit='', reference_type='', reference_id='', note=''):
     """دفتر حركات لا يعدّل الرصيد؛ تسجّل الدوال الأخرى الرصيد ثم نستدعيه للتدقيق."""
     amount = float(quantity or 0)
