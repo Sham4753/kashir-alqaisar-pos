@@ -665,7 +665,9 @@ body.caesar-page-index .category-bar {
   flex: 1 1 auto !important;
   flex-wrap: wrap !important;
   align-content: flex-start !important;
+  height: 148px !important;
   max-height: 148px !important;
+  min-height: 38px !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
   scrollbar-width: thin;
@@ -674,5 +676,5 @@ body.caesar-page-index .category-bar {
 body.caesar-page-index .category-bar::-webkit-scrollbar { width: 8px; height: 8px; }
 body.caesar-page-index .category-bar::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--pos-line-strong); }
 @media (max-width: 760px) {
-  body.caesar-page-index .category-bar { max-height: 116px !important; }
+  body.caesar-page-index .category-bar { height: 116px !important; max-height: 116px !important; }
 }
