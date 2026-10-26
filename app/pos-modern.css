@@ -658,3 +658,21 @@ body.caesar-page-index .menu-toggle {
 @media (max-width: 1080px) {
   body.caesar-page-index .app { grid-template-columns: 1fr !important; grid-template-areas: "main" "order" !important; }
 }
+
+/* Category picker: allow mouse-wheel scrolling when the menu has many sections. */
+body.caesar-page-index .category-row { align-items: flex-start !important; }
+body.caesar-page-index .category-bar {
+  flex: 1 1 auto !important;
+  flex-wrap: wrap !important;
+  align-content: flex-start !important;
+  max-height: 148px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pos-line-strong) transparent;
+}
+body.caesar-page-index .category-bar::-webkit-scrollbar { width: 8px; height: 8px; }
+body.caesar-page-index .category-bar::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--pos-line-strong); }
+@media (max-width: 760px) {
+  body.caesar-page-index .category-bar { max-height: 116px !important; }
+}

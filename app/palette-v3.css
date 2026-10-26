@@ -154,3 +154,7 @@ body.caesar-ui :is(button,a)[class*="bg-red-"],
 body.caesar-ui :is(button,a)[class*="bg-rose-"] { background-color: var(--q-danger) !important; color: #fff !important; border-color: var(--q-danger) !important; }
 body.caesar-ui :is(button,a)[class*="bg-amber-"],
 body.caesar-ui :is(button,a)[class*="bg-orange-"] { background-color: var(--q-warning) !important; color: #fff !important; border-color: var(--q-warning) !important; }
+body.caesar-page-index .category-bar { background: var(--q-surface) !important; border-color: var(--q-line) !important; }
+body.caesar-page-index .category { background: var(--q-surface) !important; border-color: var(--q-line-strong) !important; color: var(--q-ink-soft) !important; }
+body.caesar-page-index .category:hover { background: var(--q-brand-soft) !important; border-color: var(--q-brand) !important; color: var(--q-brand-strong) !important; }
+body.caesar-page-index .category.active { background: var(--q-brand) !important; border-color: var(--q-brand) !important; color: #fff !important; }
