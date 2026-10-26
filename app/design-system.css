@@ -793,3 +793,52 @@ body.caesar-page-settings .status {
   background: var(--q-success-soft) !important;
   color: var(--q-brand-strong) !important;
 }
+
+/* ── Usability polish: clear hierarchy, compact line icons, calmer cards ── */
+body.caesar-ui :is(.q-line-icon, button > svg, a > svg) {
+  width: 16px !important;
+  height: 16px !important;
+  flex: 0 0 16px;
+  stroke-width: 1.85;
+}
+body.caesar-ui :is(h1, h2, h3) > .q-line-icon {
+  width: 18px !important;
+  height: 18px !important;
+  flex-basis: 18px;
+}
+body.caesar-ui :is(button, a[role="button"]) > .q-line-icon { margin-inline-end: 5px; }
+body.caesar-ui :is(.bg-white, [class*="bg-gray-50"], [class*="bg-slate-50"], .card, article, section) {
+  border-radius: 16px !important;
+  box-shadow: 0 8px 24px rgba(24, 50, 41, .055) !important;
+}
+body.caesar-ui :is(.q-appbar, main > header, main > .container > .flex:first-child) {
+  border-radius: 16px !important;
+}
+body.caesar-ui main > header::before,
+body.caesar-ui > header::before {
+  width: 4px;
+  background: linear-gradient(180deg, var(--q-brand), var(--q-warning)) !important;
+}
+body.caesar-ui :is(.q-appbar a.q-appbar-link, .q-settings-tab) {
+  font-size: 11px !important;
+  letter-spacing: 0;
+}
+body.caesar-ui :is(.q-appbar a.q-appbar-link, .q-settings-tab) > svg,
+body.caesar-ui :is(.q-appbar a.q-appbar-link, .q-settings-tab) > .q-line-icon {
+  width: 15px !important;
+  height: 15px !important;
+  flex-basis: 15px;
+}
+body.caesar-ui :is(button, a[role="button"], input[type="button"], input[type="submit"]) {
+  gap: 6px;
+  font-size: 12px;
+}
+body.caesar-ui :is(.container, main) > :is(.grid, .space-y-5, .space-y-6) { gap: 14px !important; }
+body.caesar-ui :is(.text-2xl, .text-3xl) { line-height: 1.25; }
+body.caesar-ui .q-theme-toggle {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 50% !important;
+  border-color: color-mix(in srgb, var(--q-brand) 22%, var(--q-line)) !important;
+}
+body.caesar-ui .q-theme-toggle .q-line-icon { width: 18px !important; height: 18px !important; }

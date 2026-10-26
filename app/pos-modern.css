@@ -519,6 +519,74 @@ body.caesar-page-index .quick-pay-btn { min-height: 80px !important; border-radi
   body.caesar-page-index .cart-panel { height: 68vh !important; max-height: 68vh !important; width: 100% !important; }
 }
 
+/* ── POS visual refresh: emerald workspace with warm-gold focus ─────────── */
+body.caesar-page-index > header {
+  background: linear-gradient(116deg, #123b2d 0%, #146b50 68%, #1a8a64 100%) !important;
+  border-bottom: 3px solid #c58a20 !important;
+  box-shadow: 0 10px 26px rgba(18, 59, 45, .18) !important;
+}
+body.caesar-page-index .brand-mark {
+  width: 44px; height: 44px; border-radius: 14px !important;
+  background: linear-gradient(135deg, #1a9a6d, #c58a20) !important;
+  box-shadow: 0 8px 18px rgba(197, 138, 32, .18) !important;
+}
+body.caesar-page-index .top-field {
+  border-color: rgba(255,255,255,.32) !important;
+  background: rgba(255,255,255,.96) !important;
+  border-radius: 12px !important;
+}
+body.caesar-page-index .nav-link {
+  border-color: rgba(255,255,255,.2) !important;
+  border-radius: 12px !important;
+  background: rgba(255,255,255,.08) !important;
+}
+body.caesar-page-index .nav-link:hover { border-color: rgba(255,255,255,.55) !important; background: rgba(255,255,255,.16) !important; }
+body.caesar-page-index .sidebar { background: linear-gradient(180deg, #123b2d 0%, #0d2b21 100%) !important; border-left-color: #285b45 !important; }
+body.caesar-page-index .sidebar::after { border-color: rgba(197,138,32,.24); box-shadow: 0 0 0 28px rgba(197,138,32,.06), 0 0 0 58px rgba(197,138,32,.03); }
+body.caesar-page-index .nav a { border-radius: 12px !important; }
+body.caesar-page-index .nav a:hover { background: rgba(22,132,95,.28) !important; border-color: rgba(197,138,32,.34) !important; }
+body.caesar-page-index .nav a.active { background: linear-gradient(100deg, rgba(22,132,95,.82), rgba(197,138,32,.18)) !important; border-color: rgba(197,138,32,.58) !important; }
+body.caesar-page-index .nav-icon { color: #e8c46a !important; }
+body.caesar-page-index #categoryPanel .category-active { background: linear-gradient(135deg, var(--q-brand), #0d684b) !important; border-color: var(--q-brand) !important; box-shadow: 0 8px 16px rgba(22,132,95,.18) !important; }
+body.caesar-page-index .product-card { border-radius: 16px !important; }
+body.caesar-page-index .product-card:hover,
+body.caesar-page-index .product-card:focus-visible { border-color: var(--q-brand) !important; box-shadow: 0 14px 25px rgba(22,132,95,.14) !important; }
+body.caesar-page-index .product-image,
+body.caesar-page-index .product-image-placeholder { border-radius: 12px !important; background: var(--q-surface-muted) !important; }
+body.caesar-page-index .product-image-placeholder { color: var(--q-brand) !important; }
+body.caesar-page-index .q-product-price { color: var(--q-brand-strong) !important; }
+body.caesar-page-index .cart-panel { border-color: var(--q-line) !important; border-radius: 18px !important; }
+body.caesar-page-index .cart-head { background: linear-gradient(135deg, #fff, var(--q-warning-soft)) !important; }
+body.caesar-page-index .type-selected,
+body.caesar-page-index .primary-checkout { background: var(--q-brand) !important; border-color: var(--q-brand) !important; }
+body.caesar-page-index .primary-checkout { box-shadow: 0 11px 20px rgba(22,132,95,.2) !important; }
+body.caesar-page-index .cart-summary { background: linear-gradient(135deg, #123b2d, #16845f) !important; border: 1px solid rgba(197,138,32,.42); }
+body.caesar-page-index .quick-pay-btn { border-color: var(--q-line-strong) !important; background: var(--q-brand-soft) !important; }
+body.caesar-page-index .quick-pay-btn:hover { border-color: var(--q-warning) !important; background: var(--q-warning-soft) !important; }
+body.caesar-page-index .quick-pay-btn .font-bold,
+body.caesar-page-index .q-payment-icon { color: var(--q-brand-strong) !important; stroke: var(--q-brand-strong) !important; }
+body.caesar-page-index #menuPanel { background: #123b2d !important; border-left-color: #285b45 !important; }
+body.caesar-page-index #menuPanel .menu-group { background: #173f31 !important; border-color: #285b45 !important; }
+body.caesar-page-index #menuPanel .menu-group summary { background: #1b4b3a !important; color: #f1faf4 !important; }
+body.caesar-page-index #menuPanel .menu-group-links a:hover { background: var(--q-brand) !important; }
+body.caesar-page-index .nav-icon svg,
+body.caesar-page-index .button-icon svg,
+body.caesar-page-index .icon-button svg { width: 16px !important; height: 16px !important; }
+body.caesar-page-index .icon-button { width: 38px !important; min-width: 38px !important; min-height: 38px !important; border-radius: 50% !important; }
+body.caesar-page-index button.primary-checkout,
+body.caesar-page-index button.primary-checkout * { background: var(--q-brand) !important; color: #fff !important; border-color: var(--q-brand) !important; }
+body.caesar-page-index button.secondary-action,
+body.caesar-page-index button.secondary-action * { background: var(--q-surface-muted) !important; color: var(--q-ink-soft) !important; border-color: var(--q-line-strong) !important; }
+body.caesar-page-index button.quick-pay-btn,
+body.caesar-page-index button.quick-pay-btn * { background: var(--q-brand-soft) !important; color: var(--q-brand-strong) !important; border-color: var(--q-line-strong) !important; }
+body.caesar-page-index button.quick-pay-btn:hover,
+body.caesar-page-index button.quick-pay-btn:hover * { background: var(--q-warning-soft) !important; color: var(--q-warning) !important; border-color: var(--q-warning) !important; }
+body.caesar-page-index .numpad-grid button { background: var(--q-brand-soft) !important; border-color: var(--q-line-strong) !important; color: var(--q-brand-strong) !important; }
+body.caesar-page-index .numpad-grid button:hover { background: var(--q-warning-soft) !important; color: var(--q-warning) !important; }
+body.caesar-page-index .numpad-confirm { background: var(--q-brand) !important; color: #fff !important; border-color: var(--q-brand) !important; }
+body.caesar-page-index .numpad-input:focus,
+body.caesar-page-index .qty-value:focus { outline-color: var(--q-brand) !important; }
+
 /* Theme-aware register surfaces: keep cart and quick actions legible in both modes. */
 body.caesar-page-index .cart-panel { border-color: var(--q-line-strong) !important; background: var(--q-surface) !important; box-shadow: var(--q-shadow) !important; }
 body.caesar-page-index .cart-head { border-color: var(--q-line) !important; background: var(--q-surface-soft) !important; }
@@ -1138,3 +1206,78 @@ body.caesar-page-index .counter-card strong { color: #0d684b; font-size: 24px; f
 @media (max-width: 620px) {
   body.caesar-page-index .counter-strip { grid-template-columns: 1fr; }
 }
+
+
+/* ── Final palette and hierarchy lock: must remain last ─────────────────── */
+body.caesar-page-index.light {
+  --blue: #16845f;
+  --blue-bright: #0d684b;
+  --blue-soft: #e5f5ec;
+  --line: #dce9df;
+  --line-strong: #c5d8ca;
+  --panel: #ffffff;
+  --panel-soft: #fbfdfb;
+  --panel-muted: #eef6f0;
+  --bg: #f7faf7;
+  --text: #183229;
+  --text-soft: #36564a;
+  --muted: #6c8177;
+}
+body.caesar-page-index.dark {
+  --blue: #35b982;
+  --blue-bright: #75d8a9;
+  --blue-soft: #1e4937;
+}
+body.caesar-page-index .sidebar {
+  background: linear-gradient(180deg, #123b2d 0%, #0d2b21 100%) !important;
+  border-left-color: #285b45 !important;
+}
+body.caesar-page-index .nav a.active {
+  color: #f1faf4 !important;
+  background: linear-gradient(100deg, rgba(22,132,95,.84), rgba(197,138,32,.18)) !important;
+  border-color: rgba(197,138,32,.58) !important;
+  box-shadow: inset 3px 0 #c58a20 !important;
+}
+body.caesar-page-index .nav-icon { color: #e8c46a !important; }
+body.caesar-page-index .category.active {
+  background: var(--blue) !important;
+  border-color: var(--blue) !important;
+  color: #fff !important;
+  box-shadow: 0 5px 14px rgba(22,132,95,.22) !important;
+}
+body.caesar-page-index .add,
+body.caesar-page-index .action-main,
+body.caesar-page-index .primary-checkout,
+body.caesar-page-index .numpad-confirm {
+  background: linear-gradient(135deg, #16845f, #0d684b) !important;
+  border-color: #16845f !important;
+  color: #fff !important;
+}
+body.caesar-page-index .add:hover,
+body.caesar-page-index .action-main:hover { background: #0d684b !important; }
+body.caesar-page-index .segment.active,
+body.caesar-page-index .icon-button:hover,
+body.caesar-page-index .action-secondary:hover {
+  background: var(--blue-soft) !important;
+  border-color: var(--blue) !important;
+  color: var(--blue-bright) !important;
+}
+body.caesar-page-index .product-price,
+body.caesar-page-index .q-product-price,
+body.caesar-page-index .total-row strong,
+body.caesar-page-index .cart-sum { color: var(--blue-bright) !important; }
+body.caesar-page-index .cart-summary,
+body.caesar-page-index .summary { background: linear-gradient(135deg, #123b2d, #16845f) !important; border-color: rgba(197,138,32,.46) !important; }
+body.caesar-page-index .summary * { color: #f1faf4 !important; }
+body.caesar-page-index .summary .total-row strong { color: #ffe09a !important; }
+body.caesar-page-index .quick-pay-btn { background: var(--blue-soft) !important; border-color: var(--line-strong) !important; color: var(--blue-bright) !important; }
+body.caesar-page-index .quick-pay-btn:hover { background: #fff6df !important; border-color: #c58a20 !important; color: #9a6a10 !important; }
+body.caesar-page-index #menuPanel { background: #123b2d !important; border-color: #285b45 !important; }
+body.caesar-page-index #menuPanel .menu-group { background: #173f31 !important; border-color: #285b45 !important; }
+body.caesar-page-index #menuPanel .menu-group summary { background: #1b4b3a !important; color: #f1faf4 !important; }
+body.caesar-page-index #menuPanel .menu-group-links a:hover { background: #16845f !important; color: #fff !important; }
+body.caesar-page-index :is(.nav-icon svg, .button-icon svg, .icon-button svg, .q-payment-icon) { width: 16px !important; height: 16px !important; }
+body.caesar-page-index .icon-button { width: 38px !important; min-width: 38px !important; min-height: 38px !important; border-radius: 50% !important; }
+body.caesar-page-index .product-card { border-radius: 16px !important; }
+body.caesar-page-index .product-card:hover { border-color: #16845f !important; box-shadow: 0 14px 25px rgba(22,132,95,.14) !important; }
+body.caesar-page-index .cart-panel { border-radius: 18px !important; }
