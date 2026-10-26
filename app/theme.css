@@ -791,3 +791,27 @@ html body.caesar-page-index :is(.product-card, .cart-panel, .order-panel,
   background: var(--three-burgundy) !important;
   border-color: var(--three-yellow) !important;
 }
+
+/* Remove legacy green decoration layers (glows, gradients and pseudo-shapes). */
+html body.caesar-page-index * {
+  background-image: none !important;
+  box-shadow: none !important;
+}
+html body.caesar-page-index *::before,
+html body.caesar-page-index *::after {
+  background-image: none !important;
+  background-color: var(--three-burgundy) !important;
+  box-shadow: none !important;
+  border-color: var(--three-yellow) !important;
+}
+html body.caesar-page-index :is(.app, .sidebar, .main, header, .summary,
+  .counter-card, .product-card, .order-panel, .cart-panel, .cart,
+  .total-row, .held-card, .lock-card) {
+  background-color: var(--three-burgundy) !important;
+  color: var(--three-white) !important;
+  border-color: var(--three-yellow) !important;
+}
+html body.caesar-page-index :is(.counter-card::before, .counter-card::after,
+  .product-card::before, .product-card::after, .summary::before, .summary::after) {
+  background: var(--three-burgundy) !important;
+}
