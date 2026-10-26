@@ -1,55 +1,5 @@
 /* CAESAR PALETTE v3 — colors only. No layout, sizing, spacing or icon rules. */
-:root,
-body.light,
-body.caesar-page-index.light {
-  --q-bg: #f7faf7;
-  --q-surface: #ffffff;
-  --q-surface-soft: #fbfdfb;
-  --q-surface-muted: #eef6f0;
-  --q-ink: #183229;
-  /* High-contrast light palette: muted text remains readable on solid cards. */
-  --q-ink-soft: #29463a;
-  --q-muted: #4f675b;
-  --q-line: #bfd3c4;
-  --q-line-strong: #91b09b;
-  --q-brand: #16845f;
-  --q-brand-strong: #0d684b;
-  --q-brand-soft: #e5f5ec;
-  --q-blue: #16845f;
-  --q-blue-soft: #e5f5ec;
-  --q-success: #08734e;
-  --q-success-soft: #d9f1e5;
-  --q-warning: #875400;
-  --q-warning-soft: #ffefc2;
-  --q-danger: #a9283a;
-  --q-danger-soft: #ffe0e5;
-  --q-shadow: 0 18px 42px rgba(24,50,41,.08);
-  --q-shadow-soft: 0 7px 20px rgba(24,50,41,.055);
-}
-body.dark,
-body.caesar-page-index.dark {
-  --q-bg: #10221b;
-  --q-surface: #173128;
-  --q-surface-soft: #142a22;
-  --q-surface-muted: #214236;
-  --q-ink: #f1faf4;
-  /* Keep secondary text and separators distinct on dark green surfaces. */
-  --q-ink-soft: #d9f0e2;
-  --q-muted: #b7d2c2;
-  --q-line: #3d6853;
-  --q-line-strong: #56866b;
-  --q-brand: #35b982;
-  --q-brand-strong: #75d8a9;
-  --q-brand-soft: #1e4937;
-  --q-blue: #35b982;
-  --q-blue-soft: #1e4937;
-  --q-success: #63d9a2;
-  --q-success-soft: #1d513c;
-  --q-warning: #ffd36b;
-  --q-warning-soft: #5a4318;
-  --q-danger: #ff9aa4;
-  --q-danger-soft: #5a2730;
-}
+/* The professional palette below is the only q-* color definition. */
 body.caesar-ui { background: var(--q-bg) !important; color: var(--q-ink) !important; }
 body.caesar-ui a { color: var(--q-brand) !important; }
 body.caesar-ui a:hover { color: var(--q-brand-strong) !important; }
@@ -240,20 +190,6 @@ body.caesar-ui :is(button,a)[class*="bg-slate-"] {
 body.caesar-ui :is(button,a)[class*="bg-orange-"],
 body.caesar-ui :is(button,a)[class*="bg-amber-"] {
   background: var(--q-warning) !important; border-color: var(--q-warning) !important; color: #fff !important;
-}
-
-/* Fix legacy utility collisions: green surfaces must never inherit black text. */
-body.caesar-ui :is([class*="bg-green-"],[class*="bg-emerald-"]) {
-  background: var(--q-brand) !important;
-  border-color: var(--q-brand) !important;
-  color: #ffffff !important;
-}
-body.caesar-ui :is([class*="bg-green-"],[class*="bg-emerald-"]) :is(*, .text-black, .text-gray-900, .text-gray-800, .text-slate-900, .text-slate-800, [class*="text-green-"], [class*="text-emerald-"]) {
-  color: #ffffff !important;
-}
-body.caesar-ui :is([class*="bg-green-"],[class*="bg-emerald-"]) svg {
-  color: #ffffff !important;
-  stroke: currentColor !important;
 }
 
 /* ── CAESAR Professional Theme v1 ───────────────────────────────────────────

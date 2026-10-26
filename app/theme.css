@@ -1,14 +1,17 @@
 /*
- * CAESAR POS — Unified Theme
+ * CAESAR POS — Theme Compatibility Layer
  *
- * مصدر الألوان الوحيد للمشروع.
+ * مصدر الألوان المركزي هو palette-v3.css، وهذه الطبقة تحفظ أسماء
+ * المتغيرات القديمة للمكونات التي تستخدم --color-* دون إعادة تعريف الألوان.
  * استخدم المتغيرات الدلالية التالية في بقية ملفات CSS:
  * --color-bg, --color-surface, --color-text, --color-primary,
  * --color-success, --color-warning, --color-danger, --color-border
  *
- * ترتيب التحميل المقترح:
- * 1) theme.css
- * 2) components/page CSS
+ * ترتيب التحميل:
+ * 1) design-system.css
+ * 2) palette-v3.css
+ * 3) theme.css
+ * 4) components/page CSS
  */
 
 :root {
@@ -18,42 +21,34 @@
   --font-ui: Tajawal, "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
   --font-mono: "Cascadia Mono", Consolas, "Courier New", monospace;
 
-  /* Backgrounds and surfaces */
-  --color-bg: #f5f7f9;
-  --color-surface: #ffffff;
-  --color-surface-soft: #f8fafb;
-  --color-surface-muted: #edf2f4;
-  --color-surface-raised: #ffffff;
-  --color-overlay: rgba(15, 23, 42, 0.58);
-
-  /* Text */
-  --color-text: #17212b;
-  --color-text-secondary: #334454;
-  --color-text-muted: #5c6b78;
-  --color-text-disabled: #8a98a2;
+  /* Compatibility aliases: palette-v3.css is the single color source. */
+  --color-bg: var(--q-bg);
+  --color-surface: var(--q-surface);
+  --color-surface-soft: var(--q-surface-soft);
+  --color-surface-muted: var(--q-surface-muted);
+  --color-surface-raised: var(--q-surface);
+  --color-overlay: rgba(2, 6, 23, .65);
+  --color-text: var(--q-ink);
+  --color-text-secondary: var(--q-ink-soft);
+  --color-text-muted: var(--q-muted);
+  --color-text-disabled: var(--q-muted);
   --color-text-on-primary: #ffffff;
-
-  /* Borders and focus */
-  --color-border: #d8e0e5;
-  --color-border-strong: #afbdc6;
-  --color-focus: #0f766e;
-  --focus-ring: 0 0 0 3px rgba(15, 118, 110, 0.2);
-
-  /* Primary brand */
-  --color-primary: #0f766e;
-  --color-primary-hover: #115e59;
-  --color-primary-active: #134e4a;
-  --color-primary-soft: #e5f3f1;
-
-  /* Semantic states */
-  --color-success: #0f766e;
-  --color-success-soft: #e5f3f1;
-  --color-warning: #a16207;
-  --color-warning-soft: #fff5d6;
-  --color-danger: #b42318;
-  --color-danger-soft: #ffebe9;
-  --color-info: #0f766e;
-  --color-info-soft: #e5f3f1;
+  --color-border: var(--q-line);
+  --color-border-strong: var(--q-line-strong);
+  --color-focus: var(--q-brand);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--q-brand) 20%, transparent);
+  --color-primary: var(--q-brand);
+  --color-primary-hover: var(--q-brand-strong);
+  --color-primary-active: var(--q-brand-strong);
+  --color-primary-soft: var(--q-brand-soft);
+  --color-success: var(--q-success);
+  --color-success-soft: var(--q-success-soft);
+  --color-warning: var(--q-warning);
+  --color-warning-soft: var(--q-warning-soft);
+  --color-danger: var(--q-danger);
+  --color-danger-soft: var(--q-danger-soft);
+  --color-info: var(--q-blue);
+  --color-info-soft: var(--q-blue-soft);
 
   /* Layout */
   --radius-sm: 6px;
@@ -63,9 +58,9 @@
   --control-height: 40px;
 
   /* Elevation */
-  --shadow-card: 0 4px 14px rgba(23, 33, 43, 0.06);
-  --shadow-raised: 0 10px 28px rgba(23, 33, 43, 0.08);
-  --shadow-modal: 0 16px 44px rgba(23, 33, 43, 0.16);
+  --shadow-card: var(--q-shadow-soft);
+  --shadow-raised: var(--q-shadow);
+  --shadow-modal: var(--q-shadow);
 
   /* Motion */
   --duration-fast: 140ms;
@@ -75,42 +70,6 @@
 
 body.dark {
   color-scheme: dark;
-
-  --color-bg: #111a21;
-  --color-surface: #19252e;
-  --color-surface-soft: #16212a;
-  --color-surface-muted: #22323d;
-  --color-surface-raised: #20303a;
-  --color-overlay: rgba(0, 0, 0, 0.68);
-
-  --color-text: #f3f7f8;
-  --color-text-secondary: #d2e0e3;
-  --color-text-muted: #abc0c5;
-  --color-text-disabled: #71858c;
-  --color-text-on-primary: #ffffff;
-
-  --color-border: #344853;
-  --color-border-strong: #526b75;
-  --color-focus: #36b5a8;
-  --focus-ring: 0 0 0 3px rgba(54, 181, 168, 0.28);
-
-  --color-primary: #36b5a8;
-  --color-primary-hover: #75d6cc;
-  --color-primary-active: #9be3dc;
-  --color-primary-soft: #163d3a;
-
-  --color-success: #59c9a1;
-  --color-success-soft: #174437;
-  --color-warning: #f2c35b;
-  --color-warning-soft: #4a3918;
-  --color-danger: #ff9b91;
-  --color-danger-soft: #542724;
-  --color-info: #75d6cc;
-  --color-info-soft: #163d3a;
-
-  --shadow-card: 0 5px 18px rgba(0, 0, 0, 0.18);
-  --shadow-raised: 0 12px 32px rgba(0, 0, 0, 0.24);
-  --shadow-modal: 0 18px 48px rgba(0, 0, 0, 0.38);
 }
 
 /* Base document */
@@ -616,230 +575,4 @@ html body.caesar-page-index :is(.lateMuteButton, .warning) {
   background: var(--color-warning) !important;
   border-color: var(--color-warning) !important;
   color: #ffffff !important;
-}
-
-/* ── CAESAR Three-Color Contract ─────────────────────────────────────────────
-   Only three visual colors are permitted across the application:
-   white text, fiery yellow accents, and burgundy surfaces/actions. */
-:root {
-  --three-white: #ffffff;
-  --three-yellow: #ffb000;
-  --three-burgundy: #68152b;
-  --color-bg: var(--three-burgundy);
-  --color-surface: var(--three-burgundy);
-  --color-surface-soft: var(--three-burgundy);
-  --color-surface-muted: var(--three-burgundy);
-  --color-surface-raised: var(--three-burgundy);
-  --color-text: var(--three-white);
-  --color-text-secondary: var(--three-white);
-  --color-text-muted: var(--three-white);
-  --color-text-disabled: var(--three-white);
-  --color-text-on-primary: var(--three-white);
-  --color-border: var(--three-yellow);
-  --color-border-strong: var(--three-yellow);
-  --color-focus: var(--three-yellow);
-  --color-primary: var(--three-burgundy);
-  --color-primary-hover: var(--three-burgundy);
-  --color-primary-active: var(--three-burgundy);
-  --color-primary-soft: var(--three-burgundy);
-  --color-success: var(--three-yellow);
-  --color-success-soft: var(--three-burgundy);
-  --color-warning: var(--three-yellow);
-  --color-warning-soft: var(--three-burgundy);
-  --color-danger: var(--three-burgundy);
-  --color-danger-soft: var(--three-burgundy);
-  --color-info: var(--three-yellow);
-  --color-info-soft: var(--three-burgundy);
-}
-
-body,
-body.caesar-ui,
-body.caesar-ui.light,
-body.caesar-ui.dark {
-  background: var(--three-burgundy) !important;
-  color: var(--three-white) !important;
-}
-
-body.caesar-ui :is(*, *::before, *::after) {
-  border-color: var(--three-yellow) !important;
-}
-body.caesar-ui :is(h1,h2,h3,h4,h5,h6,p,small,label,span,strong,b,td,th,li,div) {
-  color: var(--three-white) !important;
-}
-body.caesar-ui a {
-  color: var(--three-yellow) !important;
-}
-body.caesar-ui a:hover {
-  color: var(--three-white) !important;
-}
-
-/* All surfaces use burgundy; yellow is reserved for clear accents. */
-body.caesar-ui :is(.bg-white, [class*="bg-gray-"], [class*="bg-slate-"],
-  [class*="bg-blue-"], [class*="bg-indigo-"], [class*="bg-sky-"],
-  [class*="bg-violet-"], [class*="bg-purple-"], [class*="bg-teal-"],
-  [class*="bg-green-"], [class*="bg-emerald-"], [class*="bg-amber-"],
-  [class*="bg-orange-"], [class*="bg-yellow-"], [class*="bg-red-"],
-  [class*="bg-rose-"]) {
-  background: var(--three-burgundy) !important;
-  color: var(--three-white) !important;
-}
-
-/* All normal controls are burgundy with a fiery-yellow outline. */
-body.caesar-ui :is(button, input, select, textarea, a[role="button"],
-  .btn, .icon-button, .segment, .action-main, .action-secondary,
-  .dine-action, .continue, .move, .receipt-preset, .thermal-mode-toggle) {
-  background: var(--three-burgundy) !important;
-  border-color: var(--three-yellow) !important;
-  color: var(--three-white) !important;
-}
-body.caesar-ui :is(button, input, select, textarea, a[role="button"],
-  .btn, .icon-button, .segment, .action-main, .action-secondary,
-  .dine-action, .continue, .move, .receipt-preset, .thermal-mode-toggle) * {
-  color: inherit !important;
-}
-body.caesar-ui :is(button, input, select, textarea):focus,
-body.caesar-ui :is(button, input, select, textarea):focus-visible {
-  outline: none !important;
-  border-color: var(--three-yellow) !important;
-  box-shadow: 0 0 0 3px var(--three-yellow) !important;
-}
-body.caesar-ui :is(button, a[role="button"]):hover {
-  background: var(--three-yellow) !important;
-  color: var(--three-burgundy) !important;
-}
-body.caesar-ui :is(button, a[role="button"]):hover * {
-  color: var(--three-burgundy) !important;
-}
-
-/* Yellow is the only status/accent color. */
-body.caesar-ui :is(.status, .badge, .notice, .q-appbar-status, .q-appbar-link.active,
-  .category.active, .tab.active, .segment.active, .connection-chip) {
-  background: var(--three-yellow) !important;
-  border-color: var(--three-yellow) !important;
-  color: var(--three-burgundy) !important;
-}
-body.caesar-ui :is(.status, .badge, .notice, .q-appbar-status, .q-appbar-link.active,
-  .category.active, .tab.active, .segment.active, .connection-chip) * {
-  color: var(--three-burgundy) !important;
-}
-
-/* Keep icons, logos and decorative marks inside the same three-color system. */
-body.caesar-ui svg {
-  color: var(--three-white) !important;
-  stroke: currentColor !important;
-}
-body.caesar-ui .q-appbar-brand-mark,
-body.caesar-ui .mark,
-body.caesar-ui .lock-mark {
-  background: var(--three-yellow) !important;
-  color: var(--three-burgundy) !important;
-}
-
-/* Global three-color fallback for legacy pages without caesar-ui. */
-body {
-  background: var(--three-burgundy) !important;
-  color: var(--three-white) !important;
-}
-body :is([class*="bg-green-"], [class*="bg-emerald-"], [class*="bg-blue-"], [class*="bg-indigo-"], [class*="bg-purple-"], [class*="bg-violet-"], [class*="bg-gray-"], [class*="bg-slate-"], .bg-white) {
-  background: var(--three-burgundy) !important;
-  color: var(--three-white) !important;
-}
-body :is([class*="text-black"], [class*="text-gray-"], [class*="text-slate-"], [class*="text-green-"], [class*="text-emerald-"], [class*="text-blue-"], [class*="text-indigo-"], [class*="text-purple-"], [class*="text-violet-"]) {
-  color: var(--three-white) !important;
-}
-body :is(button, input[type="button"], input[type="submit"], a[role="button"]) {
-  background: var(--three-burgundy) !important;
-  border-color: var(--three-yellow) !important;
-  color: var(--three-white) !important;
-}
-body :is(button, input[type="button"], input[type="submit"], a[role="button"]) * {
-  color: inherit !important;
-}
-body :is(button, input[type="button"], input[type="submit"], a[role="button"]):hover {
-  background: var(--three-yellow) !important;
-  color: var(--three-burgundy) !important;
-}
-
-/* Legacy POS tokens are remapped to the same three colors. */
-:root {
-  --pos-ivory: var(--three-burgundy);
-  --pos-card: var(--three-burgundy);
-  --pos-ink: var(--three-white);
-  --pos-ink-soft: var(--three-white);
-  --pos-muted: var(--three-white);
-  --pos-line: var(--three-yellow);
-  --pos-line-strong: var(--three-yellow);
-  --pos-emerald: var(--three-yellow);
-  --pos-emerald-strong: var(--three-yellow);
-  --pos-emerald-soft: var(--three-burgundy);
-  --pos-gold: var(--three-yellow);
-  --pos-gold-soft: var(--three-burgundy);
-  --pos-danger: var(--three-burgundy);
-}
-
-/* Direct legacy color literals in the POS stylesheet. */
-html body.caesar-page-index :is(.product-name, .cart-item-name, .cart-unit,
-  .summary-row, .counter-card, .page-heading, .page-subtitle,
-  .order-head, .field-label, .field-hint, .total-row, .print-state,
-  .operator-copy, .sidebar-footnote, .category, .icon-button, .segment,
-  .action-secondary, .menu-toggle, .lock-button, .modal-close) {
-  color: var(--three-white) !important;
-}
-html body.caesar-page-index :is(.product-card, .cart-panel, .order-panel,
-  .sidebar, .counter-card, .category-bar, .cart, .action-secondary,
-  .icon-button, .segment, .modal-close) {
-  background: var(--three-burgundy) !important;
-  border-color: var(--three-yellow) !important;
-}
-
-/* Remove legacy green decoration layers (glows, gradients and pseudo-shapes). */
-html body.caesar-page-index * {
-  background-image: none !important;
-  box-shadow: none !important;
-}
-html body.caesar-page-index *::before,
-html body.caesar-page-index *::after {
-  background-image: none !important;
-  background-color: var(--three-burgundy) !important;
-  box-shadow: none !important;
-  border-color: var(--three-yellow) !important;
-}
-html body.caesar-page-index :is(.app, .sidebar, .main, header, .summary,
-  .counter-card, .product-card, .order-panel, .cart-panel, .cart,
-  .total-row, .held-card, .lock-card) {
-  background-color: var(--three-burgundy) !important;
-  color: var(--three-white) !important;
-  border-color: var(--three-yellow) !important;
-}
-html body.caesar-page-index :is(.counter-card::before, .counter-card::after,
-  .product-card::before, .product-card::after, .summary::before, .summary::after) {
-  background: var(--three-burgundy) !important;
-}
-
-/* Absolute final palette guard: no legacy selector may reintroduce green/black. */
-html body * {
-  background-color: var(--three-burgundy) !important;
-  color: var(--three-white) !important;
-  border-color: var(--three-yellow) !important;
-}
-html body *::before,
-html body *::after {
-  background-color: var(--three-burgundy) !important;
-  background-image: none !important;
-  color: var(--three-white) !important;
-  border-color: var(--three-yellow) !important;
-  box-shadow: none !important;
-}
-html body a,
-html body a * {
-  color: var(--three-yellow) !important;
-}
-html body :is(button, input, select, textarea),
-html body :is(button, input, select, textarea) * {
-  color: var(--three-white) !important;
-}
-html body :is(button, input, select, textarea):hover,
-html body :is(button, input, select, textarea):hover * {
-  background-color: var(--three-yellow) !important;
-  color: var(--three-burgundy) !important;
 }
