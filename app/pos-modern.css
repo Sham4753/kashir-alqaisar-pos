@@ -662,11 +662,12 @@ body.caesar-page-index .menu-toggle {
 /* Category picker: allow mouse-wheel scrolling when the menu has many sections. */
 body.caesar-page-index .category-row { align-items: flex-start !important; }
 body.caesar-page-index .category-bar {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   flex: 1 1 auto !important;
-  flex-wrap: wrap !important;
   align-content: flex-start !important;
-  height: 148px !important;
-  max-height: 148px !important;
+  height: 96px !important;
+  max-height: 96px !important;
   min-height: 38px !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
@@ -676,7 +677,7 @@ body.caesar-page-index .category-bar {
 body.caesar-page-index .category-bar::-webkit-scrollbar { width: 8px; height: 8px; }
 body.caesar-page-index .category-bar::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--pos-line-strong); }
 @media (max-width: 760px) {
-  body.caesar-page-index .category-bar { height: 116px !important; max-height: 116px !important; }
+  body.caesar-page-index .category-bar { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; height: 78px !important; max-height: 78px !important; }
 }
 
 /* Give the desktop catalog a real scroll viewport instead of allowing the grid to grow past it. */
