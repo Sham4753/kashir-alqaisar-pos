@@ -637,3 +637,23 @@ body.caesar-page-index .nav a:hover {
 body.caesar-page-index .nav a:is(.active, :hover) .nav-icon {
   color: #2b1720 !important;
 }
+
+/* Keep the cashier order panel and its inner surfaces on one neutral background. */
+html body.caesar-page-index .order-panel,
+html body.caesar-page-index .order-panel :is(.order-context, .cart-empty, .summary, .total-row, .cart-item:hover) {
+  background: var(--q-surface) !important;
+  border-color: var(--q-line) !important;
+}
+html body.caesar-page-index .order-panel :is(.cart-symbol, .cart-count) {
+  background: var(--q-surface-muted) !important;
+  border-color: var(--q-surface-muted) !important;
+  color: var(--q-brand) !important;
+}
+html body.caesar-page-index .order-panel .total-row :is(span, strong) {
+  color: var(--q-brand) !important;
+}
+html body.caesar-page-index .order-panel .compact-action-bar :is(#checkoutButton, #paymentButton, #tableButton) {
+  background: var(--q-brand) !important;
+  border-color: var(--q-brand) !important;
+  color: #fff !important;
+}
