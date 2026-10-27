@@ -4606,20 +4606,79 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
             lines.extend([divider, 'ملاحظة: ' + str(order.get('notes'))])
     else:
         header = str(printer.get('receipt_header', 'إيصال مبيعات') or 'إيصال مبيعات')[:36]
-        header_lines = [format_line(restaurant_name)] + ([format_line(caption)] if caption else []) + [divider, format_line(header)]
-        raw_date = str(order.get('timestamp') or order.get('date', ''))[:16]
-        # Keep the technical LTR value isolated from the Arabic RTL label. The
-        # raster renderer must not run bidi reshaping over a mixed ISO token.
+        restaurant_phone = str(restaurant.get('phone', '') or '').strip()
+        restaurant_address = str(restaurant.get('address', '') or '').strip()
+        header_lines = [format_line(restaurant_name)] + ([format_line(caption)] if caption else [])
+        if restaurant_address:
+            header_lines.append(format_line(restaurant_address[:width]))
+        if restaurant_phone:
+            header_lines.append(format_line('هاتف: ' + restaurant_phone[:width - 6]))
+        header_lines.extend([divider, format_line(header)])
+        raw_date = str(order.get('timestamp') or order.get('date', ''))[:19]
+        # Keep technical LTR values isolated from Arabic RTL labels.
         safe_date = raw_date.replace('T', ' ')
         isolated_date = '\u200e' + safe_date + '\u200e' if safe_date else ''
-        detail_lines = [f"الفاتورة: {order.get('id', '')}", f"التاريخ: {isolated_date}", divider]
-        item_lines = [receipt_item_line(item) for item in order.get('items', [])] + [divider]
-        total_lines = ['الإجمالي: ' + str(order.get('total', 0)), 'الدفع: ' + str(order.get('payment', ''))]
+        detail_lines = [f"رقم الفاتورة: {order.get('id', '')}", f"التاريخ: {isolated_date}"]
+        if order.get('customer'):
+            detail_lines.append('الزبون: ' + str(order.get('customer'))[:width - 8])
+        if order.get('table') or order.get('table_no'):
+            detail_lines.append('الطاولة: ' + str(order.get('table') or order.get('table_no')))
+        if printer.get('receipt_show_order_type', True):
+            detail_lines.append('نوع الطلب: ' + str(order.get('type', 'سفري')))
+        detail_lines.append(divider)
+
+        def display_amount(value):
+            currency = str(order.get('currency') or settings.get('currency', 'SYP'))
+            rate = order.get('exchange_rate') or settings.get('usd_rate' if currency == 'USD' else 'eur_rate', 0)
+            try:
+                amount = float(value or 0)
+                if currency in {'USD', 'EUR'} and float(rate or 0) > 0:
+                    amount /= float(rate)
+            except (TypeError, ValueError):
+                amount = 0
+            symbol = {'SYP': 'ل.س', 'USD': '$', 'EUR': '€'}.get(currency, 'ل.س')
+            return receipt_amount(amount) + ' ' + symbol
+
+        def table_line(name, quantity, unit_price, line_total):
+            name_width = max(12, width - 25)
+            compact_name = str(name or '').replace('\n', ' ')[:name_width]
+            unit = '\u200e' + display_amount(unit_price) + '\u200e'
+            total = '\u200e' + display_amount(line_total) + '\u200e'
+            return f'{compact_name:<{name_width}} {str(quantity):>5} {unit:>9} {total:>10}'
+
+        name_width = max(12, width - 25)
+        item_lines = [f"{'الصنف':<{name_width}} {'الكمية':>5} {'السعر':>9} {'القيمة':>10}", divider]
+        item_count = 0
+        quantity_total = 0.0
+        for item in order.get('items', []):
+            try:
+                quantity = float(item.get('quantity', item.get('qty', 1)) or 0)
+            except (TypeError, ValueError):
+                quantity = 0
+            item_count += 1
+            quantity_total += quantity
+            unit_price = item.get('price', item.get('unit_price', 0)) or 0
+            quantity_text = str(int(quantity)) if quantity.is_integer() else receipt_amount(quantity)
+            item_lines.append(table_line(item.get('name', ''), quantity_text, unit_price, float(unit_price or 0) * quantity))
+        item_lines.extend([divider, f'عدد البنود: {item_count}    مجموع الكمية: {receipt_amount(quantity_total)}'])
+
+        subtotal = order.get('subtotal', order.get('total', 0)) or 0
+        discount = order.get('discount_total', 0) or 0
+        total = order.get('total', 0) or 0
+        cash = order.get('cash_amount', total if order.get('payment') != 'بطاقة' else 0) or 0
+        card = order.get('card_amount', total if order.get('payment') == 'بطاقة' else 0) or 0
+        total_lines = [divider, 'المجموع الفرعي: ' + display_amount(subtotal)]
+        if float(discount or 0) > 0:
+            total_lines.append('الخصم: -' + display_amount(discount))
+        total_lines.extend(['الإجمالي: ' + display_amount(total), 'طريقة الدفع: ' + str(order.get('payment', ''))])
+        if str(order.get('payment', '')) == 'مختلط':
+            total_lines.extend(['النقدي: ' + display_amount(cash), 'البطاقة: ' + display_amount(card)])
         footer_lines = []
         if printer.get('receipt_show_cashier', True) and order.get('cashier_name'):
-            footer_lines.append('الكاشير قيصر: ' + str(order.get('cashier_name')))
-        if printer.get('receipt_show_order_type', True):
-            footer_lines.append('الطلب: ' + str(order.get('type', 'سفري')))
+            footer_lines.append('الكاشير: ' + str(order.get('cashier_name')))
+        tax_number = str(restaurant.get('tax_number', '') or '').strip()
+        if tax_number:
+            footer_lines.append('الرقم الضريبي: ' + tax_number)
         social_lines = []
         for label, key in [('Facebook', 'social_facebook'), ('Instagram', 'social_instagram'), ('WhatsApp', 'social_whatsapp')]:
             value = str(printer.get(key, '') or '').strip()

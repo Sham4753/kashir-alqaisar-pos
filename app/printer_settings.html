@@ -522,9 +522,10 @@
             const headerLines = [centerLine(rest)];
             if (caption) headerLines.push(centerLine(caption));
             headerLines.push(divider.repeat(chars), centerLine(document.getElementById('receipt_header').value.trim() || 'إيصال مبيعات'));
-            const detailsLines = ['الفاتورة: ORD-0001', 'التاريخ: 27/08/2026 20:00', divider.repeat(chars)];
-            const itemLines = ['سندويش شاورما × 2     10,000', 'عصير طبيعي × 1          5,000', divider.repeat(chars)];
-            const totalsLines = ['الإجمالي:               15,000 ل.س', 'الدفع: نقدي'];
+            const detailsLines = ['رقم الفاتورة: ORD-0001', 'التاريخ: 27/08/2026 20:00', 'نوع الطلب: سفري', divider.repeat(chars)];
+            const nameChars = Math.max(12, chars - 25);
+            const itemLines = ['الصنف'.padEnd(nameChars) + ' الكمية   السعر     القيمة', divider.repeat(chars), 'سندويش شاورما'.padEnd(nameChars) + '    2   10,000    20,000', 'عصير طبيعي'.padEnd(nameChars) + '    1    5,000     5,000', divider.repeat(chars), 'عدد البنود: 2    مجموع الكمية: 3'];
+            const totalsLines = [divider.repeat(chars), 'المجموع الفرعي: 25,000 ل.س', 'الخصم: -1,000 ل.س', 'الإجمالي: 24,000 ل.س', 'طريقة الدفع: مختلط', 'النقدي: 10,000 ل.س', 'البطاقة: 14,000 ل.س'];
             const footerLines = [];
             if (document.getElementById('receipt_show_cashier').checked) footerLines.push('الكاشير قيصر: أحمد');
             if (document.getElementById('receipt_show_order_type').checked) footerLines.push('الطلب: سفري');
