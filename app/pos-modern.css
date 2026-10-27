@@ -692,3 +692,31 @@ body.caesar-page-index .category-bar::-webkit-scrollbar-thumb { border-radius: 9
     overscroll-behavior: contain;
   }
 }
+
+/* POS density correction: give the active order more room and keep the
+   catalogue compact enough to show more products at once on a laptop. */
+@media (min-width: 1081px) {
+  body.caesar-page-index .app {
+    grid-template-columns: 246px minmax(0, 1fr) minmax(450px, 480px) !important;
+  }
+  body.caesar-page-index .products {
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+    gap: 9px;
+  }
+  body.caesar-page-index .product-card {
+    min-height: 148px;
+    padding: 8px;
+    border-radius: 12px;
+  }
+  body.caesar-page-index .product-image {
+    height: 72px;
+    margin-bottom: 7px;
+    border-radius: 9px;
+  }
+  body.caesar-page-index .product-name,
+  body.caesar-page-index .q-product-price { font-size: 11px; }
+  body.caesar-page-index .product-name { line-height: 1.35; }
+  body.caesar-page-index .product-foot { padding-top: 6px; }
+  body.caesar-page-index .add { width: 28px; height: 28px; flex-basis: 28px; font-size: 17px; border-radius: 8px; }
+  body.caesar-page-index .order-panel { padding-inline: 24px; }
+}
