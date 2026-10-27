@@ -576,3 +576,50 @@ html body.caesar-page-index :is(.lateMuteButton, .warning) {
   border-color: var(--color-warning) !important;
   color: #ffffff !important;
 }
+
+/* Color-only brand palette for action buttons and primary navigation. */
+body.caesar-ui :is(.btn-primary, .primary, .action-main, .dine-primary) {
+  background: var(--q-brand) !important;
+  border-color: var(--q-brand) !important;
+  color: #fff !important;
+}
+body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.btn-secondary, .btn-ghost, .secondary, .action-secondary, .icon-button, .modal-close, .segment:not(.active), .q-settings-tab:not(.active), .category:not(.active), .dine-muted):not(.danger):not(.warning):not(.success) {
+  background: var(--q-brand-soft) !important;
+  border-color: var(--q-line-strong) !important;
+  color: var(--q-brand-strong) !important;
+}
+body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.btn-secondary, .btn-ghost, .secondary, .action-secondary, .icon-button, .modal-close, .segment:not(.active), .q-settings-tab:not(.active), .category:not(.active), .dine-muted):not(.danger):not(.warning):not(.success):hover {
+  background: var(--q-warning-soft) !important;
+  border-color: var(--q-warning) !important;
+  color: var(--q-brand-strong) !important;
+}
+body.caesar-page-index .segment.active,
+body.caesar-page-index .category.active,
+body.caesar-ui .q-settings-tab.active,
+body.caesar-page-settings .tab.active,
+body.caesar-ui .tab.active {
+  background: var(--q-warning) !important;
+  border-color: var(--q-warning) !important;
+  color: #2b1720 !important;
+}
+body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]).success,
+body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"])[class*="bg-green-"],
+body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"])[class*="bg-emerald-"] {
+  background: var(--q-success) !important;
+  border-color: var(--q-success) !important;
+  color: #fff !important;
+}
+body.caesar-ui .q-appbar a.q-appbar-link:not(.active) {
+  color: var(--q-ink-soft) !important;
+}
+body.caesar-ui .q-appbar a.q-appbar-link.active,
+body.caesar-ui .q-appbar a.q-appbar-link:hover {
+  background: var(--q-warning) !important;
+  border-color: var(--q-warning) !important;
+  color: #2b1720 !important;
+}
+body.caesar-page-index .nav a.active {
+  background: var(--q-warning) !important;
+  border-color: var(--q-warning) !important;
+  color: #2b1720 !important;
+}
