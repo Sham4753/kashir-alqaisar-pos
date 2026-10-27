@@ -13,7 +13,7 @@
         .receipt-preset:hover,.receipt-preset:focus{border-color:#2563eb;background:#eff6ff;color:#1d4ed8;outline:0}
         .receipt-preview-shell{background:linear-gradient(135deg,#e2e8f0,#f8fafc);border:1px solid #cbd5e1;border-radius:8px;padding:1rem;overflow:auto}
         .receipt-paper{margin:auto;min-height:360px;background:white;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 12px 24px #0f172a1a;padding:18px 14px;transition:width .2s ease,transform .2s ease}.receipt-paper.orientation-landscape{min-height:250px;transform:rotate(0deg)}
-        .receipt-paper pre{font-family:var(--receipt-font-family,ui-monospace,SFMono-Regular,Menlo,monospace);font-size:var(--receipt-font-size,11px);line-height:1.6;white-space:pre-wrap;word-break:break-word;margin:0;color:#111827}
+        .receipt-paper pre{font-family:var(--receipt-font-family,ui-monospace,SFMono-Regular,Menlo,monospace);font-size:var(--receipt-font-size,10px);line-height:1.45;white-space:pre-wrap;word-break:break-word;margin:0;color:#111827}
         .receipt-paper.compact pre{line-height:1.35}.receipt-paper.spacious pre{line-height:1.95}
         .receipt-preview-logo{display:block;max-width:72%;max-height:56px;object-fit:contain;margin:0 auto 9px;transition:max-width .2s ease,max-height .2s ease}.receipt-preview-logo.hidden{display:none}
         .template-row{display:flex;align-items:center;gap:.5rem;border:1px solid #dbeafe;background:#fff;border-radius:8px;padding:.55rem .65rem}.template-name{font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -503,7 +503,8 @@
 
         function applyReceiptPreset(width) {
             document.getElementById('paper_width').value = String(width);
-            document.getElementById('font_size').value = width === 58 ? 'small' : 'medium';
+            document.getElementById('font_size').value = 'small';
+            document.getElementById('receipt_font_scale').value = 'small';
             document.getElementById('receipt_alignment').value = 'center';
             document.getElementById('receipt_divider').value = width === 58 ? 'dots' : 'line';
             document.getElementById('receipt_density').value = width === 58 ? 'compact' : 'standard';
@@ -536,7 +537,7 @@
             updateEscposFontWarning();
             const chosenFontFamily = {system:'Tahoma, Arial, sans-serif', cairo:'Cairo, Tahoma, Arial, sans-serif', serif:'Georgia, Times New Roman, serif', mono:'ui-monospace, SFMono-Regular, Menlo, monospace'}[document.getElementById('receipt_font_family').value] || 'Tahoma, Arial, sans-serif';
             const fontFamily = (thermalPreviewActive || escposFontPreviewActive) ? 'ui-monospace, SFMono-Regular, Menlo, monospace' : chosenFontFamily;
-            const fontScale = {small:'10px',medium:'12px',large:'14px'}[document.getElementById('receipt_font_scale').value] || '12px';
+            const fontScale = {small:'9px',medium:'10px',large:'12px'}[document.getElementById('receipt_font_scale').value] || '10px';
             const blockRoot = document.getElementById('receiptPreviewBlocks');
             const receiptLogo = document.createElement('img');
             receiptLogo.className = 'receipt-preview-logo'; receiptLogo.alt = 'شعار المتجر في معاينة الإيصال';
