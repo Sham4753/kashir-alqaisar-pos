@@ -698,3 +698,60 @@ html body.caesar-ui.caesar-page-index .sidebar .nav a:not(.active):not(:hover) .
 html body.caesar-ui.caesar-page-index .sidebar .nav a:is(.active, :hover) .nav-icon {
   color: #2b1720 !important;
 }
+
+/* Final shared color layer: every application page uses the same palette. */
+html body.caesar-ui {
+  background: var(--q-bg) !important;
+  color: var(--q-ink) !important;
+}
+html body.caesar-ui :is(.card, .panel, .surface, .table-card, .profile-card, .print-loading-card, .password-dialog, .lock-card, .held-card, .counter-card, .product-card, .order-panel, .order-context, .cart-empty, .summary, .total-row):not(.danger-card):not(.success-card):not(.warning-card) {
+  background: var(--q-surface) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-ink) !important;
+  box-shadow: var(--q-shadow-soft) !important;
+}
+html body.caesar-ui .hero {
+  background: var(--q-brand-soft) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-ink) !important;
+  box-shadow: var(--q-shadow-soft) !important;
+}
+html body.caesar-ui .hero :is(h1, h2, h3, h4) { color: var(--q-ink) !important; }
+html body.caesar-ui .hero p:not([class*="text-orange-"]):not([class*="text-amber-"]):not([class*="text-yellow-"]),
+html body.caesar-ui .hero small { color: var(--q-muted) !important; }
+html body.caesar-page-welcome :is(.welcome-identity-mark, .login-identity-mark) {
+  background: var(--q-surface) !important;
+  border-color: var(--q-line) !important;
+}
+html body.caesar-page-welcome :is(.welcome-identity svg, .profile-icon svg) {
+  stroke: var(--q-brand) !important;
+}
+html body.caesar-page-welcome .profile-icon,
+html body.caesar-page-mobile .icon {
+  background: var(--q-brand-soft) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-brand) !important;
+}
+html body.caesar-page-welcome > div:last-of-type {
+  background: var(--q-surface-muted) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-muted) !important;
+}
+html body.caesar-page-mobile a.bg-slate-900 {
+  background: var(--q-brand) !important;
+  border-color: var(--q-brand) !important;
+  color: #fff !important;
+}
+html body.caesar-page-waiting_screen #readyGrid > article {
+  background: var(--q-surface) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-ink) !important;
+}
+html body.caesar-page-waiting_screen #readyGrid > article .text-white { color: var(--q-ink) !important; }
+html body.caesar-page-waiting_screen #readyGrid > article .text-emerald-300 { color: var(--q-brand) !important; }
+html body.caesar-page-waiting_screen #readyGrid > article .text-slate-300 { color: var(--q-muted) !important; }
+html body.caesar-page-waiting_screen #readyGrid > .col-span-full {
+  background: var(--q-surface-muted) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-muted) !important;
+}

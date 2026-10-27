@@ -6,8 +6,8 @@
   "start_url": "/mobile.html",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#f8fafc",
-  "theme_color": "#0f172a",
+  "background_color": "#fbf8f7",
+  "theme_color": "#68152b",
   "description": "بوابة الجوال المحلية للمطبخ والطاولات والكاشير قيصر",
   "icons": [
     {
