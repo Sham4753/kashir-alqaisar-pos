@@ -662,3 +662,39 @@ html body.caesar-page-index .nav-scrim {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
+html body.caesar-ui.caesar-page-index .sidebar {
+  background: var(--q-bg) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-ink) !important;
+}
+html body.caesar-ui.caesar-page-index .sidebar .brand,
+html body.caesar-ui.caesar-page-index .sidebar .sidebar-bottom {
+  border-color: var(--q-line) !important;
+}
+html body.caesar-ui.caesar-page-index .sidebar :is(.brand-copy strong, .operator-copy strong) {
+  color: var(--q-ink) !important;
+}
+html body.caesar-ui.caesar-page-index .sidebar :is(.brand-copy small, .nav-label, .nav-group-title, .operator-copy span, .sidebar-footnote) {
+  color: var(--q-muted) !important;
+}
+html body.caesar-ui.caesar-page-index .sidebar .operator-mark {
+  background: var(--q-surface-muted) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-brand) !important;
+}
+html body.caesar-ui.caesar-page-index .sidebar .nav a:not(.active) {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--q-ink) !important;
+}
+html body.caesar-ui.caesar-page-index .sidebar .nav a:is(.active, :hover) {
+  background: var(--q-warning) !important;
+  border-color: var(--q-warning) !important;
+  color: #2b1720 !important;
+}
+html body.caesar-ui.caesar-page-index .sidebar .nav a:not(.active):not(:hover) .nav-icon {
+  color: var(--q-brand) !important;
+}
+html body.caesar-ui.caesar-page-index .sidebar .nav a:is(.active, :hover) .nav-icon {
+  color: #2b1720 !important;
+}
