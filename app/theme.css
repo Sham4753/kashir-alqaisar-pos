@@ -657,3 +657,8 @@ html body.caesar-page-index .order-panel .compact-action-bar :is(#checkoutButton
   border-color: var(--q-brand) !important;
   color: #fff !important;
 }
+html body.caesar-page-index .nav-scrim {
+  background: rgba(77, 15, 32, .10) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
