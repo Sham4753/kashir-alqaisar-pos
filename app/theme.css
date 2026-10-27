@@ -577,21 +577,12 @@ html body.caesar-page-index :is(.lateMuteButton, .warning) {
   color: #ffffff !important;
 }
 
-/* Color-only brand palette for action buttons and primary navigation. */
-body.caesar-ui :is(.btn-primary, .primary, .action-main, .dine-primary) {
-  background: var(--q-brand) !important;
-  border-color: var(--q-brand) !important;
-  color: #fff !important;
-}
-body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.btn-secondary, .btn-ghost, .secondary, .action-secondary, .icon-button, .modal-close, .segment:not(.active), .q-settings-tab:not(.active), .category:not(.active), .dine-muted):not(.danger):not(.warning):not(.success) {
-  background: var(--q-brand-soft) !important;
-  border-color: var(--q-line-strong) !important;
-  color: var(--q-brand-strong) !important;
-}
+/* Simplified colors for buttons and primary navigation only. */
+body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.btn-secondary, .btn-ghost, .secondary, .action-secondary, .icon-button, .modal-close, .segment:not(.active), .q-settings-tab:not(.active), .category:not(.active), .dine-muted):not(.danger):not(.warning):not(.success),
 body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.btn-secondary, .btn-ghost, .secondary, .action-secondary, .icon-button, .modal-close, .segment:not(.active), .q-settings-tab:not(.active), .category:not(.active), .dine-muted):not(.danger):not(.warning):not(.success):hover {
-  background: var(--q-warning-soft) !important;
-  border-color: var(--q-warning) !important;
-  color: var(--q-brand-strong) !important;
+  background: var(--q-surface-muted) !important;
+  border-color: var(--q-surface-muted) !important;
+  color: var(--q-ink) !important;
 }
 body.caesar-page-index .segment.active,
 body.caesar-page-index .category.active,
@@ -602,15 +593,25 @@ body.caesar-ui .tab.active {
   border-color: var(--q-warning) !important;
   color: #2b1720 !important;
 }
-body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]).success,
-body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"])[class*="bg-green-"],
-body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"])[class*="bg-emerald-"] {
+body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.danger, .remove-cart-item, .discard, [class*="bg-red-"], [class*="bg-rose-"]) {
+  background: var(--q-danger) !important;
+  border-color: var(--q-danger) !important;
+  color: #fff !important;
+}
+body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.warning, .lateMuteButton, [class*="bg-amber-"], [class*="bg-orange-"], [class*="bg-yellow-"]) {
+  background: var(--q-warning) !important;
+  border-color: var(--q-warning) !important;
+  color: #2b1720 !important;
+}
+body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.success, [class*="bg-green-"], [class*="bg-emerald-"]) {
   background: var(--q-success) !important;
   border-color: var(--q-success) !important;
   color: #fff !important;
 }
 body.caesar-ui .q-appbar a.q-appbar-link:not(.active) {
-  color: var(--q-ink-soft) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--q-brand) !important;
 }
 body.caesar-ui .q-appbar a.q-appbar-link.active,
 body.caesar-ui .q-appbar a.q-appbar-link:hover {
@@ -621,5 +622,18 @@ body.caesar-ui .q-appbar a.q-appbar-link:hover {
 body.caesar-page-index .nav a.active {
   background: var(--q-warning) !important;
   border-color: var(--q-warning) !important;
+  color: #2b1720 !important;
+}
+body.caesar-page-index .nav a:not(.active) {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #f5e7eb !important;
+}
+body.caesar-page-index .nav a:hover {
+  background: var(--q-warning) !important;
+  border-color: var(--q-warning) !important;
+  color: #2b1720 !important;
+}
+body.caesar-page-index .nav a:is(.active, :hover) .nav-icon {
   color: #2b1720 !important;
 }
