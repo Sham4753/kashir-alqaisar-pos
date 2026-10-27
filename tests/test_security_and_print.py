@@ -175,6 +175,36 @@ class SecurityAndPrintTests(unittest.TestCase):
         self.assertNotIn('شاورما'.encode('utf-8'), plain)
         self.assertIn(b'\x1d\x56\x00', plain)
 
+    def test_customer_receipt_matches_table_layout_and_mixed_payment_summary(self):
+        data = server.load()
+        data['settings']['restaurant'] = {
+            'name': 'مطعم الاختبار', 'address': 'دمشق - شارع رئيسي', 'phone': '0111234567',
+            'tax_number': '123456'
+        }
+        data['settings']['printer'] = {
+            'paper_width': 80, 'receipt_density': 'standard', 'receipt_alignment': 'center',
+            'receipt_show_order_type': True, 'receipt_show_cashier': True,
+            'receipt_layout': ['logo', 'header', 'details', 'items', 'totals', 'footer'],
+            'footer_text': 'شكرًا لزيارتكم'
+        }
+        order = {
+            'id': 'ORD-80', 'timestamp': '2026-10-28T16:22:00', 'type': 'سفري',
+            'customer': 'عميل الاختبار', 'cashier_name': 'أحمد', 'payment': 'مختلط',
+            'subtotal': 311, 'discount_total': 1, 'total': 310,
+            'cash_amount': 100, 'card_amount': 210,
+            'items': [{'name': 'وجبة شاورما', 'quantity': 2, 'price': 100}, {'name': 'عصير', 'quantity': 1, 'price': 111}],
+        }
+        text = server.thermal_receipt_text(data, order)
+        self.assertIn('الصنف', text)
+        self.assertIn('الكمية', text)
+        self.assertIn('القيمة', text)
+        self.assertIn('المجموع الفرعي:', text)
+        self.assertIn('الخصم:', text)
+        self.assertIn('النقدي:', text)
+        self.assertIn('البطاقة:', text)
+        self.assertIn('الرقم الضريبي:', text)
+        self.assertIn('شكرًا لزيارتكم', text)
+
     def test_print_test_uses_raster_path_not_raw_utf8(self):
         self.login('manager', 'manager-pass')
         data = server.load(); data['settings']['printer'] = {'printer_name': 'Thermal 80', 'paper_width': 80, 'connection_mode': 'windows'}; server.save(data)
