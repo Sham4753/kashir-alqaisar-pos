@@ -1,0 +1,80 @@
+name: Windows CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-package:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run Python unit tests
+        shell: pwsh
+        run: |
+          $env:PYTHONPATH = "$PWD\Lib\site-packages;$PWD"
+          & .\python.exe -m unittest discover -s tests -p "test_*.py" -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify frontend
+        shell: pwsh
+        run: |
+          node tests\verify_frontend.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify build fails closed without a license secret
+        shell: pwsh
+        run: |
+          $candidates = @(".license_secret", "license.secret", "app/.license_secret", "app/license.secret")
+          foreach ($candidate in $candidates) {
+            if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+              throw "A real license secret must never be committed to the repository."
+            }
+          }
+          $output = & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\Setup_CAESAR_OneFile.ps1 2>&1
+          $exitCode = $LASTEXITCODE
+          $output | ForEach-Object { Write-Host $_ }
+          if ($exitCode -eq 0 -or (($output | Out-String) -notmatch "LICENSE_SECRET_MISSING")) {
+            throw "The build must stop with LICENSE_SECRET_MISSING when no local secret is supplied."
+          }
+
+      - name: Build Windows package with a disposable test secret (no artifact is published)
+        shell: pwsh
+        run: |
+          $secretPath = Join-Path $PWD ".license_secret"
+          $bytes = New-Object byte[] 32
+          $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+          try {
+            $rng.GetBytes($bytes)
+            [System.IO.File]::WriteAllText($secretPath, [Convert]::ToBase64String($bytes))
+            & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\Setup_CAESAR_OneFile.ps1
+            if ($LASTEXITCODE -ne 0) { throw "Windows package build failed with exit code $LASTEXITCODE." }
+            $exe = Join-Path $PWD "dist\CAESAR_POS\CAESAR_POS.exe"
+            if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "The expected CAESAR_POS.exe was not produced." }
+            $bundledSecret = Get-ChildItem -LiteralPath (Join-Path $PWD "dist\CAESAR_POS") -Filter ".license_secret" -File -Recurse | Select-Object -First 1
+            if (-not $bundledSecret) { throw "The build output is missing the license secret file." }
+            Write-Host "Windows packaging passed. This disposable test package is not published."
+          } finally {
+            $rng.Dispose()
+            if (Test-Path -LiteralPath $secretPath) { Remove-Item -LiteralPath $secretPath -Force }
+            $distPath = Join-Path $PWD "dist"
+            if (Test-Path -LiteralPath $distPath) { Remove-Item -LiteralPath $distPath -Recurse -Force }
+            $buildPath = Join-Path $PWD "build"
+            if (Test-Path -LiteralPath $buildPath) { Remove-Item -LiteralPath $buildPath -Recurse -Force }
+            $zipPath = Join-Path $PWD "CAESAR_POS_OneFolder_Commercial_v4.zip"
+            if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
+          }
