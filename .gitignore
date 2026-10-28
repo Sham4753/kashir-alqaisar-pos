@@ -1,4 +1,5 @@
 # Runtime data and secrets
+.license_secret
 app/.license_secret
 license.secret
 .license

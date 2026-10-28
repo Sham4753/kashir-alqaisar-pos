@@ -177,12 +177,29 @@ if (Test-Path -LiteralPath $WebView2Runtime) {
 }
 
 $LicenseDataArguments = @()
-foreach ($licenseFile in @(".license", ".license_secret")) {
-    $licensePath = Join-Path $ScriptDir $licenseFile
-    if (Test-Path -LiteralPath $licensePath) {
-        $LicenseDataArguments += @("--add-data", ($licensePath + ";app"))
-        Write-Host ("Bundling license file: " + $licenseFile)
+$LicenseSecretCandidates = @(
+    (Join-Path $ScriptDir ".license_secret"),
+    (Join-Path $ScriptDir "license.secret"),
+    (Join-Path $App ".license_secret"),
+    (Join-Path $App "license.secret")
+)
+$LicenseSecretPath = $null
+foreach ($candidate in $LicenseSecretCandidates) {
+    if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+        $LicenseSecretPath = $candidate
+        break
     }
+}
+if (-not $LicenseSecretPath) {
+    throw "LICENSE_SECRET_MISSING: Restore the authorized local .license_secret or license.secret file from a secure backup. Never commit or share it."
+}
+$LicenseDataArguments += @("--add-data", ($LicenseSecretPath + ";app"))
+Write-Host "Local license signing secret found; including it in the private build package."
+
+$OptionalLicensePath = Join-Path $ScriptDir ".license"
+if (Test-Path -LiteralPath $OptionalLicensePath -PathType Leaf) {
+    $LicenseDataArguments += @("--add-data", ($OptionalLicensePath + ";app"))
+    Write-Host "Bundling optional preconfigured license file."
 }
 
 Write-Host "2/6 - Compiling application sources..."
@@ -207,6 +224,19 @@ if (-not (Test-Path -LiteralPath $Exe)) { throw "CAESAR_POS.exe was not created.
 $BundledIndex = Get-ChildItem -LiteralPath $ProductDir -Filter "index.html" -File -Recurse | Where-Object { $_.Directory.Name -eq "app" } | Select-Object -First 1
 if (-not $BundledIndex) { throw "Bundled POS app\index.html was not found inside the executable package." }
 $BundledAppDir = $BundledIndex.Directory.FullName
+$BundledLicenseSecret = $null
+foreach ($secretName in @(".license_secret", "license.secret")) {
+    $candidate = Join-Path $BundledAppDir $secretName
+    if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+        $BundledLicenseSecret = $candidate
+        break
+    }
+}
+if (-not $BundledLicenseSecret) { throw "Bundled license signing secret was not found; refusing to report a licensed build as successful." }
+$BundledWelcome = Join-Path $BundledAppDir "welcome.html"
+if (-not (Test-Path -LiteralPath $BundledWelcome -PathType Leaf)) { throw "Bundled app\welcome.html is missing; the account-selection screen cannot be verified." }
+$WelcomeHtml = Get-Content -LiteralPath $BundledWelcome -Raw -Encoding UTF8
+if (-not $WelcomeHtml.Contains('اختر حسابك للمتابعة')) { throw "Bundled welcome page is missing the account-selection screen text." }
 $BundledHtml = Get-Content -LiteralPath $BundledIndex.FullName -Raw
 $BundledCss = Get-Content -LiteralPath (Join-Path $BundledAppDir "pos-modern.css") -Raw
 foreach ($CounterId in @('counterOrders', 'counterReady', 'counterSales')) {
@@ -217,6 +247,10 @@ foreach ($CounterId in @('counterOrders', 'counterReady', 'counterSales')) {
 if (-not $BundledHtml.Contains('/api/dashboard/counters') -or -not $BundledCss.Contains('.counter-strip { display: grid !important;')) {
     throw "Bundled POS counter API binding or visibility fallback is missing from the built package."
 }
+if (-not $BundledCss.Contains('grid-template-columns: minmax(0, 1fr) minmax(450px, 480px) !important;')) {
+    throw "Bundled POS desktop grid is stale; expected the two-track catalogue/order layout."
+}
+Write-Host "Built package contains the account-selection page and verified two-track POS layout."
 Write-Host "Built package contains all three visible POS counter cards."
 
 Write-Host "4/6 - Copying the standalone license generator..."
