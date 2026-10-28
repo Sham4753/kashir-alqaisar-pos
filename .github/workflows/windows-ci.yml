@@ -51,6 +51,7 @@ jobs:
           if ($exitCode -eq 0 -or (($output | Out-String) -notmatch "LICENSE_SECRET_MISSING")) {
             throw "The build must stop with LICENSE_SECRET_MISSING when no local secret is supplied."
           }
+          exit 0
 
       - name: Build Windows package with a disposable test secret (no artifact is published)
         shell: pwsh
