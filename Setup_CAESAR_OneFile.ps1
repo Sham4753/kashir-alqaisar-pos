@@ -235,7 +235,7 @@ foreach ($secretName in @(".license_secret", "license.secret")) {
 if (-not $BundledLicenseSecret) { throw "Bundled license signing secret was not found; refusing to report a licensed build as successful." }
 $BundledWelcome = Join-Path $BundledAppDir "welcome.html"
 if (-not (Test-Path -LiteralPath $BundledWelcome -PathType Leaf)) { throw "Bundled app\welcome.html is missing; the account-selection screen cannot be verified." }
-$WelcomeHtml = Get-Content -LiteralPath $BundledWelcome -Raw
+$WelcomeHtml = Get-Content -LiteralPath $BundledWelcome -Raw -Encoding UTF8
 if (-not $WelcomeHtml.Contains('اختر حسابك للمتابعة')) { throw "Bundled welcome page is missing the account-selection screen text." }
 $BundledHtml = Get-Content -LiteralPath $BundledIndex.FullName -Raw
 $BundledCss = Get-Content -LiteralPath (Join-Path $BundledAppDir "pos-modern.css") -Raw
