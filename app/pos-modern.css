@@ -696,8 +696,11 @@ body.caesar-page-index .category-bar::-webkit-scrollbar-thumb { border-radius: 9
 /* POS density correction: give the active order more room and keep the
    catalogue compact enough to show more products at once on a laptop. */
 @media (min-width: 1081px) {
+  /* The sidebar is a fixed off-canvas drawer (see "Final navigation behavior"),
+     so the grid has only two tracks: catalogue and order panel. */
   body.caesar-page-index .app {
-    grid-template-columns: 246px minmax(0, 1fr) minmax(450px, 480px) !important;
+    grid-template-columns: minmax(0, 1fr) minmax(450px, 480px) !important;
+    grid-template-areas: "main order" !important;
   }
   body.caesar-page-index .products {
     grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
