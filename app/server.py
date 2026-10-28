@@ -1632,6 +1632,17 @@ def manager_approval_policy(data):
     }
 
 
+def effective_discount_pct(subtotal, discount_total):
+    """النسبة الفعلية للخصم (نسبة + مبلغ ثابت معاً) كي لا يتجاوز الخصم الثابت حد موافقة المدير."""
+    try:
+        sub = Decimal(str(subtotal or 0)); disc = Decimal(str(discount_total or 0))
+        if sub <= 0:
+            return 0.0
+        return float((disc / sub * 100).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+    except (InvalidOperation, TypeError, ValueError):
+        return 0.0
+
+
 def manager_approval_required(data, discount_pct=0, discount_amount=0):
     policy = manager_approval_policy(data)
     return ((discount_pct > policy['discount_percent_limit']) or
@@ -1761,7 +1772,7 @@ def orders():
         total = round_money(after_percent - discount_amount)
         total_discount = round_money(subtotal - total)
         approval_record = None
-        needs_approval, approval_policy = manager_approval_required(data, discount_pct, total_discount)
+        needs_approval, approval_policy = manager_approval_required(data, max(discount_pct, effective_discount_pct(subtotal, total_discount)), total_discount)
         if needs_approval:
             approval_record, approval_error = verify_manager_approval(data, payload, 'خصم فاتورة', total_discount)
             if approval_error:
@@ -6214,7 +6225,7 @@ def mobile_create_dine_in_session():
     if totals_error:
         return jsonify({'ok': False, 'error': totals_error}), 400
     discount_total = round_money(totals['subtotal'] - totals['total'])
-    needs_approval, _ = manager_approval_required(data, totals['discount_pct'], discount_total)
+    needs_approval, _ = manager_approval_required(data, max(totals['discount_pct'], effective_discount_pct(totals['subtotal'], discount_total)), discount_total)
     approval_record = None
     if needs_approval:
         approval_record, approval_error = verify_manager_approval(data, payload, 'خصم طلب صالة من تطبيق النادل', discount_total)
@@ -6250,7 +6261,7 @@ def mobile_dine_in_session_detail(session_id):
     if totals_error:
         return jsonify({'ok': False, 'error': totals_error}), 400
     discount_total = round_money(totals['subtotal'] - totals['total'])
-    needs_approval, _ = manager_approval_required(data, totals['discount_pct'], discount_total)
+    needs_approval, _ = manager_approval_required(data, max(totals['discount_pct'], effective_discount_pct(totals['subtotal'], discount_total)), discount_total)
     approval_record = None
     if needs_approval:
         approval_record, approval_error = verify_manager_approval(data, payload, 'تعديل خصم طلب صالة من تطبيق النادل', discount_total, session_id)
@@ -6304,7 +6315,7 @@ def dine_in_sessions():
         return jsonify({'ok': False, 'error': error}), 400
     discount_total = round_money(totals['subtotal'] - totals['total'])
     approval_record = None
-    needs_approval, _ = manager_approval_required(data, totals['discount_pct'], discount_total)
+    needs_approval, _ = manager_approval_required(data, max(totals['discount_pct'], effective_discount_pct(totals['subtotal'], discount_total)), discount_total)
     if needs_approval:
         approval_record, approval_error = verify_manager_approval(data, payload, 'خصم طلب صالة', discount_total)
         if approval_error:
@@ -6345,7 +6356,7 @@ def dine_in_session_detail(session_id):
     if error:
         return jsonify({'ok': False, 'error': error}), 400
     discount_total = round_money(totals['subtotal'] - totals['total'])
-    needs_approval, _ = manager_approval_required(data, totals['discount_pct'], discount_total)
+    needs_approval, _ = manager_approval_required(data, max(totals['discount_pct'], effective_discount_pct(totals['subtotal'], discount_total)), discount_total)
     if needs_approval:
         approval_record, approval_error = verify_manager_approval(data, payload, 'تعديل خصم طلب صالة', discount_total, session_id)
         if approval_error:
@@ -6396,7 +6407,7 @@ def close_dine_in_session(session_id):
         return jsonify({'ok': False, 'error': 'طلب الصالة المفتوح غير موجود'}), 404
     payload = request.get_json(silent=True) or {}
     total_discount = round_money(Decimal(str(session_row.get('subtotal', 0) or 0)) - Decimal(str(session_row.get('total', 0) or 0)))
-    needs_approval, _ = manager_approval_required(data, round_money(session_row.get('discount_pct', 0) or 0), total_discount)
+    needs_approval, _ = manager_approval_required(data, max(round_money(session_row.get('discount_pct', 0) or 0), effective_discount_pct(session_row.get('subtotal', 0), total_discount)), total_discount)
     if needs_approval and not session_row.get('manager_approval'):
         approval_record, approval_error = verify_manager_approval(data, payload, 'خصم طلب صالة عند الدفع', total_discount, session_id)
         if approval_error:
