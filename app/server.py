@@ -1632,6 +1632,17 @@ def manager_approval_policy(data):
     }
 
 
+def effective_discount_pct(subtotal, discount_total):
+    """النسبة الفعلية للخصم (نسبة + مبلغ ثابت معاً) كي لا يتجاوز الخصم الثابت حد موافقة المدير."""
+    try:
+        sub = Decimal(str(subtotal or 0)); disc = Decimal(str(discount_total or 0))
+        if sub <= 0:
+            return 0.0
+        return float((disc / sub * 100).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+    except (InvalidOperation, TypeError, ValueError):
+        return 0.0
+
+
 def manager_approval_required(data, discount_pct=0, discount_amount=0):
     policy = manager_approval_policy(data)
     return ((discount_pct > policy['discount_percent_limit']) or
@@ -1761,7 +1772,7 @@ def orders():
         total = round_money(after_percent - discount_amount)
         total_discount = round_money(subtotal - total)
         approval_record = None
-        needs_approval, approval_policy = manager_approval_required(data, discount_pct, total_discount)
+        needs_approval, approval_policy = manager_approval_required(data, max(discount_pct, effective_discount_pct(subtotal, total_discount)), total_discount)
         if needs_approval:
             approval_record, approval_error = verify_manager_approval(data, payload, 'خصم فاتورة', total_discount)
             if approval_error:
@@ -4132,6 +4143,137 @@ def set_default_windows_printer(name):
     except Exception:
         return False
 
+RECEIPT_RS = '\x01'   # بداية أمر تنسيق داخل نص الإيصال (ليس \x1c-\x1e لأن splitlines يكسرها)
+RECEIPT_US = '\x02'   # فاصل حقول الأمر
+
+
+def _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visual):
+    """يرسم إيصالاً مقسّماً بإطارات وأعمدة بعرض بكسلات ثابتة (لا يعتمد على مسافات الخط).
+
+    الأوامر (سطر يبدأ بـ RS ويفصل حقوله US): RULE، GAP، C (نص وسط)، BOX/ENDBOX (إطار)،
+    ROW (صف أعمدة مع نسب ومحاذاة)، KV (عنوان يمين وقيمة يسار).
+    """
+    probe = ImageDraw.Draw(Image.new('L', (width, 10), 255))
+    margin, pad = 6, 6
+    inner_w = width - 2 * margin
+    line_h = scale + 10
+
+    def text_w(value, fnt):
+        return probe.textbbox((0, 0), visual(value), font=fnt)[2]
+
+    def wrap_to(value, max_w, fnt):
+        value = str(value or '')
+        if not value:
+            return ['']
+        out, cur = [], ''
+        for word in value.split(' '):
+            cand = word if not cur else cur + ' ' + word
+            if cur and text_w(cand, fnt) > max_w:
+                out.append(cur)
+                cur = word
+            else:
+                cur = cand
+            if text_w(cur, fnt) > max_w:
+                chunk = ''
+                for ch in cur:
+                    if chunk and text_w(chunk + ch, fnt) > max_w:
+                        out.append(chunk)
+                        chunk = ch
+                    else:
+                        chunk += ch
+                cur = chunk
+        out.append(cur)
+        return out
+
+    ops = []
+    for raw in str(text or '').splitlines():
+        if not raw.startswith(RECEIPT_RS):
+            for part in wrap_to(raw, inner_w - 2 * pad, font):
+                ops.append({'k': 'c', 'lines': [part], 'font': font, 'h': line_h})
+            continue
+        parts = raw[1:].split(RECEIPT_US)
+        cmd = parts[0]
+        if cmd == 'RULE':
+            ops.append({'k': 'rule', 'h': 10})
+        elif cmd == 'GAP':
+            ops.append({'k': 'gap', 'h': int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 8})
+        elif cmd == 'BOX':
+            ops.append({'k': 'box', 'h': 0})
+        elif cmd == 'ENDBOX':
+            ops.append({'k': 'endbox', 'h': 0})
+        elif cmd == 'C':
+            fnt = big_font if len(parts) > 3 and parts[3] == '1' else (bold_font if len(parts) > 2 and parts[2] == '1' else font)
+            lines = wrap_to(parts[1] if len(parts) > 1 else '', inner_w - 2 * pad, fnt)
+            ops.append({'k': 'c', 'lines': lines, 'font': fnt, 'h': len(lines) * (line_h + (4 if fnt is big_font else 0))})
+        elif cmd == 'KV':
+            label = parts[1] if len(parts) > 1 else ''
+            value = parts[2] if len(parts) > 2 else ''
+            fnt = bold_font if len(parts) > 3 and parts[3] == '1' else font
+            ops.append({'k': 'kv', 'label': label, 'value': value, 'font': fnt, 'h': line_h + 4})
+        elif cmd == 'ROW' and len(parts) >= 6:
+            sep = parts[1] == '1'
+            ratios = [max(1.0, float(x)) for x in parts[2].split(',') if x]
+            aligns = parts[3].split(',')
+            fnt = bold_font if parts[4] == '1' else font
+            cells = parts[5:]
+            total_ratio = sum(ratios[:len(cells)]) or 1.0
+            xs, x_right = [], width - margin
+            for idx in range(len(cells)):
+                col_w = inner_w * ratios[idx] / total_ratio
+                xs.append((x_right - col_w, x_right))
+                x_right -= col_w
+            wrapped = [wrap_to(cell, max(10, (xs[i][1] - xs[i][0]) - 2 * pad), fnt) for i, cell in enumerate(cells)]
+            rows = max(len(w) for w in wrapped)
+            ops.append({'k': 'row', 'sep': sep, 'xs': xs, 'aligns': aligns, 'font': fnt, 'cells': wrapped,
+                        'h': rows * line_h + 8})
+    height = sum(op['h'] for op in ops) + 20
+    image = Image.new('L', (width, max(32, height)), 255)
+    draw = ImageDraw.Draw(image)
+    y = 10
+    box_tops = []
+
+    def put(value, fnt, x_left, x_right_edge, align, y_top):
+        shaped = visual(value)
+        bb = draw.textbbox((0, 0), shaped, font=fnt)
+        w = bb[2] - bb[0]
+        if align == 'r':
+            x = x_right_edge - pad - w
+        elif align == 'l':
+            x = x_left + pad
+        else:
+            x = x_left + ((x_right_edge - x_left) - w) / 2
+        draw.text((x, y_top - bb[1]), shaped, fill=0, font=fnt)
+
+    for op in ops:
+        kind = op['k']
+        if kind == 'rule':
+            draw.line([(margin, y + 4), (width - margin, y + 4)], fill=0, width=2)
+        elif kind == 'box':
+            box_tops.append(y)
+        elif kind == 'endbox':
+            top = box_tops.pop() if box_tops else y
+            draw.rectangle([margin, top, width - margin, y], outline=0, width=2)
+        elif kind == 'c':
+            fh = op['h'] // max(1, len(op['lines']))
+            for i, part in enumerate(op['lines']):
+                put(part, op['font'], margin, width - margin, 'c', y + i * fh + 3)
+        elif kind == 'kv':
+            put(op['label'], op['font'], margin, width - margin, 'r', y + 3)
+            put(op['value'], op['font'], margin, width - margin, 'l', y + 3)
+        elif kind == 'row':
+            for i, lines in enumerate(op['cells']):
+                x0, x1 = op['xs'][i]
+                align = op['aligns'][i] if i < len(op['aligns']) else 'c'
+                for j, part in enumerate(lines):
+                    put(part, op['font'], x0, x1, align, y + 4 + j * line_h)
+                if op['sep'] and i < len(op['cells']) - 1:
+                    draw.line([(x0, y), (x0, y + op['h'])], fill=0, width=1)
+            if op['sep']:
+                draw.line([(margin, y + op['h']), (width - margin, y + op['h'])], fill=0, width=1)
+        y += op['h']
+    return image.crop((0, 0, width, max(y + 10, 32)))
+
+
 def render_escpos_raster_payload(text, paper_width=80, font_size='medium', logo_data='', logo_size='medium', logo_alignment='center', text_alignment='center', print_density=80, print_quality='normal'):
     """يرسم العربية بخط Tajawal ثم يحولها إلى صورة ESC/POS أحادية اللون.
 
@@ -4160,6 +4302,14 @@ def render_escpos_raster_payload(text, paper_width=80, font_size='medium', logo_
                 break
             except (OSError, ValueError):
                 continue
+    bold_font, big_font = font, font
+    bold_path = os.path.join(BASE_DIR, 'fonts', 'Tajawal-Bold.ttf')
+    if os.path.exists(bold_path):
+        try:
+            bold_font = ImageFont.truetype(bold_path, scale)
+            big_font = ImageFont.truetype(bold_path, scale + 7)
+        except (OSError, ValueError):
+            pass
     probe = ImageDraw.Draw(Image.new('L', (width, 10), 255))
     max_text_width = width - 24
 
@@ -4204,36 +4354,39 @@ def render_escpos_raster_payload(text, paper_width=80, font_size='medium', logo_
             result.append(current)
         return result
 
-    lines = []
-    for raw_line in str(text or '').splitlines():
-        lines.extend(wrap(raw_line))
-    # Derive line spacing from the actual font metrics. A fixed height is not
-    # safe for Arabic marks, especially with the large font setting.
-    sample_bbox = probe.textbbox((0, 0), visual('إيصال'), font=font)
-    glyph_height = max(1, sample_bbox[3] - sample_bbox[1])
-    line_height = max(scale + 8, glyph_height + 8)
-    top_padding = 10
-    bottom_padding = 10
-    image = Image.new('L', (width, max(32, len(lines) * line_height + top_padding + bottom_padding)), 255)
-    draw = ImageDraw.Draw(image)
-    y = top_padding
-    right_aligned = str(text_alignment or 'center') == 'right'
-    for line in lines:
-        shaped = visual(line)
-        bbox = draw.textbbox((0, 0), shaped, font=font)
-        line_width = bbox[2] - bbox[0]
-        if right_aligned:
-            # النص العربي RTL: "يمين" يعني إلصاق الحافة اليمنى بحافة الورق.
-            x = max(6, width - line_width - 12)
-        else:
-            x = max(6, (width - line_width) // 2)
-        # Compensate for fonts with a negative top bearing. Without this, the
-        # first Arabic glyph row can be clipped and appear to touch the line
-        # above it on some thermal printers.
-        draw_y = y - bbox[1]
-        draw.text((x, draw_y), shaped, fill=0, font=font)
-        y += line_height
-    image = image.crop((0, 0, width, max(y + bottom_padding, 32)))
+    if RECEIPT_RS in str(text or ''):
+        image = _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visual)
+    else:
+        lines = []
+        for raw_line in str(text or '').splitlines():
+            lines.extend(wrap(raw_line))
+        # Derive line spacing from the actual font metrics. A fixed height is not
+        # safe for Arabic marks, especially with the large font setting.
+        sample_bbox = probe.textbbox((0, 0), visual('إيصال'), font=font)
+        glyph_height = max(1, sample_bbox[3] - sample_bbox[1])
+        line_height = max(scale + 8, glyph_height + 8)
+        top_padding = 10
+        bottom_padding = 10
+        image = Image.new('L', (width, max(32, len(lines) * line_height + top_padding + bottom_padding)), 255)
+        draw = ImageDraw.Draw(image)
+        y = top_padding
+        right_aligned = str(text_alignment or 'center') == 'right'
+        for line in lines:
+            shaped = visual(line)
+            bbox = draw.textbbox((0, 0), shaped, font=font)
+            line_width = bbox[2] - bbox[0]
+            if right_aligned:
+                # النص العربي RTL: "يمين" يعني إلصاق الحافة اليمنى بحافة الورق.
+                x = max(6, width - line_width - 12)
+            else:
+                x = max(6, (width - line_width) // 2)
+            # Compensate for fonts with a negative top bearing. Without this, the
+            # first Arabic glyph row can be clipped and appear to touch the line
+            # above it on some thermal printers.
+            draw_y = y - bbox[1]
+            draw.text((x, draw_y), shaped, fill=0, font=font)
+            y += line_height
+        image = image.crop((0, 0, width, max(y + bottom_padding, 32)))
 
     # Include the configured restaurant logo in the same raster job. This avoids
     # the old split path where the logo appeared in browser preview but was
@@ -4692,6 +4845,150 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
     return gap.join(line for line in lines if line is not None)
 
 
+def thermal_receipt_structured(data, order):
+    """إيصال مبيعات مقسّم (ترويسة، صندوق بيانات، جدول أصناف، مجاميع، تذييل) للرسم الحراري.
+
+    يعيد نصاً فيه أوامر تنسيق يفهمها _draw_structured_receipt. النسخة النصية البسيطة
+    تبقى في thermal_receipt_text للمطبخ وللمعاينة والاختبارات.
+    """
+    settings = data.get('settings', {})
+    restaurant = settings.get('restaurant', {})
+    printer = settings.get('printer', {})
+    RS, US = RECEIPT_RS, RECEIPT_US
+    try:
+        narrow = int(printer.get('paper_width', 80) or 80) <= 58
+    except (TypeError, ValueError):
+        narrow = False
+    cols = '33,21,23,23' if narrow else '42,14,22,22'
+
+    def cmd(*parts):
+        return RS + US.join(str(part).replace('\n', ' ').replace(RS, '').replace(US, '') for part in parts)
+
+    currency = str(order.get('currency') or settings.get('currency', 'SYP'))
+    rate = order.get('exchange_rate') or settings.get('usd_rate' if currency == 'USD' else 'eur_rate', 0)
+    symbol = {'SYP': 'ل.س', 'USD': '$', 'EUR': '€'}.get(currency, 'ل.س')
+
+    def money_text(value, with_symbol=False):
+        try:
+            amount = float(value or 0)
+            if currency in {'USD', 'EUR'} and float(rate or 0) > 0:
+                amount /= float(rate)
+        except (TypeError, ValueError):
+            amount = 0
+        converted = currency in {'USD', 'EUR'} and float(rate or 0) > 0
+        text = f'{amount:,.2f}' if converted else f'{amount:,.2f}'.rstrip('0').rstrip('.')
+        if with_symbol:
+            text += ' ' + (symbol if converted else 'ل.س')
+        return '‎' + text + '‎'
+
+    def number_text(value):
+        try:
+            number = float(value or 0)
+        except (TypeError, ValueError):
+            number = 0
+        return str(int(number)) if number.is_integer() else f'{number:,.2f}'.rstrip('0').rstrip('.')
+
+    restaurant_name = restaurant.get('name') or 'كاشير قيصر'
+    lines = [cmd('C', restaurant_name, 1, 1)]
+    caption = str(printer.get('logo_caption', '') or '').strip()
+    if caption:
+        lines.append(cmd('C', caption))
+    address = str(restaurant.get('address', '') or '').strip()
+    if address:
+        lines.append(cmd('C', address))
+    phone = str(restaurant.get('phone', '') or '').strip()
+    if phone:
+        lines.append(cmd('C', 'هاتف: ' + phone))
+    header = str(printer.get('receipt_header', 'إيصال مبيعات') or '').strip()
+    if header:
+        lines.append(cmd('C', header, 1))
+    lines.append(cmd('GAP', 6))
+
+    stamp = str(order.get('timestamp') or order.get('date', ''))[:19].replace('T', ' ')
+    date_part, _, time_part = stamp.partition(' ')
+    lines.append(cmd('BOX'))
+    lines.append(cmd('ROW', 1, '55,45', 'r,r', 1, 'رقم الفاتورة: ' + str(order.get('id', '')), 'التاريخ: ‎' + date_part + '‎'))
+    info = []
+    if order.get('customer'):
+        info.append('اسم الزبون: ' + str(order.get('customer'))[:60])
+    if order.get('table') or order.get('table_no'):
+        info.append('الطاولة: ' + str(order.get('table') or order.get('table_no')))
+    if printer.get('receipt_show_order_type', True):
+        info.append('نوع الطلب: ' + str(order.get('type', 'سفري')))
+    for entry in info:
+        lines.append(cmd('ROW', 1, '100', 'r', 0, entry))
+    lines.append(cmd('ENDBOX'))
+    lines.append(cmd('GAP', 6))
+
+    lines.append(cmd('BOX'))
+    lines.append(cmd('ROW', 1, cols, 'r,c,c,c', 1, 'الصنف', 'الكمية', 'السعر', 'القيمة'))
+    item_count, quantity_total = 0, 0.0
+    for item in order.get('items', []):
+        try:
+            quantity = float(item.get('quantity', item.get('qty', 1)) or 0)
+        except (TypeError, ValueError):
+            quantity = 0
+        unit_price = item.get('price', item.get('unit_price', 0)) or 0
+        try:
+            line_total = float(unit_price or 0) * quantity
+        except (TypeError, ValueError):
+            line_total = 0
+        item_count += 1
+        quantity_total += quantity
+        name = str(item.get('name', '') or '')
+        mods = [str(m.get('name', '')) for m in item.get('modifiers', []) if isinstance(m, dict) and m.get('name')]
+        if mods:
+            name += ' (' + '، '.join(mods) + ')'
+        lines.append(cmd('ROW', 1, cols, 'r,c,c,c', 0, name, number_text(quantity),
+                         money_text(unit_price), money_text(line_total)))
+    lines.append(cmd('ROW', 1, '50,50', 'r,r', 1, 'عدد البنود: ' + str(item_count), 'مجموع الكمية: ' + number_text(quantity_total)))
+    lines.append(cmd('ENDBOX'))
+    lines.append(cmd('GAP', 6))
+
+    subtotal = order.get('subtotal', order.get('total', 0)) or 0
+    discount = order.get('discount_total', 0) or 0
+    total = order.get('total', 0) or 0
+    lines.append(cmd('KV', 'الإجمالي', money_text(subtotal, True), 0))
+    try:
+        has_discount = float(discount) > 0
+    except (TypeError, ValueError):
+        has_discount = False
+    if has_discount:
+        lines.append(cmd('KV', 'الخصم', '-' + money_text(discount, True), 0))
+    lines.append(cmd('RULE'))
+    lines.append(cmd('KV', 'الصافي', money_text(total, True), 1))
+    lines.append(cmd('KV', 'طريقة الدفع', str(order.get('payment', '')), 0))
+    if str(order.get('payment', '')) == 'مختلط':
+        cash = order.get('cash_amount', 0) or 0
+        card = order.get('card_amount', 0) or 0
+        lines.append(cmd('KV', 'النقدي', money_text(cash, True), 0))
+        lines.append(cmd('KV', 'البطاقة', money_text(card, True), 0))
+    lines.append(cmd('GAP', 6))
+
+    footer = []
+    tax_number = str(restaurant.get('tax_number', '') or '').strip()
+    if tax_number:
+        footer.append('الرقم الضريبي: ' + tax_number)
+    footer_text = str(printer.get('footer_text', '') or '').strip()
+    if footer_text:
+        footer.append(footer_text)
+    for label, key in [('Facebook', 'social_facebook'), ('Instagram', 'social_instagram'), ('WhatsApp', 'social_whatsapp')]:
+        value = str(printer.get(key, '') or '').strip()
+        if value:
+            footer.append(f'{label}: {value}')
+    if footer:
+        lines.append(cmd('BOX'))
+        for entry in footer:
+            lines.append(cmd('ROW', 0, '100', 'r', 0, entry))
+        lines.append(cmd('ENDBOX'))
+        lines.append(cmd('GAP', 6))
+    cashier = str(order.get('cashier_name', '') or '') if printer.get('receipt_show_cashier', True) else ''
+    time_label = '‎' + time_part[:5] + '‎' if time_part else ''
+    lines.append(cmd('ROW', 0, '60,40', 'r,l', 0, ('الكاشير: ' + cashier) if cashier else '', time_label))
+    lines.append('')
+    return '\n'.join(lines)
+
+
 PRINT_QUEUE = queue.Queue(maxsize=1000)
 
 
@@ -4700,7 +4997,10 @@ def _dispatch_print_job(job):
     printer = data.get('settings', {}).get('printer', {})
     printer_name = str(printer.get('printer_name') or '').strip()
     font_size = str(printer.get('font_size', 'medium') or 'medium')
-    document_text = thermal_receipt_text(data, order, ticket_type)
+    if ticket_type == 'receipt' and str(printer.get('receipt_style', 'boxed') or 'boxed') != 'plain':
+        document_text = thermal_receipt_structured(data, order)
+    else:
+        document_text = thermal_receipt_text(data, order, ticket_type)
     try:
         copies = max(1, min(3, int(printer.get('copies', 1) or 1)))
     except (TypeError, ValueError):
@@ -6214,7 +6514,7 @@ def mobile_create_dine_in_session():
     if totals_error:
         return jsonify({'ok': False, 'error': totals_error}), 400
     discount_total = round_money(totals['subtotal'] - totals['total'])
-    needs_approval, _ = manager_approval_required(data, totals['discount_pct'], discount_total)
+    needs_approval, _ = manager_approval_required(data, max(totals['discount_pct'], effective_discount_pct(totals['subtotal'], discount_total)), discount_total)
     approval_record = None
     if needs_approval:
         approval_record, approval_error = verify_manager_approval(data, payload, 'خصم طلب صالة من تطبيق النادل', discount_total)
@@ -6250,7 +6550,7 @@ def mobile_dine_in_session_detail(session_id):
     if totals_error:
         return jsonify({'ok': False, 'error': totals_error}), 400
     discount_total = round_money(totals['subtotal'] - totals['total'])
-    needs_approval, _ = manager_approval_required(data, totals['discount_pct'], discount_total)
+    needs_approval, _ = manager_approval_required(data, max(totals['discount_pct'], effective_discount_pct(totals['subtotal'], discount_total)), discount_total)
     approval_record = None
     if needs_approval:
         approval_record, approval_error = verify_manager_approval(data, payload, 'تعديل خصم طلب صالة من تطبيق النادل', discount_total, session_id)
@@ -6304,7 +6604,7 @@ def dine_in_sessions():
         return jsonify({'ok': False, 'error': error}), 400
     discount_total = round_money(totals['subtotal'] - totals['total'])
     approval_record = None
-    needs_approval, _ = manager_approval_required(data, totals['discount_pct'], discount_total)
+    needs_approval, _ = manager_approval_required(data, max(totals['discount_pct'], effective_discount_pct(totals['subtotal'], discount_total)), discount_total)
     if needs_approval:
         approval_record, approval_error = verify_manager_approval(data, payload, 'خصم طلب صالة', discount_total)
         if approval_error:
@@ -6345,7 +6645,7 @@ def dine_in_session_detail(session_id):
     if error:
         return jsonify({'ok': False, 'error': error}), 400
     discount_total = round_money(totals['subtotal'] - totals['total'])
-    needs_approval, _ = manager_approval_required(data, totals['discount_pct'], discount_total)
+    needs_approval, _ = manager_approval_required(data, max(totals['discount_pct'], effective_discount_pct(totals['subtotal'], discount_total)), discount_total)
     if needs_approval:
         approval_record, approval_error = verify_manager_approval(data, payload, 'تعديل خصم طلب صالة', discount_total, session_id)
         if approval_error:
@@ -6396,7 +6696,7 @@ def close_dine_in_session(session_id):
         return jsonify({'ok': False, 'error': 'طلب الصالة المفتوح غير موجود'}), 404
     payload = request.get_json(silent=True) or {}
     total_discount = round_money(Decimal(str(session_row.get('subtotal', 0) or 0)) - Decimal(str(session_row.get('total', 0) or 0)))
-    needs_approval, _ = manager_approval_required(data, round_money(session_row.get('discount_pct', 0) or 0), total_discount)
+    needs_approval, _ = manager_approval_required(data, max(round_money(session_row.get('discount_pct', 0) or 0), effective_discount_pct(session_row.get('subtotal', 0), total_discount)), total_discount)
     if needs_approval and not session_row.get('manager_approval'):
         approval_record, approval_error = verify_manager_approval(data, payload, 'خصم طلب صالة عند الدفع', total_discount, session_id)
         if approval_error:
