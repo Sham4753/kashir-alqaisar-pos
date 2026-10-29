@@ -5229,9 +5229,11 @@ def printer_preview():
                                           printer.get('logo_size', 'medium'), printer.get('logo_alignment', 'center'),
                                           printer.get('receipt_alignment', 'center'), printer.get('print_density', 80),
                                           printer.get('print_quality', 'normal'))
-    row_bytes = int.from_bytes(raster[8:10], 'little')
-    height = int.from_bytes(raster[10:12], 'little')
-    bitmap = Image.frombytes('1', (row_bytes * 8, height), raster[12:12 + row_bytes * height]).crop((0, 0, row_bytes * 8, height))
+    # أول بايتين هما ESC @؛ بعدها رأس GS v 0 الذي يبدأ بعرض الصف ثم الارتفاع.
+    row_bytes = int.from_bytes(raster[6:8], 'little')
+    height = int.from_bytes(raster[8:10], 'little')
+    data_start = 10
+    bitmap = Image.frombytes('1', (row_bytes * 8, height), raster[data_start:data_start + row_bytes * height]).crop((0, 0, row_bytes * 8, height))
     output = BytesIO()
     bitmap.save(output, format='PNG')
     response = send_file(BytesIO(output.getvalue()), mimetype='image/png', max_age=0)
