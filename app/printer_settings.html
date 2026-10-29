@@ -98,7 +98,7 @@
                 <div class="rounded-lg border border-slate-200 bg-white p-3"><div class="flex items-center justify-between gap-3"><label for="thermalInkDensity" class="text-sm font-bold text-slate-800">كثافة الحبر في المحاكاة</label><output id="thermalInkDensityValue" class="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">90%</output></div><input id="thermalInkDensity" class="range-control mt-3" type="range" min="30" max="100" step="5" value="90" oninput="setThermalInkDensity(this.value)"><p class="mt-1 text-[11px] leading-4 text-slate-500">تؤثر في معاينة الأبيض والأسود فقط: قيمة أقل تحاكي طباعة باهتة.</p></div>
                 <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3"><div><b class="text-sm text-slate-800">خط المعاينة الفعلي</b><p class="mt-1 text-[11px] leading-4 text-slate-500">بدّل إلى خط ESC/POS الثابت لتقدير النتيجة عند عدم دعم خطك المخصص.</p></div><button id="escposFontToggle" type="button" class="thermal-mode-toggle" aria-pressed="false" onclick="toggleEscposFontPreview()">معاينة خط ESC/POS</button></div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><label class="flex items-center gap-2 rounded-lg bg-white p-3 text-sm cursor-pointer"><input id="receipt_show_cashier" type="checkbox" class="w-4 h-4 accent-blue-600" checked><span>إظهار اسم الكاشير قيصر</span></label><label class="flex items-center gap-2 rounded-lg bg-white p-3 text-sm cursor-pointer"><input id="receipt_show_order_type" type="checkbox" class="w-4 h-4 accent-blue-600" checked><span>إظهار نوع الطلب</span></label></div>
-                <div class="receipt-preview-shell"><div id="receiptPaper" class="receipt-paper"><div id="receiptPreviewBlocks" aria-live="polite"></div><img id="receiptRasterPreview" class="receipt-raster-preview hidden" alt="المعاينة المطابقة لخرج الطابعة الحرارية"><p id="receiptRasterPreviewStatus" class="hidden mt-3 text-center text-xs text-slate-500">جارٍ تجهيز صورة الطباعة…</p></div></div><div id="receipt58LongTextWarning" class="hidden mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950" role="alert"></div>
+                <div class="receipt-preview-shell"><div id="receiptPaper" class="receipt-paper"><div id="receiptPreviewBlocks" aria-live="polite"></div><img id="receiptRasterPreview" class="receipt-raster-preview hidden" alt="المعاينة المطابقة لخرج الطابعة الحرارية"><p id="receiptRasterPreviewStatus" class="hidden mt-3 text-center text-xs text-slate-500">جارٍ تجهيز صورة الطباعة…</p><p id="receiptRasterPreviewError" class="hidden mt-3 rounded-lg bg-red-50 p-3 text-center text-xs text-red-700" role="alert"></p></div></div><div id="receipt58LongTextWarning" class="hidden mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950" role="alert"></div>
             </div>
 
             <div>
@@ -514,9 +514,9 @@
         }
 
         async function updateExactPrinterPreview() {
-            const image = document.getElementById('receiptRasterPreview'), status = document.getElementById('receiptRasterPreviewStatus'), blocks = document.getElementById('receiptPreviewBlocks');
+            const image = document.getElementById('receiptRasterPreview'), status = document.getElementById('receiptRasterPreviewStatus'), errorBox = document.getElementById('receiptRasterPreviewError'), blocks = document.getElementById('receiptPreviewBlocks');
             if (!image || !status) return;
-            status.classList.remove('hidden'); image.classList.add('hidden');
+            status.classList.remove('hidden'); errorBox?.classList.add('hidden'); image.classList.add('hidden'); blocks.classList.add('hidden');
             const value = id => document.getElementById(id)?.value ?? '';
             const checked = id => !!document.getElementById(id)?.checked;
             const printer = {paper_width:Number(value('paper_width') || 80), font_size:value('font_size') || 'medium', logo_data:logoData, logo_size:value('logo_size') || 'medium', logo_alignment:value('logo_alignment') || 'center', receipt_alignment:value('receipt_alignment') || 'center', receipt_header:value('receipt_header') || 'إيصال مبيعات', logo_caption:value('logo_caption'), footer_text:value('footer_text'), receipt_show_cashier:checked('receipt_show_cashier'), receipt_show_order_type:checked('receipt_show_order_type'), social_facebook:value('social_facebook'), social_instagram:value('social_instagram'), social_whatsapp:value('social_whatsapp'), print_density:Number(value('print_density') || 80), print_quality:value('print_quality') || 'normal'};
@@ -528,6 +528,7 @@
                 exactPreviewUrl = URL.createObjectURL(blob); image.src = exactPreviewUrl; image.classList.remove('hidden'); blocks.classList.add('hidden');
             } catch (error) {
                 blocks.classList.remove('hidden');
+                if (errorBox) { errorBox.textContent = 'تعذّر تحميل صورة الطباعة المطابقة؛ هذه ليست المعاينة الفعلية للطابعة. أعد تشغيل النظام وتحقق من رقم الإصدار.'; errorBox.classList.remove('hidden'); }
             } finally { status.classList.add('hidden'); }
         }
         function updateReceiptPreview() {
