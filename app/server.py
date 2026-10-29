@@ -5193,6 +5193,51 @@ def get_printer_settings():
         "receipt_font_scale": p.get('receipt_font_scale', p.get('font_size', 'medium'))
     })
 
+@app.route('/api/printer/preview', methods=['POST'])
+def printer_preview():
+    """يعيد صورة البكسلات نفسها التي ستُرسل إلى ESC/POS، بدون لمس الطابعة."""
+    if not has_role('manager'):
+        return permission_error()
+    payload = request.get_json(silent=True) or {}
+    printer = dict(payload.get('printer') or {})
+    try:
+        printer['paper_width'] = int(printer.get('paper_width', 80) or 80)
+    except (TypeError, ValueError):
+        printer['paper_width'] = 80
+    if printer['paper_width'] not in {58, 80, 112}:
+        return jsonify({'ok': False, 'error': 'عرض ورق غير صالح للمعاينة'}), 400
+    printer['font_size'] = str(printer.get('font_size', 'medium') or 'medium')
+    printer['logo_data'] = str(printer.get('logo_data', '') or '')
+    printer['print_density'] = printer.get('print_density', 80)
+    printer['print_quality'] = printer.get('print_quality', 'normal')
+    restaurant = dict(load().get('settings', {}).get('restaurant', {}) or {})
+    if isinstance(payload.get('restaurant'), dict):
+        restaurant.update(payload['restaurant'])
+    data = {'settings': {'restaurant': restaurant, 'currency': 'SYP', 'printer': printer}}
+    order = {
+        'id': 'ORD-0001', 'timestamp': '2026-10-29T20:00:00', 'customer': 'زبون تجريبي',
+        'type': 'سفري', 'payment': 'نقدي', 'cashier_name': 'أحمد',
+        'subtotal': 25000, 'discount_total': 1000, 'total': 24000,
+        'cash_amount': 24000, 'card_amount': 0,
+        'items': [
+            {'name': 'سندويش شاورما', 'quantity': 2, 'price': 10000},
+            {'name': 'عصير طبيعي', 'quantity': 1, 'price': 5000},
+        ],
+    }
+    raster = render_escpos_raster_payload(thermal_receipt_structured(data, order), printer['paper_width'],
+                                          printer['font_size'], printer.get('logo_data', ''),
+                                          printer.get('logo_size', 'medium'), printer.get('logo_alignment', 'center'),
+                                          printer.get('receipt_alignment', 'center'), printer.get('print_density', 80),
+                                          printer.get('print_quality', 'normal'))
+    row_bytes = int.from_bytes(raster[8:10], 'little')
+    height = int.from_bytes(raster[10:12], 'little')
+    bitmap = Image.frombytes('1', (row_bytes * 8, height), raster[12:12 + row_bytes * height]).crop((0, 0, row_bytes * 8, height))
+    output = BytesIO()
+    bitmap.save(output, format='PNG')
+    response = send_file(BytesIO(output.getvalue()), mimetype='image/png', max_age=0)
+    response.headers['X-Printer-Preview'] = 'escpos-raster'
+    return response
+
 @app.route('/api/printer/settings', methods=['POST'])
 def set_printer_settings():
     if not has_role('manager'):

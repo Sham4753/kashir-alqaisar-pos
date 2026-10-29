@@ -19,7 +19,7 @@
         .template-row{display:flex;align-items:center;gap:.5rem;border:1px solid #dbeafe;background:#fff;border-radius:8px;padding:.55rem .65rem}.template-name{font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .print-loading{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.46);padding:1.25rem}.print-loading.hidden{display:none}.print-loading-card{width:min(100%,21rem);border-radius:8px;background:#fff;padding:1.35rem;text-align:center;box-shadow:0 20px 45px rgba(15,23,42,.3)}.print-spinner{width:2.75rem;height:2.75rem;border:4px solid #dbeafe;border-top-color:#2563eb;border-radius:50%;margin:0 auto .8rem;animation:spin .75s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
         .layout-item{display:flex;align-items:center;gap:.55rem;border:1px solid #bfdbfe;border-radius:8px;background:#fff;padding:.58rem .65rem;cursor:grab;user-select:none}.layout-item:active{cursor:grabbing}.layout-item.dragging{opacity:.45;border-style:dashed}.layout-handle{color:#2563eb;font-size:1.1rem}.layout-label{font-weight:700;flex:1}.layout-move{border:1px solid #bfdbfe;border-radius:8px;color:#1d4ed8;background:#eff6ff;padding:.08rem .42rem;font-weight:700}.file-import-label{display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
-        .thermal-mode-toggle{border:1px solid #475569;background:#fff;color:#0f172a;border-radius:8px;padding:.55rem .8rem;font-weight:700;font-size:.8rem;transition:.18s}.thermal-mode-toggle.active{background:#334155;color:#fff;border-color:#334155}.receipt-preview-shell.thermal-sim{background:#111827;border-color:#111827}.receipt-paper.thermal-sim{background:#fff;border:2px solid #000;box-shadow:none;filter:grayscale(1) contrast(1.65)}.receipt-paper.thermal-sim pre{color:#000;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;opacity:var(--thermal-ink,.9)}.receipt-paper.thermal-sim .receipt-preview-logo{filter:grayscale(1) contrast(4);opacity:var(--thermal-ink,.9)}.range-control{accent-color:#2563eb;width:100%}
+        .thermal-mode-toggle{border:1px solid #475569;background:#fff;color:#0f172a;border-radius:8px;padding:.55rem .8rem;font-weight:700;font-size:.8rem;transition:.18s}.thermal-mode-toggle.active{background:#334155;color:#fff;border-color:#334155}.receipt-preview-shell.thermal-sim{background:#111827;border-color:#111827}.receipt-paper.thermal-sim{background:#fff;border:2px solid #000;box-shadow:none;filter:grayscale(1) contrast(1.65)}.receipt-paper.thermal-sim pre{color:#000;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;opacity:var(--thermal-ink,.9)}.receipt-paper.thermal-sim .receipt-preview-logo{filter:grayscale(1) contrast(4);opacity:var(--thermal-ink,.9)}.receipt-raster-preview{display:block;width:min(100%,576px);height:auto;margin:auto;background:#fff;image-rendering:auto}.receipt-raster-preview.hidden{display:none}.range-control{accent-color:#2563eb;width:100%}
     </style>
   <link rel="stylesheet" href="design-system.css">
   <link rel="stylesheet" href="palette-v3.css">
@@ -98,7 +98,7 @@
                 <div class="rounded-lg border border-slate-200 bg-white p-3"><div class="flex items-center justify-between gap-3"><label for="thermalInkDensity" class="text-sm font-bold text-slate-800">كثافة الحبر في المحاكاة</label><output id="thermalInkDensityValue" class="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">90%</output></div><input id="thermalInkDensity" class="range-control mt-3" type="range" min="30" max="100" step="5" value="90" oninput="setThermalInkDensity(this.value)"><p class="mt-1 text-[11px] leading-4 text-slate-500">تؤثر في معاينة الأبيض والأسود فقط: قيمة أقل تحاكي طباعة باهتة.</p></div>
                 <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3"><div><b class="text-sm text-slate-800">خط المعاينة الفعلي</b><p class="mt-1 text-[11px] leading-4 text-slate-500">بدّل إلى خط ESC/POS الثابت لتقدير النتيجة عند عدم دعم خطك المخصص.</p></div><button id="escposFontToggle" type="button" class="thermal-mode-toggle" aria-pressed="false" onclick="toggleEscposFontPreview()">معاينة خط ESC/POS</button></div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><label class="flex items-center gap-2 rounded-lg bg-white p-3 text-sm cursor-pointer"><input id="receipt_show_cashier" type="checkbox" class="w-4 h-4 accent-blue-600" checked><span>إظهار اسم الكاشير قيصر</span></label><label class="flex items-center gap-2 rounded-lg bg-white p-3 text-sm cursor-pointer"><input id="receipt_show_order_type" type="checkbox" class="w-4 h-4 accent-blue-600" checked><span>إظهار نوع الطلب</span></label></div>
-                <div class="receipt-preview-shell"><div id="receiptPaper" class="receipt-paper"><div id="receiptPreviewBlocks" aria-live="polite"></div></div></div><div id="receipt58LongTextWarning" class="hidden mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950" role="alert"></div>
+                <div class="receipt-preview-shell"><div id="receiptPaper" class="receipt-paper"><div id="receiptPreviewBlocks" aria-live="polite"></div><img id="receiptRasterPreview" class="receipt-raster-preview hidden" alt="المعاينة المطابقة لخرج الطابعة الحرارية"><p id="receiptRasterPreviewStatus" class="hidden mt-3 text-center text-xs text-slate-500">جارٍ تجهيز صورة الطباعة…</p></div></div><div id="receipt58LongTextWarning" class="hidden mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950" role="alert"></div>
             </div>
 
             <div>
@@ -235,7 +235,7 @@
     <script>
         const RECEIPT_LAYOUT_DEFAULT = ['logo','header','details','items','totals','footer'];
         const RECEIPT_LAYOUT_LABELS = {logo:'الشعار', header:'اسم وعنوان الإيصال', details:'تفاصيل الطلب', items:'الأصناف', totals:'الإجمالي والدفع', footer:'التذييل والتواصل'};
-        let logoData = '', receiptLayout = [...RECEIPT_LAYOUT_DEFAULT], draggedLayoutId = '', thermalPreviewActive = localStorage.getItem('caesarThermalPreview') === 'true', thermalInkDensity = Number(localStorage.getItem('caesarThermalInkDensity') || 90), escposFontPreviewActive = localStorage.getItem('caesarEscposFontPreview') === 'true';
+        let logoData = '', receiptLayout = [...RECEIPT_LAYOUT_DEFAULT], draggedLayoutId = '', thermalPreviewActive = localStorage.getItem('caesarThermalPreview') === 'true', thermalInkDensity = Number(localStorage.getItem('caesarThermalInkDensity') || 90), escposFontPreviewActive = localStorage.getItem('caesarEscposFontPreview') === 'true', exactPreviewUrl = '';
         async function loadSettings() {
             try {
                 const res = await fetch('/api/printer/settings');
@@ -513,6 +513,23 @@
             showToast('تم تطبيق قالب ' + width + 'mm؛ اضغط حفظ لاعتماده.');
         }
 
+        async function updateExactPrinterPreview() {
+            const image = document.getElementById('receiptRasterPreview'), status = document.getElementById('receiptRasterPreviewStatus'), blocks = document.getElementById('receiptPreviewBlocks');
+            if (!image || !status) return;
+            status.classList.remove('hidden'); image.classList.add('hidden');
+            const value = id => document.getElementById(id)?.value ?? '';
+            const checked = id => !!document.getElementById(id)?.checked;
+            const printer = {paper_width:Number(value('paper_width') || 80), font_size:value('font_size') || 'medium', logo_data:logoData, logo_size:value('logo_size') || 'medium', logo_alignment:value('logo_alignment') || 'center', receipt_alignment:value('receipt_alignment') || 'center', receipt_header:value('receipt_header') || 'إيصال مبيعات', logo_caption:value('logo_caption'), footer_text:value('footer_text'), receipt_show_cashier:checked('receipt_show_cashier'), receipt_show_order_type:checked('receipt_show_order_type'), social_facebook:value('social_facebook'), social_instagram:value('social_instagram'), social_whatsapp:value('social_whatsapp'), print_density:Number(value('print_density') || 80), print_quality:value('print_quality') || 'normal'};
+            try {
+                const response = await fetch('/api/printer/preview', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({printer, restaurant:{name:value('restaurant_name')}})});
+                if (!response.ok) throw new Error('preview failed');
+                const blob = await response.blob();
+                if (exactPreviewUrl) URL.revokeObjectURL(exactPreviewUrl);
+                exactPreviewUrl = URL.createObjectURL(blob); image.src = exactPreviewUrl; image.classList.remove('hidden'); blocks.classList.add('hidden');
+            } catch (error) {
+                blocks.classList.remove('hidden');
+            } finally { status.classList.add('hidden'); }
+        }
         function updateReceiptPreview() {
             const width = Number(document.getElementById('paper_width').value || 80);
             const chars = width >= 80 ? 42 : 32;
@@ -564,6 +581,7 @@
             blockRoot.innerHTML = '';
             const makeItemsGrid = () => { const table = document.createElement('table'); table.className = 'receipt-preview-grid'; table.dir = 'rtl'; table.innerHTML = '<colgroup><col style="width:45%"><col style="width:15%"><col style="width:20%"><col style="width:20%"></colgroup><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>القيمة</th></tr></thead><tbody><tr><td class="item-cell">سندويش شاورما</td><td class="qty-cell">2</td><td class="money-cell">10,000</td><td class="money-cell">20,000</td></tr><tr><td class="item-cell">عصير طبيعي</td><td class="qty-cell">1</td><td class="money-cell">5,000</td><td class="money-cell">5,000</td></tr><tr class="summary-row"><td class="item-cell">البنود</td><td class="qty-cell">2</td><td class="money-cell">الكمية</td><td class="money-cell">3</td></tr></tbody></table>'; return table; };
             receiptLayout.forEach(id => { if (id === 'logo') { if (logoData) blockRoot.appendChild(receiptLogo); return; } if (id === 'items') { blockRoot.appendChild(makeItemsGrid()); return; } const block = document.createElement('pre'); block.className = 'receipt-preview-block'; block.textContent = (previewBlocks[id] || []).join('\n'); blockRoot.appendChild(block); });
+            updateExactPrinterPreview();
             updateReceipt58LongTextWarning(width, [rest, caption, document.getElementById('receipt_header').value.trim(), document.getElementById('footer_text').value.trim(), document.getElementById('social_facebook').value.trim(), document.getElementById('social_instagram').value.trim(), document.getElementById('social_whatsapp').value.trim()]);
         }
 
