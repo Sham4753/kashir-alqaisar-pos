@@ -10,6 +10,7 @@
   window.caesarPrepareImage = async function caesarPrepareImage(file, options = {}) {
     const maxDimension = Number(options.maxDimension || 640);
     const maxBytes = Number(options.maxBytes || 180 * 1024);
+    const outputType = options.lossless ? 'image/png' : 'image/webp';
     if (!file || !String(file.type || '').startsWith('image/')) throw new Error('اختر ملف صورة صالحًا');
     const source = await new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -33,8 +34,9 @@
       canvas.width = width; canvas.height = height;
       const context = canvas.getContext('2d');
       context.drawImage(image, 0, 0, width, height);
-      for (const quality of [0.84, 0.72, 0.6]) {
-        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', quality));
+      const qualities = options.lossless ? [undefined] : [0.84, 0.72, 0.6];
+      for (const quality of qualities) {
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, outputType, quality));
         if (!blob) continue;
         if (!best || blob.size < best.blob.size) best = { blob, width, height };
         if (blob.size <= maxBytes) {

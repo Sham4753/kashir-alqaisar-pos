@@ -4397,8 +4397,16 @@ def render_escpos_raster_payload(text, paper_width=80, font_size='medium', logo_
             logo_bytes = base64.b64decode(encoded, validate=True)
             logo = Image.open(BytesIO(logo_bytes)).convert('L')
             max_logo_width = width - 32
-            max_logo_height = {'small': 48, 'medium': 72, 'large': 104}.get(str(logo_size or 'medium'), 72)
-            logo.thumbnail((max_logo_width, max_logo_height), Image.Resampling.LANCZOS)
+            is_square = logo.width > 0 and logo.height > 0 and abs(logo.width - logo.height) / max(logo.width, logo.height) <= 0.12
+            if is_square:
+                # الصور المربعة غالباً QR؛ تكبيرها يحسن القراءة، وNEAREST يحافظ
+                # على حواف الوحدات السوداء بدلاً من تمويهها مثل شعارات الصور.
+                max_logo_height = {'small': 120, 'medium': 180, 'large': 240}.get(str(logo_size or 'medium'), 180)
+                resampling = Image.Resampling.NEAREST
+            else:
+                max_logo_height = {'small': 48, 'medium': 72, 'large': 104}.get(str(logo_size or 'medium'), 72)
+                resampling = Image.Resampling.LANCZOS
+            logo.thumbnail((max_logo_width, max_logo_height), resampling)
             if logo.width and logo.height:
                 logo_canvas = Image.new('L', (width, logo.height + 16), 255)
                 if logo_alignment == 'right':

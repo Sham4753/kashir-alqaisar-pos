@@ -478,7 +478,8 @@
             const file = event.target.files && event.target.files[0];
             if (!file) return;
             try {
-                const prepared = await window.caesarPrepareImage(file, {maxDimension: 640, maxBytes: 180 * 1024});
+                // PNG غير مضغوط مهم للـQR: ضغط WebP يطمس الحواف والمربعات الصغيرة.
+                const prepared = await window.caesarPrepareImage(file, {maxDimension: 1000, maxBytes: 280 * 1024, lossless: true});
                 logoData = prepared.dataUrl;
                 renderLogoPreview();
                 showToast(` جرى ضغط الشعار إلى ${Math.ceil(prepared.bytes / 1024)} كيلوبايت`);
