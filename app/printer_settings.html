@@ -522,13 +522,13 @@
             const printer = {paper_width:Number(value('paper_width') || 80), font_size:value('font_size') || 'medium', logo_data:logoData, logo_size:value('logo_size') || 'medium', logo_alignment:value('logo_alignment') || 'center', receipt_alignment:value('receipt_alignment') || 'center', receipt_header:value('receipt_header') || 'إيصال مبيعات', logo_caption:value('logo_caption'), footer_text:value('footer_text'), receipt_show_cashier:checked('receipt_show_cashier'), receipt_show_order_type:checked('receipt_show_order_type'), social_facebook:value('social_facebook'), social_instagram:value('social_instagram'), social_whatsapp:value('social_whatsapp'), print_density:Number(value('print_density') || 80), print_quality:value('print_quality') || 'normal'};
             try {
                 const response = await fetch('/api/printer/preview', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({printer, restaurant:{name:value('restaurant_name')}})});
-                if (!response.ok) throw new Error('preview failed');
+                if (!response.ok) { let detail = ''; try { detail = (await response.json()).error || ''; } catch (_) {} throw new Error('HTTP ' + response.status + (detail ? ' — ' + detail : '')); }
                 const blob = await response.blob();
                 if (exactPreviewUrl) URL.revokeObjectURL(exactPreviewUrl);
                 exactPreviewUrl = URL.createObjectURL(blob); image.src = exactPreviewUrl; image.classList.remove('hidden'); blocks.classList.add('hidden');
             } catch (error) {
                 blocks.classList.remove('hidden');
-                if (errorBox) { errorBox.textContent = 'تعذّر تحميل صورة الطباعة المطابقة؛ هذه ليست المعاينة الفعلية للطابعة. أعد تشغيل النظام وتحقق من رقم الإصدار.'; errorBox.classList.remove('hidden'); }
+                if (errorBox) { errorBox.textContent = 'تعذّر تحميل صورة الطباعة المطابقة (' + (error?.message || 'خطأ غير معروف') + ')؛ هذه ليست المعاينة الفعلية للطابعة.'; errorBox.classList.remove('hidden'); }
             } finally { status.classList.add('hidden'); }
         }
         function updateReceiptPreview() {
