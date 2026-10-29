@@ -4211,7 +4211,8 @@ def _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visu
             fnt = bold_font if len(parts) > 3 and parts[3] == '1' else font
             ops.append({'k': 'kv', 'label': label, 'value': value, 'font': fnt, 'h': line_h + 4})
         elif cmd == 'ROW' and len(parts) >= 6:
-            sep = parts[1] == '1'
+            sep = parts[1] != '0'
+            dotted = parts[1] == '2'
             ratios = [max(1.0, float(x)) for x in parts[2].split(',') if x]
             aligns = parts[3].split(',')
             fnt = bold_font if parts[4] == '1' else font
@@ -4224,7 +4225,7 @@ def _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visu
                 x_right -= col_w
             wrapped = [wrap_to(cell, max(10, (xs[i][1] - xs[i][0]) - 2 * pad), fnt) for i, cell in enumerate(cells)]
             rows = max(len(w) for w in wrapped)
-            ops.append({'k': 'row', 'sep': sep, 'xs': xs, 'aligns': aligns, 'font': fnt, 'cells': wrapped,
+            ops.append({'k': 'row', 'sep': sep, 'dotted': dotted, 'xs': xs, 'aligns': aligns, 'font': fnt, 'cells': wrapped,
                         'h': rows * line_h + 8})
     height = sum(op['h'] for op in ops) + 20
     image = Image.new('L', (width, max(32, height)), 255)
@@ -4271,7 +4272,11 @@ def _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visu
                 for j, part in enumerate(lines):
                     put(part, op['font'], x0, x1, align, y + 4 + j * line_h)
             if op['sep']:
-                draw.line([(margin, y + op['h']), (width - margin, y + op['h'])], fill=0, width=1)
+                if op.get('dotted'):
+                    for x in range(margin, width - margin, 5):
+                        draw.line([(x, y + op['h']), (min(x + 2, width - margin), y + op['h'])], fill=0, width=1)
+                else:
+                    draw.line([(margin, y + op['h']), (width - margin, y + op['h'])], fill=0, width=1)
         y += op['h']
     return image.crop((0, 0, width, max(y + 10, 32)))
 
@@ -4953,7 +4958,7 @@ def thermal_receipt_structured(data, order):
             name += ' (' + '، '.join(mods) + ')'
         # اجعل كل صنف صفاً شبكياً كاملاً: الفاصل يرسم الحدود العمودية بين
         # الأعمدة والخط الأفقي أسفل الصف، مثل فاتورة الجدول المطبوعة.
-        lines.append(cmd('ROW', 1, cols, 'r,c,c,c', 1, name, number_text(quantity),
+        lines.append(cmd('ROW', 2, cols, 'r,c,c,c', 1, name, number_text(quantity),
                          money_text(unit_price), money_text(line_total)))
     # يبقى صف الملخص داخل الشبكة نفسها حتى تستمر الخطوط العمودية في جدول
     # الأصناف من رأس الأعمدة إلى آخر صف دون انقطاع أو تغيير في مواقعها.
