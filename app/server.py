@@ -4926,7 +4926,6 @@ def thermal_receipt_structured(data, order):
     for entry in info:
         lines.append(cmd('ROW', 1, '100', 'r', 0, entry))
     lines.append(cmd('ENDBOX'))
-    lines.append(cmd('GAP', 6))
 
     lines.append(cmd('BOX'))
     lines.append(cmd('ROW', 1, cols, 'r,c,c,c', 1, 'الصنف', 'الكمية', 'السعر', 'القيمة'))
@@ -4953,11 +4952,11 @@ def thermal_receipt_structured(data, order):
                          money_text(unit_price), money_text(line_total)))
     lines.append(cmd('ROW', 1, '50,50', 'r,r', 1, 'عدد البنود: ' + str(item_count), 'مجموع الكمية: ' + number_text(quantity_total)))
     lines.append(cmd('ENDBOX'))
-    lines.append(cmd('GAP', 6))
 
     subtotal = order.get('subtotal', order.get('total', 0)) or 0
     discount = order.get('discount_total', 0) or 0
     total = order.get('total', 0) or 0
+    lines.append(cmd('BOX'))
     lines.append(cmd('KV', 'الإجمالي', money_text(subtotal, True), 0))
     try:
         has_discount = float(discount) > 0
@@ -4973,7 +4972,7 @@ def thermal_receipt_structured(data, order):
         card = order.get('card_amount', 0) or 0
         lines.append(cmd('KV', 'النقدي', money_text(cash, True), 0))
         lines.append(cmd('KV', 'البطاقة', money_text(card, True), 0))
-    lines.append(cmd('GAP', 6))
+    lines.append(cmd('ENDBOX'))
 
     footer = []
     tax_number = str(restaurant.get('tax_number', '') or '').strip()
