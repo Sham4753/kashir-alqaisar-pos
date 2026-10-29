@@ -5902,7 +5902,9 @@ def enforce_api_access():
             return jsonify({'ok': False, 'error': 'يجب إكمال الإعداد الأولي للمطعم أولاً'}), 423
         return None
 
-    if not installation_license_valid(data):
+    # المعاينة صورة محلية غير تشغيلية ولا ترسل شيئًا للطابعة؛ نُبقيها متاحة
+    # للمدير كي يستطيع فحص تصميم الإيصال عند الحاجة لإعادة تفعيل النسخة.
+    if not installation_license_valid(data) and path != '/api/printer/preview':
         return jsonify({'ok': False, 'error': 'الترخيص غير صالح لهذا الجهاز. يلزم إعادة تفعيل النسخة.'}), 423
 
     # بوابة الجوال تقرأ حالة الميزات فقط لإخفاء الأقسام المعطلة؛ تغييرها يبقى للمدير.
