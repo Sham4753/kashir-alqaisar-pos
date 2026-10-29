@@ -5007,7 +5007,10 @@ def _dispatch_print_job(job):
     printer = data.get('settings', {}).get('printer', {})
     printer_name = str(printer.get('printer_name') or '').strip()
     font_size = str(printer.get('font_size', 'medium') or 'medium')
-    if ticket_type == 'receipt' and str(printer.get('receipt_style', 'boxed') or 'boxed') != 'plain':
+    # فاتورة البيع الرئيسية تستخدم القالب الشبكي دائماً. هذا يمنع إعداد
+    # receipt_style=plain القديم من إعادة الإيصال إلى أسطر نصية بلا مربعات؛
+    # تذكرة المطبخ تبقى على القالب النصي المعتاد.
+    if ticket_type == 'receipt':
         document_text = thermal_receipt_structured(data, order)
     else:
         document_text = thermal_receipt_text(data, order, ticket_type)

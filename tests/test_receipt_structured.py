@@ -38,9 +38,9 @@ class StructuredReceiptTests(unittest.TestCase):
             self.assertTrue(boxed.startswith(b'\x1b\x40\x1d\x76\x30'))
             self.assertNotEqual(boxed, plain)
 
-    def test_dispatch_uses_boxed_by_default_and_plain_on_request(self):
+    def test_dispatch_keeps_sales_receipt_boxed_when_legacy_plain_is_saved(self):
         from unittest.mock import patch
-        for style, expect_boxed in (('boxed', True), ('plain', False)):
+        for style in ('boxed', 'plain'):
             data, order = sample()
             data['settings']['printer'].update({'printer_name': 'X', 'receipt_style': style})
             seen = {}
@@ -48,7 +48,7 @@ class StructuredReceiptTests(unittest.TestCase):
                 seen['text'] = text; return {'ok': True, 'status': 'sent', 'message': 'ok'}
             with patch.object(server, 'submit_silent_thermal_print', fake):
                 server._dispatch_print_job((data, order, 'receipt', 'log'))
-            self.assertEqual(RS in seen['text'], expect_boxed, style)
+            self.assertIn(RS, seen['text'], style)
 
     def test_kitchen_ticket_stays_plain(self):
         data, order = sample()
