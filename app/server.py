@@ -4264,10 +4264,12 @@ def _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visu
             for i, lines in enumerate(op['cells']):
                 x0, x1 = op['xs'][i]
                 align = op['aligns'][i] if i < len(op['aligns']) else 'c'
+                if op['sep'] and i < len(op['cells']) - 1:
+                    # ارسم الفاصل خلف النص؛ لا يجوز أن يمر الخط فوق آخر حرف
+                    # عندما تكون الخانة ضيقة، خصوصاً في 58mm الطولي.
+                    draw.line([(x0, y), (x0, y + op['h'])], fill=0, width=1)
                 for j, part in enumerate(lines):
                     put(part, op['font'], x0, x1, align, y + 4 + j * line_h)
-                if op['sep'] and i < len(op['cells']) - 1:
-                    draw.line([(x0, y), (x0, y + op['h'])], fill=0, width=1)
             if op['sep']:
                 draw.line([(margin, y + op['h']), (width - margin, y + op['h'])], fill=0, width=1)
         y += op['h']
@@ -4867,7 +4869,9 @@ def thermal_receipt_structured(data, order):
         narrow = int(printer.get('paper_width', 80) or 80) <= 58
     except (TypeError, ValueError):
         narrow = False
-    cols = '33,21,23,23' if narrow else '42,14,22,22'
+    # نعطي الكمية والسعر والقيمة عرضاً ثابتاً كافياً للأرقام، ونمنع
+    # تداخلها مع خط الفصل عند الطباعة الطولية، خصوصاً على رول 58mm.
+    cols = '38,18,22,22' if narrow else '40,17,22,21'
 
     def cmd(*parts):
         return RS + US.join(str(part).replace('\n', ' ').replace(RS, '').replace(US, '') for part in parts)
