@@ -5233,7 +5233,10 @@ def printer_preview():
     row_bytes = int.from_bytes(raster[6:8], 'little')
     height = int.from_bytes(raster[8:10], 'little')
     data_start = 10
-    bitmap = Image.frombytes('1', (row_bytes * 8, height), raster[data_start:data_start + row_bytes * height]).crop((0, 0, row_bytes * 8, height))
+    # في بايتات ESC/POS تكون البتة 1 هي نقطة الحبر السوداء، بينما يفسرها
+    # عارض PNG في صورة 1-bit كأبيض؛ نعكسها للمعاينة فقط، ولا نغيّر payload.
+    bitmap = Image.frombytes('1', (row_bytes * 8, height), raster[data_start:data_start + row_bytes * height]).convert('L')
+    bitmap = bitmap.point(lambda pixel: 0 if pixel > 0 else 255, mode='1').crop((0, 0, row_bytes * 8, height))
     output = BytesIO()
     bitmap.save(output, format='PNG')
     response = send_file(BytesIO(output.getvalue()), mimetype='image/png', max_age=0)
