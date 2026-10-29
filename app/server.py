@@ -56,7 +56,8 @@ _LICENSE_SECRET_FILENAMES = ('.license_secret', 'license.secret')
 
 
 def _license_secret_search_dirs():
-    dirs = [os.path.dirname(os.path.abspath(__file__))]
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    dirs = [app_dir, os.path.dirname(app_dir)]
     exe_dir = os.path.dirname(os.path.abspath(sys.argv[0])) if getattr(sys, 'frozen', False) else None
     if exe_dir:
         dirs.append(exe_dir)
