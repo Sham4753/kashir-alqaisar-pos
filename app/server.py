@@ -4955,7 +4955,9 @@ def thermal_receipt_structured(data, order):
         # الأعمدة والخط الأفقي أسفل الصف، مثل فاتورة الجدول المطبوعة.
         lines.append(cmd('ROW', 1, cols, 'r,c,c,c', 1, name, number_text(quantity),
                          money_text(unit_price), money_text(line_total)))
-    lines.append(cmd('ROW', 1, '50,50', 'r,r', 1, 'عدد البنود: ' + str(item_count), 'مجموع الكمية: ' + number_text(quantity_total)))
+    # يبقى صف الملخص داخل الشبكة نفسها حتى تستمر الخطوط العمودية في جدول
+    # الأصناف من رأس الأعمدة إلى آخر صف دون انقطاع أو تغيير في مواقعها.
+    lines.append(cmd('ROW', 1, cols, 'r,c,r,c', 1, 'البنود', str(item_count), 'الكمية', number_text(quantity_total)))
     lines.append(cmd('ENDBOX'))
 
     subtotal = order.get('subtotal', order.get('total', 0)) or 0
