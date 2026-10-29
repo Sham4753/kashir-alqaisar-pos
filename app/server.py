@@ -4961,21 +4961,21 @@ def thermal_receipt_structured(data, order):
     discount = order.get('discount_total', 0) or 0
     total = order.get('total', 0) or 0
     lines.append(cmd('BOX'))
-    lines.append(cmd('KV', 'الإجمالي', money_text(subtotal, True), 0))
+    lines.append(cmd('ROW', 1, '55,45', 'r,l', 0, 'المجموع الفرعي', money_text(subtotal, True)))
     try:
         has_discount = float(discount) > 0
     except (TypeError, ValueError):
         has_discount = False
     if has_discount:
-        lines.append(cmd('KV', 'الخصم', '-' + money_text(discount, True), 0))
+        lines.append(cmd('ROW', 1, '55,45', 'r,l', 0, 'الخصم', '-' + money_text(discount, True)))
     lines.append(cmd('RULE'))
-    lines.append(cmd('KV', 'الصافي', money_text(total, True), 1))
-    lines.append(cmd('KV', 'طريقة الدفع', str(order.get('payment', '')), 0))
+    lines.append(cmd('ROW', 1, '55,45', 'r,l', 1, 'الإجمالي', money_text(total, True)))
+    lines.append(cmd('ROW', 1, '55,45', 'r,l', 0, 'طريقة الدفع', str(order.get('payment', ''))))
     if str(order.get('payment', '')) == 'مختلط':
         cash = order.get('cash_amount', 0) or 0
         card = order.get('card_amount', 0) or 0
-        lines.append(cmd('KV', 'النقدي', money_text(cash, True), 0))
-        lines.append(cmd('KV', 'البطاقة', money_text(card, True), 0))
+        lines.append(cmd('ROW', 1, '55,45', 'r,l', 0, 'النقدي', money_text(cash, True)))
+        lines.append(cmd('ROW', 1, '55,45', 'r,l', 0, 'البطاقة', money_text(card, True)))
     lines.append(cmd('ENDBOX'))
 
     footer = []
