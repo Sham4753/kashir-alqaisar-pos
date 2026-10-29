@@ -525,10 +525,10 @@
             if (caption) headerLines.push(centerLine(caption));
             headerLines.push(divider.repeat(chars), centerLine(document.getElementById('receipt_header').value.trim() || 'إيصال مبيعات'));
             const detailsLines = ['رقم الفاتورة: ORD-0001', 'التاريخ: 27/08/2026 20:00', 'نوع الطلب: سفري', divider.repeat(chars)];
-            const tableWidths = [Math.max(11, chars - 21), 4, 6, 7];
+            const tableWidths = width >= 80 ? [14, 6, 8, 9] : [11, 5, 6, 5];
             const tableBorder = (left, middle, right, fill = '─') => left + tableWidths.map((size) => fill.repeat(size)).join(middle) + right;
             const tableRow = (cells, alignments = ['left','center','right','right']) => '│' + cells.map((cell, index) => { const value = String(cell || '').slice(0, tableWidths[index]); const size = tableWidths[index] - value.length; return alignments[index] === 'right' ? ' '.repeat(Math.max(0, size)) + value : value + ' '.repeat(Math.max(0, size)); }).join('│') + '│';
-            const itemLines = [tableBorder('┌','┬','┐'), tableRow(['الصنف','الكمية','السعر','القيمة'], ['right','center','center','center']), tableBorder('├','┼','┤'), tableRow(['سندويش شاورما','2','10,000','20,000']), tableBorder('├','┼','┤'), tableRow(['عصير طبيعي','1','5,000','5,000']), tableBorder('├','┼','┤'), tableRow(['عدد البنود: 2','','','مجموع الكمية: 3'], ['right','center','center','right']), tableBorder('└','┴','┘')];
+            const itemLines = [tableBorder('┌','┬','┐'), tableRow(['الصنف','الكمية','السعر','القيمة'], ['right','center','center','center']), tableBorder('├','┼','┤'), tableRow(['سندويش شاورما','2','10,000','20,000']), tableBorder('├','┼','┤'), tableRow(['عصير طبيعي','1','5,000','5,000']), tableBorder('├','┼','┤'), tableRow(['البنود','2','الكمية','3'], ['right','center','right','center']), tableBorder('└','┴','┘')];
             const totalsLines = [divider.repeat(chars), 'المجموع الفرعي: 25,000 ل.س', 'الخصم: -1,000 ل.س', 'الإجمالي: 24,000 ل.س', 'طريقة الدفع: مختلط', 'النقدي: 10,000 ل.س', 'البطاقة: 14,000 ل.س'];
             const footerLines = [];
             if (document.getElementById('receipt_show_cashier').checked) footerLines.push('الكاشير قيصر: أحمد');
