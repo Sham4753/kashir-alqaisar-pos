@@ -4919,7 +4919,8 @@ def thermal_receipt_structured(data, order):
     stamp = str(order.get('timestamp') or order.get('date', ''))[:19].replace('T', ' ')
     date_part, _, time_part = stamp.partition(' ')
     lines.append(cmd('BOX'))
-    lines.append(cmd('ROW', 1, '55,45', 'r,r', 1, 'رقم الفاتورة: ' + str(order.get('id', '')), 'التاريخ: ‎' + date_part + '‎'))
+    lines.append(cmd('ROW', 1, '100', 'r', 1, 'رقم الفاتورة: ' + str(order.get('id', ''))))
+    lines.append(cmd('ROW', 1, '100', 'r', 0, 'التاريخ: ‎' + date_part + '‎'))
     info = []
     if order.get('customer'):
         info.append('اسم الزبون: ' + str(order.get('customer'))[:60])
