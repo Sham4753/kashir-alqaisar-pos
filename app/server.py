@@ -4939,7 +4939,9 @@ def thermal_receipt_structured(data, order):
         mods = [str(m.get('name', '')) for m in item.get('modifiers', []) if isinstance(m, dict) and m.get('name')]
         if mods:
             name += ' (' + '، '.join(mods) + ')'
-        lines.append(cmd('ROW', 1, cols, 'r,c,c,c', 0, name, number_text(quantity),
+        # اجعل كل صنف صفاً شبكياً كاملاً: الفاصل يرسم الحدود العمودية بين
+        # الأعمدة والخط الأفقي أسفل الصف، مثل فاتورة الجدول المطبوعة.
+        lines.append(cmd('ROW', 1, cols, 'r,c,c,c', 1, name, number_text(quantity),
                          money_text(unit_price), money_text(line_total)))
     lines.append(cmd('ROW', 1, '50,50', 'r,r', 1, 'عدد البنود: ' + str(item_count), 'مجموع الكمية: ' + number_text(quantity_total)))
     lines.append(cmd('ENDBOX'))
