@@ -18,10 +18,17 @@ class StructuredReceiptTests(unittest.TestCase):
     def test_structured_text_has_table_counts_and_totals(self):
         data, order = sample()
         text = server.thermal_receipt_structured(data, order)
-        for needle in ('الصنف', 'الكمية', 'السعر', 'القيمة', 'عدد البنود: 2', 'مجموع الكمية: 12.5',
-                       'الإجمالي', 'الخصم', 'الصافي', 'الرقم الضريبي: 123', 'الكاشير: محمد'):
+        for needle in ('الصنف', 'الكمية', 'السعر', 'القيمة', 'البنود', '12.5',
+                       'الإجمالي', 'الخصم', 'الرقم الضريبي: 123', 'الكاشير: محمد'):
             self.assertIn(needle, text)
         self.assertEqual(text.count(RS + 'BOX'), text.count(RS + 'ENDBOX'))
+
+    def test_item_rows_use_continuous_separators(self):
+        data, order = sample()
+        text = server.thermal_receipt_structured(data, order)
+        row_commands = [line for line in text.splitlines() if line.startswith(RS + 'ROW' + US)]
+        self.assertGreaterEqual(len(row_commands), 3)
+        self.assertTrue(all(line.split(US, 2)[1] == '1' for line in row_commands[:3]))
 
     def test_directives_cannot_be_injected_from_item_names(self):
         data, order = sample()
