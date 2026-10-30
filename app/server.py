@@ -148,6 +148,12 @@ BASE_DIR = EXTERNAL_PATH
 
 def choose_vault_dir():
     """يختار مجلد بيانات قابلًا للكتابة دون صلاحيات مدير على Windows، مع الحفاظ على المسار القديم إن أمكن."""
+    # تستعمل الاختبارات هذا المتغير قبل استيراد الخادم كي لا تلامس إطلاقاً
+    # مخزن المطعم التشغيلي. وهو مفيد أيضاً للنشر المُدار الذي يحدد مخزنه صراحةً.
+    configured = os.environ.get('CAESAR_VAULT_DIR', '').strip()
+    if configured:
+        os.makedirs(configured, exist_ok=True)
+        return configured
     if sys.platform == 'win32':
         candidates = [r'C:\CAESAR_Vault']
         local_app_data = os.environ.get('LOCALAPPDATA')
