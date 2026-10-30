@@ -1837,7 +1837,7 @@ def orders():
         # تصبح الفاتورة نفسها قابلة للاسترجاع من SQLite والنسخ الاحتياطي.
         save(data, [o['id']]); backup()
         receipt_print = queue_thermal_print(data, o, 'receipt')
-        kitchen_print = queue_thermal_print(data, o, 'kitchen', wait=True) if kitchen_release == 'now' else {
+        kitchen_print = queue_thermal_print(data, o, 'kitchen') if kitchen_release == 'now' else {
             'ok': True, 'status': 'deferred', 'message': 'تذكرة المطبخ مؤجلة حتى إطلاق الطلب'}
         o['print_status'] = {'receipt': receipt_print, 'kitchen': kitchen_print}
         drawer_result = maybe_auto_open_cash_drawer(data, o, payment_data.get('cash_amount', 0))
