@@ -31,6 +31,36 @@ def frames_to_image(payload):
 
 
 class QrQuietZoneTests(unittest.TestCase):
+    def test_fractionally_resized_qr_is_rebuilt_with_uniform_integer_modules(self):
+        qr = qrcode.QRCode(border=0, box_size=1, error_correction=qrcode.constants.ERROR_CORRECT_M)
+        qr.add_data('https://example.com/menu/CAESAR-TEST-12345')
+        qr.make(fit=True)
+        modules = qr.modules_count
+        source = Image.new('L', (modules, modules), 255)
+        for y, row in enumerate(qr.get_matrix()):
+            for x, value in enumerate(row):
+                if value:
+                    source.putpixel((x, y), 0)
+        # Mimic browser/image resampling to a non-integral pixels-per-module size.
+        compressed = source.resize((263, 263), Image.Resampling.LANCZOS)
+        prepared = server.prepare_qr_logo_image(compressed, 352, 320, 'large')
+        grid_width = modules + 8
+        self.assertEqual(prepared.width % grid_width, 0)
+        self.assertEqual(prepared.height, prepared.width)
+        cell = prepared.width // grid_width
+        px = prepared.load()
+        for row, matrix_row in enumerate(qr.get_matrix()):
+            for col, is_black in enumerate(matrix_row):
+                sample = px[(col + 4) * cell + cell // 2, (row + 4) * cell + cell // 2]
+                self.assertEqual(sample < 128, is_black, (row, col))
+        for row in range(grid_width):
+            for col in range(grid_width):
+                block = {px[x, y] for y in range(row * cell, (row + 1) * cell)
+                         for x in range(col * cell, (col + 1) * cell)}
+                self.assertEqual(len(block), 1, (row, col))
+        self.assertTrue(all(px[x, y] == 255 for y in range(prepared.height)
+                            for x in range(4 * cell)))
+
     def test_real_qr_keeps_four_module_quiet_zone_on_58_and_80mm(self):
         qr = qrcode.QRCode(border=0, box_size=1, error_correction=qrcode.constants.ERROR_CORRECT_M)
         qr.add_data('https://example.com/menu/CAESAR-TEST-12345')
