@@ -2674,7 +2674,7 @@ def expenses_api():
 @app.route('/api/expenses/<int:eid>', methods=['DELETE'])
 def delete_expense(eid):
     data = load(); rows = data.get('expenses', [])
-    target = next((x for x in rows if x.get('id') == eid and not x.get('material_id')), None)
+    target = next((x for x in rows if x.get('id') == eid and not x.get('material_id') and not x.get('voided')), None)
     if not target: return jsonify({'ok': False, 'error': 'المصروف غير موجود'}), 404
     target['voided'] = True; target['voided_at'] = datetime.now().isoformat(); target['voided_by'] = session.get('username', 'نظام محلي')
     record_cash_movement(data, 'in', target.get('amount', 0), 'عكس مصروف ملغى',
