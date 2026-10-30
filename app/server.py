@@ -4663,21 +4663,38 @@ def render_escpos_raster_payload(text, paper_width=80, font_size='medium', logo_
                 if col < width and pixels[col, row] == 0:
                     value |= 0x80 >> bit
             data.append(value)
-    header = bytes((0x1d, 0x76, 0x30, 0x00, row_bytes & 0xff, row_bytes >> 8, bitmap.height & 0xff, bitmap.height >> 8))
-    return b'\x1b\x40' + header + bytes(data) + b'\n\n\n\x1d\x56\x00'
+    return escpos_raster_frames(row_bytes, bytes(data), bitmap.height) + b'\n\n\n\x1d\x56\x00'
+
+
+def escpos_raster_frames(row_bytes, raster_bytes, height, max_frame_height=4096):
+    """يبني ESC @ وإطارات GS v 0، مع حد أصغر من 16-bit للصور الطويلة."""
+    row_bytes = int(row_bytes)
+    height = int(height)
+    if row_bytes <= 0 or height < 0 or len(raster_bytes) != row_bytes * height:
+        raise ValueError('بيانات raster غير صالحة')
+    max_frame_height = max(1, min(65535, int(max_frame_height)))
+    frames = [b'\x1b\x40']
+    for start in range(0, height, max_frame_height):
+        frame_height = min(max_frame_height, height - start)
+        header = bytes((0x1d, 0x76, 0x30, 0x00, row_bytes & 0xff, row_bytes >> 8,
+                        frame_height & 0xff, frame_height >> 8))
+        begin = start * row_bytes
+        frames.extend((header, raster_bytes[begin:begin + frame_height * row_bytes]))
+    return b''.join(frames)
 
 def escpos_cut_bytes(printer=None):
     """يبني أمر القص من إعدادات الطابعة بدل افتراض أمر واحد لكل الموديلات."""
     printer = printer or {}
-    if not bool(printer.get('cut_enabled', True)):
-        return b''
     try:
         feed_lines = max(0, min(10, int(printer.get('feed_before_cut', 3) or 0)))
     except (TypeError, ValueError):
         feed_lines = 3
+    feed = b'\n' * feed_lines
+    if not bool(printer.get('cut_enabled', True)):
+        return feed
     cut_mode = str(printer.get('cut_mode', 'full') or 'full')
     cut_code = b'\x00' if cut_mode == 'full' else b'\x01'
-    return (b'\n' * feed_lines) + b'\x1d\x56' + cut_code
+    return feed + b'\x1d\x56' + cut_code
 
 def render_escpos_raster_payload_for_printer(text, printer=None):
     """مسار الطباعة الرسمي: صورة عربية raster ثم قص مضبوط من إعدادات الطابعة."""
@@ -4719,10 +4736,15 @@ def submit_network_raw_print(host, port, text, font_size='medium', paper_width=8
         timeout = max(3, min(30, int(config.get('printer_timeout', 5) or 5)))
         retries = max(0, min(3, int(config.get('printer_retry_count', 1) or 0)))
         last_error = None
+        offset = 0
         for attempt in range(retries + 1):
             try:
                 with socket.create_connection((host, port), timeout=timeout) as conn:
-                    conn.sendall(payload)
+                    while offset < len(payload):
+                        sent = conn.send(payload[offset:])
+                        if not sent:
+                            raise OSError('لم تقبل الطابعة بيانات إضافية')
+                        offset += sent
                 return {'ok': True, 'status': 'submitted', 'message': f'تم إرسال الإيصال إلى الطابعة الشبكية {host}:{port}', 'job_id': uuid.uuid4().hex[:12], 'attempt': attempt + 1}
             except OSError as exc:
                 last_error = exc
@@ -5281,6 +5303,15 @@ def _print_worker():
                     save(latest)
         except Exception as exc:
             error_logger.error('خطأ في عامل الطباعة: %s', exc, exc_info=True)
+            try:
+                with DATA_LOCK:
+                    latest = load()
+                    row = next((item for item in latest.get('print_log', []) if item.get('id') == log_id), None)
+                    if row:
+                        row.update({'status': 'failed', 'message': str(exc)[:220] or 'تعذر إرسال أمر الطباعة'})
+                        save(latest)
+            except Exception:
+                error_logger.error('تعذر تثبيت فشل مهمة الطباعة %s', log_id, exc_info=True)
         finally:
             PRINT_QUEUE.task_done()
 
