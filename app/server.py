@@ -4815,14 +4815,21 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
         return f'{name} × {quantity_text} | سعر: {receipt_amount(unit_price)} | الإجمالي: {receipt_amount(line_total)}'
 
     if ticket_type == 'kitchen':
-        lines = [format_line(restaurant_name), format_line(caption), divider, format_line('طلب مطبخ'), f"الطلب: {order.get('id', '')}", f"النوع: {order.get('type', 'سفري')}"]
+        lines = [format_line(restaurant_name), divider, format_line('طلب مطبخ'), f"الطلب: {order.get('id', '')}", f"النوع: {order.get('type', 'سفري')}"]
         if order.get('table'):
             lines.append('الطاولة: ' + str(order.get('table')))
         if order.get('customer'):
             lines.append('الزبون: ' + str(order.get('customer')))
-        lines.extend([divider] + [f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', [])])
-        if order.get('notes'):
-            lines.extend([divider, 'ملاحظة: ' + str(order.get('notes'))])
+        lines.append(divider)
+        for item in order.get('items', []):
+            lines.append(f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}")
+            modifiers = item.get('modifiers', []) if isinstance(item, dict) else []
+            names = [str(row.get('name', '') if isinstance(row, dict) else row).strip() for row in modifiers]
+            names = [name for name in names if name]
+            if names:
+                lines.append('إضافات: ' + '، '.join(names))
+        if order.get('note'):
+            lines.extend([divider, 'ملاحظة: ' + str(order.get('note'))])
     else:
         header = str(printer.get('receipt_header', 'إيصال مبيعات') or 'إيصال مبيعات')[:36]
         restaurant_phone = str(restaurant.get('phone', '') or '').strip()
@@ -5070,7 +5077,11 @@ PRINT_QUEUE = queue.Queue(maxsize=1000)
 
 def _dispatch_print_job(job):
     data, order, ticket_type, log_id = job
-    printer = data.get('settings', {}).get('printer', {})
+    printer = dict(data.get('settings', {}).get('printer', {}) or {})
+    if ticket_type == 'kitchen':
+        # تذكرة العمل الداخلية لا تحمل أي صورة شعار/QR ولا تتكرر لنسخ العميل.
+        printer['logo_data'] = ''
+        printer['logo_caption'] = ''
     printer_name = str(printer.get('printer_name') or '').strip()
     font_size = str(printer.get('font_size', 'medium') or 'medium')
     # فاتورة البيع الرئيسية تستخدم القالب الشبكي دائماً. هذا يمنع إعداد
@@ -5083,6 +5094,8 @@ def _dispatch_print_job(job):
     try:
         copies = max(1, min(3, int(printer.get('copies', 1) or 1)))
     except (TypeError, ValueError):
+        copies = 1
+    if ticket_type == 'kitchen':
         copies = 1
     result = None
     for copy_number in range(copies):
