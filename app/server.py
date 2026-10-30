@@ -464,6 +464,9 @@ def init_database():
     finally:
         conn.close()
 
+    if not os.path.exists(marker_path):
+        with open(marker_path, 'w', encoding='utf-8') as marker:
+            marker.write(datetime.now().isoformat())
 
 init_database()
 
@@ -7394,6 +7397,3 @@ if __name__ == '__main__':
     print('='*50)
 
     start_flask()
-    if not os.path.exists(marker_path):
-        with open(marker_path, 'w', encoding='utf-8') as marker:
-            marker.write(datetime.now().isoformat())
