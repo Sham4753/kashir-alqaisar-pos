@@ -4397,6 +4397,22 @@ RECEIPT_RS = '\x01'   # بداية أمر تنسيق داخل نص الإيصا�
 RECEIPT_US = '\x02'   # فاصل حقول الأمر
 
 
+def fit_numeric_cell_font(value, base_font, max_width, measure, min_size=10):
+    """يصغّر خط القيمة الرقمية فقط حتى تلائم الخلية دون تقسيمها أو تجاوز حدودها."""
+    bare_value = str(value or '').replace('\u200e', '').replace('\u200f', '').strip()
+    if not re.fullmatch(r'[-+]?[0-9٠-٩][0-9٠-٩,\.]*', bare_value or ''):
+        return base_font
+    font = base_font
+    size = int(getattr(font, 'size', min_size) or min_size)
+    while measure(value, font) > max_width and size > min_size:
+        try:
+            size = max(min_size, size - 1)
+            font = font.font_variant(size=size)
+        except (AttributeError, OSError, ValueError):
+            break
+    return font
+
+
 def _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visual):
     """يرسم إيصالاً مقسّماً بإطارات وأعمدة بعرض بكسلات ثابتة (لا يعتمد على مسافات الخط).
 
@@ -4488,14 +4504,17 @@ def _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visu
             for i, cell in enumerate(cells):
                 cell_font = fnt
                 cell_width = max(10, (xs[i][1] - xs[i][0]) - 2 * pad)
-                bare_cell = str(cell or '').replace('\u200e', '').replace('\u200f', '').strip()
-                # 58mm يخصص أكثر من ربع السطر للأرقام، ومع ذلك نخفض خط
-                # الرقم فقط إن احتاج لتبقى الفواصل داخل عموده ولا نغير 80mm.
-                if width <= 384 and re.fullmatch(r'[-+]?[0-9٠-٩][0-9٠-٩,\.]*', bare_cell or '') and text_w(cell, cell_font) > cell_width:
-                    try:
-                        cell_font = cell_font.font_variant(size=max(10, int(getattr(cell_font, 'size', scale) * 0.72)))
-                    except (AttributeError, OSError, ValueError):
-                        pass
+                # القيم الرقمية ذرية ولا يجوز أن تعبر الفواصل؛ صغّر خط الخلية
+                # تدريجياً حتى تلائم القيمة عمودها في عرضي الورق.
+                cell_font = fit_numeric_cell_font(cell, cell_font, cell_width, text_w)
+                if width <= 384 and str(cell or '').strip() in {'الصنف', 'الكمية', 'السعر', 'القيمة'}:
+                    label_size = int(getattr(cell_font, 'size', scale) or scale)
+                    while text_w(cell, cell_font) > cell_width and label_size > 12:
+                        try:
+                            label_size = max(12, label_size - 1)
+                            cell_font = cell_font.font_variant(size=label_size)
+                        except (AttributeError, OSError, ValueError):
+                            break
                 cell_fonts.append(cell_font)
                 wrapped.append(wrap_to(cell, cell_width, cell_font))
             rows = max(len(w) for w in wrapped)
@@ -5200,7 +5219,7 @@ def thermal_receipt_structured(data, order):
         narrow = False
     # نعطي الكمية والسعر والقيمة عرضاً ثابتاً كافياً للأرقام، ونمنع
     # تداخلها مع خط الفصل عند الطباعة الطولية، خصوصاً على رول 58mm.
-    cols = '28,16,28,28' if narrow else '40,17,22,21'
+    cols = '30,18,22,30' if narrow else '40,17,22,21'
 
     def cmd(*parts):
         return RS + US.join(str(part).replace('\n', ' ').replace(RS, '').replace(US, '') for part in parts)

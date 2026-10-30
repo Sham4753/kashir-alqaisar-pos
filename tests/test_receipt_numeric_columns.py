@@ -25,7 +25,7 @@ class ReceiptNumericColumnsTests(unittest.TestCase):
         return data, order
 
     def test_large_numeric_cells_are_not_split_on_58_or_80mm(self):
-        for width, expected_columns in ((58, '28,16,28,28'), (80, '40,17,22,21')):
+        for width, expected_columns in ((58, '30,18,22,30'), (80, '40,17,22,21')):
             with self.subTest(width=width):
                 data, order = self.receipt_data(width)
                 structured = server.thermal_receipt_structured(data, order)
@@ -37,6 +37,20 @@ class ReceiptNumericColumnsTests(unittest.TestCase):
                 payload = server.render_escpos_raster_payload_for_printer(structured, data['settings']['printer'])
                 self.assertTrue(payload.startswith(b'\x1b\x40\x1d\x76\x30'))
                 self.assertEqual(int.from_bytes(payload[6:8], 'little') * 8, 384 if width == 58 else 576)
+
+    def test_numeric_font_is_shrunk_until_long_value_fits_cell(self):
+        candidates = (
+            server.os.path.join(server.BASE_DIR, 'fonts', 'Tajawal-Regular.ttf'),
+            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        )
+        font_path = next((path for path in candidates if server.os.path.isfile(path)), None)
+        if not font_path:
+            self.skipTest('لا يتوفر خط TrueType لاختبار قياس عرض الرقم')
+        font = server.ImageFont.truetype(font_path, 23)
+        measure = lambda value, fnt: server.ImageDraw.Draw(server.Image.new('L', (400, 40))).textbbox((0, 0), value, font=fnt)[2]
+        value = '14,814,814,680'
+        fitted = server.fit_numeric_cell_font(value, font, 100, measure)
+        self.assertLessEqual(measure(value, fitted), 100)
 
 
 if __name__ == '__main__':
