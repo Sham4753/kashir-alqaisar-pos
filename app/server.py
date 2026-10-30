@@ -1925,19 +1925,21 @@ def delete_held_order(hold_id):
 
 
 def check_manager_password(data, req_json):
-    """يتحقق من كلمة مرور مستخدم مسجّل - يُستخدم لحماية أي عملية حساسة (إلغاء طلب، تعديل طلب).
+    """يتحقق من كلمة مرور مدير مسجّل - يُستخدم لحماية أي عملية حساسة (إلغاء طلب، تعديل طلب).
     لو ما في مستخدمين مسجّلين بالنظام أصلاً، يسمح بالعملية بدون كلمة مرور (سلوك تدريجي)."""
-    users = data.get('settings', {}).get('users', [])
+    users = active_users(data)
     if not users:
         return True, None
     username = (req_json.get('username') or '').strip() if req_json else ''
     password = (req_json.get('password') or '') if req_json else ''
     valid = any(
-        u.get('username') == username and verify_password(u.get('password_hash'), password)
+        u.get('username') == username
+        and u.get('role', 'cashier') == 'manager'
+        and verify_password(u.get('password_hash', u.get('password', '')), password)
         for u in users
     )
     if not valid:
-        return False, (jsonify({"ok": False, "error": "كلمة المرور غير صحيحة - العملية تحتاج صلاحية"}), 401)
+        return False, (jsonify({"ok": False, "error": "كلمة مرور المدير غير صحيحة - العملية تحتاج موافقة مدير"}), 401)
     return True, None
 
 def build_item_recipes(data):
