@@ -4690,11 +4690,20 @@ def render_escpos_raster_payload(text, paper_width=80, font_size='medium', logo_
                 padded.paste(logo, (quiet, quiet))
                 logo = padded
                 max_logo_height = {'small': 120, 'medium': 180, 'large': 240}.get(str(logo_size or 'medium'), 180)
+                max_logo_width = width - 32
+                scale_factor = max(1, min(max_logo_width // logo.width, max_logo_height // logo.height))
+                if scale_factor > 1:
+                    logo = logo.resize((logo.width * scale_factor, logo.height * scale_factor), Image.Resampling.NEAREST)
+                elif logo.width > max_logo_width or logo.height > max_logo_height:
+                    # التصغير لا يطمس وحدات الرمز بمرشح تنعيم؛ تبقى القيم ثنائية.
+                    logo.thumbnail((max_logo_width, max_logo_height), Image.Resampling.NEAREST)
+                    logo = logo.point(lambda pixel: 0 if pixel < 128 else 255, mode='L')
                 resampling = Image.Resampling.NEAREST
             else:
                 max_logo_height = {'small': 48, 'medium': 72, 'large': 104}.get(str(logo_size or 'medium'), 72)
                 resampling = Image.Resampling.LANCZOS
-            logo.thumbnail((max_logo_width, max_logo_height), resampling)
+                logo.thumbnail((width - 32, max_logo_height), resampling)
+            # thumbnail يصغر الصورة ولا يكبرها؛ لا نعتمد عليه لتكبير QR.
             if logo.width and logo.height:
                 logo_canvas = Image.new('L', (width, logo.height + 16), 255)
                 if logo_alignment == 'right':
@@ -4800,6 +4809,7 @@ def render_escpos_raster_payload_for_printer(text, printer=None):
         printer.get('receipt_alignment', 'center'),
         printer.get('print_density', 80),
         printer.get('print_quality', 'normal'),
+        bool(printer.get('logo_is_qr', False)),
     )
     default_tail = b'\n\n\n\x1d\x56\x00'
     if payload.endswith(default_tail):
@@ -4870,7 +4880,6 @@ def submit_silent_thermal_print(printer_name, text, font_size='medium', paper_wi
     )
 
 
-        bool(printer.get('logo_is_qr', False)),
 def submit_raw_windows_bytes(printer_name, payload, document_name='CAESAR Raw Command'):
     """يرسل بايتات ESC/POS مباشرة إلى Windows Spooler بدون تحويلها إلى نص."""
     if sys.platform != 'win32':
@@ -5378,15 +5387,6 @@ def mark_print_job_failed(log_id, error):
             save(latest)
 
 
-            with DATA_LOCK:
-                latest = load()
-                row = next((item for item in latest.get('print_log', []) if item.get('id') == log_id), None)
-                if row:
-                    row.update({'status': result.get('status', 'failed'),
-                                'message': result.get('message', 'تعذر إرسال أمر الطباعة'),
-                                'job_id': result.get('job_id', ''),
-                                'document_name': result.get('document_name', '')})
-                    save(latest)
 def _print_worker():
     while True:
         job = PRINT_QUEUE.get()
@@ -5396,6 +5396,15 @@ def _print_worker():
             # load() وsave() محميتان كل واحدة على حدة، لكن العامل يحتاج
             # القفل نفسه طوال دورة القراءة والتعديل والحفظ حتى لا يكتب فوق
             # فاتورة أو حركة نقدية حفظها طلب HTTP بالتزامن.
+            with DATA_LOCK:
+                latest = load()
+                row = next((item for item in latest.get('print_log', []) if item.get('id') == log_id), None)
+                if row:
+                    row.update({'status': result.get('status', 'failed'),
+                                'message': result.get('message', 'تعذر إرسال أمر الطباعة'),
+                                'job_id': result.get('job_id', ''),
+                                'document_name': result.get('document_name', '')})
+                    save(latest)
         except Exception as exc:
             error_logger.error('خطأ في عامل الطباعة: %s', exc, exc_info=True)
             try:
@@ -5685,6 +5694,7 @@ def set_printer_settings():
         'cash_drawer_printer': str(payload.get('cash_drawer_printer', existing.get('cash_drawer_printer', existing.get('printer_name', ''))) or '')[:160],
         'cash_drawer_pulse_profile': pulse_profile,
         'logo_data': logo_data,
+        'logo_is_qr': bool(payload.get('logo_is_qr', existing.get('logo_is_qr', False))),
         'logo_caption': str(payload.get('logo_caption', existing.get('logo_caption', '')) or '')[:36],
         'receipt_header': str(payload.get('receipt_header', existing.get('receipt_header', 'إيصال مبيعات')) or 'إيصال مبيعات')[:36],
         'receipt_alignment': receipt_alignment,
@@ -5760,7 +5770,6 @@ def apply_receipt_template(template_id):
 @app.route('/api/printer/templates/<template_id>', methods=['DELETE'])
 def delete_receipt_template(template_id):
     if not has_role('manager'):
-        'logo_is_qr': bool(payload.get('logo_is_qr', existing.get('logo_is_qr', False))),
         return permission_error()
     data = load(); printer = data.setdefault('settings', {}).setdefault('printer', {})
     templates = printer.get('receipt_templates', [])
