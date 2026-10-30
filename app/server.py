@@ -2338,13 +2338,30 @@ def force_backup():
     backup(force=True)
     return jsonify({"ok": True})
 
+
+def safe_backup_export(value):
+    """ينشئ نسخة قابلة للتنزيل من دون تجزئات كلمات المرور أو مفاتيح الترخيص.
+
+    لا نعدّل ``data`` في الذاكرة: قد تكون النسخة المفتوحة نفسها مستخدمة في طلب
+    آخر أو تحتوي قيماً لازمة للتحقق المحلي من الترخيص.
+    """
+    if isinstance(value, dict):
+        return {
+            key: safe_backup_export(item)
+            for key, item in value.items()
+            if key not in {'password_hash', 'license_key'}
+        }
+    if isinstance(value, list):
+        return [safe_backup_export(item) for item in value]
+    return value
+
+
 @app.route('/api/backup/download', methods=['GET'])
 def download_backup():
-    data = load(); stamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    export_path = os.path.join(BACKUP_DIR, f'caesar_alcaesar_{stamp}.json')
-    with open(export_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    return send_file(export_path, as_attachment=True, download_name=f'CAESAR_POS_Backup_{stamp}.json', mimetype='application/json')
+    data = safe_backup_export(load())
+    stamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    payload = BytesIO(json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8'))
+    return send_file(payload, as_attachment=True, download_name=f'CAESAR_POS_Backup_{stamp}.json', mimetype='application/json')
 
 @app.route('/api/version', methods=['GET'])
 def version():
