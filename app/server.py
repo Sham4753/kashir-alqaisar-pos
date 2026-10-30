@@ -4704,11 +4704,23 @@ def render_escpos_raster_payload(text, paper_width=80, font_size='medium', logo_
                 # nearest-neighbor وتكبيراً بعامل صحيح، مع quiet zone لا تقل عن
                 # أربع وحدات تقريبية حول مصفوفة الرمز.
                 logo = logo.point(lambda pixel: 0 if pixel < 128 else 255, mode='L')
-                dimension = min(logo.width, logo.height)
-                version = max(0, round((dimension - 21) / 4))
-                modules = 21 + 4 * version
-                module_px = max(1, dimension // modules)
-                quiet = 4 * module_px
+                # قص أي هامش أبيض موجود ثم تقدير حجم الوحدة من عرض نمط الزاوية
+                # (7 وحدات عرضاً) بدل افتراض أن كل وحدة بكسل واحد.
+                content_box = logo.point(lambda pixel: 255 if pixel < 128 else 0, mode='L').getbbox()
+                if content_box:
+                    logo = logo.crop(content_box)
+                finder_run = 0
+                for pixel in logo.crop((0, 0, logo.width, 1)).tobytes():
+                    if pixel != 0:
+                        break
+                    finder_run += 1
+                if finder_run >= 7:
+                    quiet = max(4, -(-4 * finder_run // 7))
+                else:
+                    dimension = min(logo.width, logo.height)
+                    version = max(0, round((dimension - 21) / 4))
+                    modules = 21 + 4 * version
+                    quiet = 4 * max(1, dimension // modules)
                 padded = Image.new('L', (logo.width + 2 * quiet, logo.height + 2 * quiet), 255)
                 padded.paste(logo, (quiet, quiet))
                 logo = padded
