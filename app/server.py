@@ -187,6 +187,7 @@ DATABASE_FILE = os.path.join(VAULT_DIR, 'caesar.sqlite3')
 BACKUP_DIR = os.path.join(VAULT_DIR, 'backups')
 FLASH_BACKUP = os.path.join(VAULT_DIR, 'data_backup.json')
 FACTORY_FILE = os.path.join(BASE_DIR, 'factory_data.json')
+MAX_LOGO_DATA_URL_CHARS = 250_000  # يكفي لصورة PNG مجهزة حتى 180 KiB مع بادئة Base64.
 
 # Structured order storage is maintained alongside the legacy JSON snapshot during
 # the migration window. The operational database remains inside VAULT_DIR.
@@ -4208,8 +4209,8 @@ def set_restaurant():
     existing = data['settings'].get('restaurant', {})
     payload = request.get_json(silent=True) or {}
     brand_logo_data = str(payload.get('brand_logo_data', existing.get('brand_logo_data', '')) or '')
-    if brand_logo_data and (not brand_logo_data.startswith('data:image/') or len(brand_logo_data) > 300000):
-        return jsonify({'ok': False, 'error': 'شعار واجهات المطعم يجب أن يكون صورة محلية لا تتجاوز 200 كيلوبايت'}), 400
+    if brand_logo_data and (not brand_logo_data.startswith('data:image/') or len(brand_logo_data) > MAX_LOGO_DATA_URL_CHARS):
+        return jsonify({'ok': False, 'error': 'شعار واجهات المطعم يجب ألا يتجاوز 180 كيلوبايت بعد التجهيز'}), 400
     data['settings']['restaurant'] = {
         'name': str(payload.get('name', existing.get('name', '')) or '')[:80],
         'phone': str(payload.get('phone', existing.get('phone', '')) or '')[:50],
@@ -4491,7 +4492,7 @@ def _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visu
     return image.crop((0, 0, width, max(y + 10, 32)))
 
 
-def render_escpos_raster_payload(text, paper_width=80, font_size='medium', logo_data='', logo_size='medium', logo_alignment='center', text_alignment='center', print_density=80, print_quality='normal'):
+def render_escpos_raster_payload(text, paper_width=80, font_size='medium', logo_data='', logo_size='medium', logo_alignment='center', text_alignment='center', print_density=80, print_quality='normal', logo_is_qr=False):
     """يرسم العربية بخط Tajawal ثم يحولها إلى صورة ESC/POS أحادية اللون.
 
     لا نرسل UTF-8 خامًا إلى الطابعة؛ أغلب طابعات ESC/POS لا تعرف UTF-8 العربي
@@ -4614,10 +4615,19 @@ def render_escpos_raster_payload(text, paper_width=80, font_size='medium', logo_
             logo_bytes = base64.b64decode(encoded, validate=True)
             logo = Image.open(BytesIO(logo_bytes)).convert('L')
             max_logo_width = width - 32
-            is_square = logo.width > 0 and logo.height > 0 and abs(logo.width - logo.height) / max(logo.width, logo.height) <= 0.12
-            if is_square:
-                # الصور المربعة غالباً QR؛ تكبيرها يحسن القراءة، وNEAREST يحافظ
-                # على حواف الوحدات السوداء بدلاً من تمويهها مثل شعارات الصور.
+            if logo_is_qr and logo.width > 0 and logo.height > 0:
+                # لا نفترض أن الصورة المربعة QR. عند التحديد الصريح فقط نستخدم
+                # nearest-neighbor وتكبيراً بعامل صحيح، مع quiet zone لا تقل عن
+                # أربع وحدات تقريبية حول مصفوفة الرمز.
+                logo = logo.point(lambda pixel: 0 if pixel < 128 else 255, mode='L')
+                dimension = min(logo.width, logo.height)
+                version = max(0, round((dimension - 21) / 4))
+                modules = 21 + 4 * version
+                module_px = max(1, dimension // modules)
+                quiet = 4 * module_px
+                padded = Image.new('L', (logo.width + 2 * quiet, logo.height + 2 * quiet), 255)
+                padded.paste(logo, (quiet, quiet))
+                logo = padded
                 max_logo_height = {'small': 120, 'medium': 180, 'large': 240}.get(str(logo_size or 'medium'), 180)
                 resampling = Image.Resampling.NEAREST
             else:
@@ -4799,6 +4809,7 @@ def submit_silent_thermal_print(printer_name, text, font_size='medium', paper_wi
     )
 
 
+        bool(printer.get('logo_is_qr', False)),
 def submit_raw_windows_bytes(printer_name, payload, document_name='CAESAR Raw Command'):
     """يرسل بايتات ESC/POS مباشرة إلى Windows Spooler بدون تحويلها إلى نص."""
     if sys.platform != 'win32':
@@ -5484,7 +5495,7 @@ def printer_preview():
                                           printer['font_size'], printer.get('logo_data', ''),
                                           printer.get('logo_size', 'medium'), printer.get('logo_alignment', 'center'),
                                           printer.get('receipt_alignment', 'center'), printer.get('print_density', 80),
-                                          printer.get('print_quality', 'normal'))
+                                          printer.get('print_quality', 'normal'), bool(printer.get('logo_is_qr', False)))
     # أول بايتين هما ESC @؛ بعدها رأس GS v 0 الذي يبدأ بعرض الصف ثم الارتفاع.
     row_bytes = int.from_bytes(raster[6:8], 'little')
     height = int.from_bytes(raster[8:10], 'little')
@@ -5509,8 +5520,8 @@ def set_printer_settings():
     existing = data['settings'].get('printer', {})
     payload = request.get_json(silent=True) or {}
     logo_data = str(payload.get('logo_data', existing.get('logo_data', '')) or '')
-    if logo_data and (not logo_data.startswith('data:image/') or len(logo_data) > 300000):
-        return jsonify({'ok': False, 'error': 'صورة الشعار يجب أن تكون صورة محلية لا تتجاوز 200 كيلوبايت'}), 400
+    if logo_data and (not logo_data.startswith('data:image/') or len(logo_data) > MAX_LOGO_DATA_URL_CHARS):
+        return jsonify({'ok': False, 'error': 'صورة الشعار يجب ألا تتجاوز 180 كيلوبايت بعد التجهيز'}), 400
     pulse_profile = str(payload.get('cash_drawer_pulse_profile', existing.get('cash_drawer_pulse_profile', 'pin2_standard')) or 'pin2_standard')
     if pulse_profile not in CASH_DRAWER_PULSE_PROFILES:
         return jsonify({'ok': False, 'error': 'نمط نبضة درج النقد غير صالح'}), 400
@@ -5683,6 +5694,7 @@ def apply_receipt_template(template_id):
 @app.route('/api/printer/templates/<template_id>', methods=['DELETE'])
 def delete_receipt_template(template_id):
     if not has_role('manager'):
+        'logo_is_qr': bool(payload.get('logo_is_qr', existing.get('logo_is_qr', False))),
         return permission_error()
     data = load(); printer = data.setdefault('settings', {}).setdefault('printer', {})
     templates = printer.get('receipt_templates', [])
