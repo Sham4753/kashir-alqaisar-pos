@@ -1994,7 +1994,9 @@ def void_order(order_id):
                     record_cash_movement(data, 'out', o.get('card_amount'), 'استرجاع فاتورة ملغاة',
                                          channel='card', reference_type='void_order', reference_id=o.get('id'),
                                          note='إلغاء فاتورة ' + str(o.get('id')))
-                save(data); backup()
+                # يظل الأرشيف الساخن خارج لقطة JSON المختصرة، لذلك يجب تمرير
+                # المعرّف كي تصل علامة voided إلى صف SQLite أيضاً.
+                save(data, [o['id']]); backup()
                 return jsonify({"ok": True})
     return jsonify({"ok": False, "error": "الطلب غير موجود"}), 404
 
