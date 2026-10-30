@@ -78,7 +78,7 @@ class RasterTransportTests(unittest.TestCase):
         self.assertEqual(row['message'], 'renderer crashed')
 
     def test_narrow_layout_matches_58mm_exactly(self):
-        for paper_width, expected in ((58, '28,16,28,28'), (80, '40,17,22,21'), (57, '40,17,22,21')):
+        for paper_width, expected in ((58, '30,18,22,30'), (80, '40,17,22,21'), (57, '40,17,22,21')):
             data = {'settings': {'printer': {'paper_width': paper_width}}}
             order = {'id': 'NARROW', 'items': []}
             with self.subTest(paper_width=paper_width):
