@@ -1,6 +1,7 @@
 import json
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import test_security_and_print as fixture_module
 
@@ -50,6 +51,20 @@ class BackupRestoreTests(unittest.TestCase):
         self.assertEqual({row['id'] for row in restored['orders_archive']}, {'ORD-ARCHIVE'})
         self.assertEqual(json.loads(Path(server._cold_archive_path('2025-01')).read_text(encoding='utf-8'))[0]['id'], 'ORD-COLD')
         self.assertTrue(list(Path(server.BACKUP_DIR).glob('archive_cold_pre_restore_*')))
+
+    def test_database_missing_after_prior_initialization_fails_closed(self):
+        marker = server.DATABASE_FILE + '.initialized'
+        original_exists = server.os.path.exists
+        def exists(path):
+            if path == marker:
+                return True
+            if path == server.DATABASE_FILE:
+                return False
+            return original_exists(path)
+        with patch.object(server.os.path, 'exists', side_effect=exists), patch.object(server, 'db_connect') as connect:
+            with self.assertRaisesRegex(RuntimeError, 'قاعدة بيانات المطعم غير موجودة'):
+                server.init_database()
+        connect.assert_not_called()
 
 
 if __name__ == '__main__':

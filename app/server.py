@@ -438,6 +438,9 @@ def sync_structured_orders(conn, payload):
 
 def init_database():
     """ينشئ SQLite ويرحّل data.json القديم دون حذف النسخة الأصلية."""
+    marker_path = DATABASE_FILE + '.initialized'
+    if os.path.exists(marker_path) and not os.path.exists(DATABASE_FILE):
+        raise RuntimeError('قاعدة بيانات المطعم غير موجودة رغم وجود علامة تهيئة سابقة؛ أوقف التشغيل واستعد نسخة احتياطية بدلاً من الرجوع إلى data.json قديم.')
     conn = db_connect()
     try:
         if conn.execute('SELECT 1 FROM app_state WHERE id=1').fetchone() is None:
@@ -7391,3 +7394,6 @@ if __name__ == '__main__':
     print('='*50)
 
     start_flask()
+    if not os.path.exists(marker_path):
+        with open(marker_path, 'w', encoding='utf-8') as marker:
+            marker.write(datetime.now().isoformat())
