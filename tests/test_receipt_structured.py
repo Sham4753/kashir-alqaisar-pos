@@ -23,6 +23,23 @@ class StructuredReceiptTests(unittest.TestCase):
             self.assertIn(needle, text)
         self.assertEqual(text.count(RS + 'BOX'), text.count(RS + 'ENDBOX'))
 
+    def test_item_note_is_in_customer_receipt_under_its_item(self):
+        data, order = sample()
+        order['items'][0]['note'] = 'بدون مخلل، صوص على جنب'
+        text = server.thermal_receipt_structured(data, order)
+        self.assertIn('ملاحظة الصنف: بدون مخلل، صوص على جنب', text)
+        self.assertIn(RS + 'ROW' + US + '0' + US + '100', text)
+        for width in (58, 80):
+            with self.subTest(width=width):
+                data['settings']['printer']['paper_width'] = width
+                with_note = server.render_escpos_raster_payload_for_printer(text, data['settings']['printer'])
+                without_note = dict(order)
+                without_note['items'] = [dict(item, note='') for item in order['items']]
+                plain_text = server.thermal_receipt_structured(data, without_note)
+                without_note_payload = server.render_escpos_raster_payload_for_printer(
+                    plain_text, data['settings']['printer'])
+                self.assertGreater(len(with_note), len(without_note_payload))
+
     def test_directives_cannot_be_injected_from_item_names(self):
         data, order = sample()
         order['items'][0]['name'] = 'x' + RS + 'RULE' + US + 'y'

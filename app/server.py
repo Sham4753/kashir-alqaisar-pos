@@ -1628,6 +1628,11 @@ def sanitize_modifier_options(raw_options):
     return result
 
 
+def sanitize_order_item_note(value):
+    """ينظف ملاحظة المطبخ من محارف التحكم ويحد طولها قبل التخزين/الطباعة."""
+    return re.sub(r'[\x00-\x1f\x7f]+', ' ', str(value or '')).strip()[:200]
+
+
 def approved_order_items(data, raw_items):
     """يبني أصناف الفاتورة من منيو الخادم، فلا يعتمد السعر أو الاسم أو الكمية القادمة من المتصفح."""
     if not isinstance(raw_items, list) or not raw_items or len(raw_items) > 100:
@@ -1690,7 +1695,8 @@ def approved_order_items(data, raw_items):
                          'base_price': base_price, 'modifier_total': modifier_total,
                          'price': sum_money((base_price, modifier_total)), 'quantity': qty,
                          'unit_cost_snapshot': round(float(unit_cost), 4) if unit_cost is not None else None,
-                         'modifiers': modifiers, 'kitchen_station': station, 'recipe_snapshot': recipe_snapshot})
+                         'modifiers': modifiers, 'note': sanitize_order_item_note(item.get('note', '')),
+                         'kitchen_station': station, 'recipe_snapshot': recipe_snapshot})
     return approved, None
 
 
@@ -1977,6 +1983,7 @@ def sanitize_held_items(raw_items):
         items.append({
             'id': raw.get('id'), 'name': str(raw.get('name', ''))[:120],
             'price': price, 'quantity': quantity, 'category': str(raw.get('category', ''))[:60],
+            'note': sanitize_order_item_note(raw.get('note', '')),
         })
     if not items:
         return items, 'لا يمكن تعليق طلب فارغ'
@@ -4576,6 +4583,57 @@ def _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visu
     return image.crop((0, 0, width, max(y + 10, 32)))
 
 
+def prepare_qr_logo_image(source, max_width, max_height, logo_size='medium'):
+    """يعيد بناء QR ثنائي الوحدات ثم يكبر كل وحدة بعدد بكسلات صحيح للطباعة."""
+    if 'A' in source.getbands():
+        rgba = source.convert('RGBA')
+        white = Image.new('RGBA', rgba.size, (255, 255, 255, 255))
+        white.alpha_composite(rgba)
+        logo = white.convert('L')
+    else:
+        logo = source.convert('L')
+    logo = logo.point(lambda pixel: 0 if pixel < 160 else 255, mode='L')
+    content_box = logo.point(lambda pixel: 255 if pixel < 128 else 0, mode='L').getbbox()
+    if not content_box:
+        return logo
+    logo = logo.crop(content_box)
+
+    # الحافة العليا لعلامة التوجيه هي سبع وحدات سوداء؛ نستنتج منها pitch
+    # ونستعيد شبكة QR الأصلية قبل أي قياس جديد، حتى لو جاءت الصورة مضغوطة.
+    first_row = logo.crop((0, 0, logo.width, 1)).tobytes()
+    finder_run = 0
+    for pixel in first_row:
+        if pixel >= 128:
+            break
+        finder_run += 1
+    pitch = finder_run / 7.0 if finder_run >= 7 else 0
+    estimated = round(logo.width / pitch) if pitch else 0
+    modules = 21 + 4 * round((estimated - 21) / 4) if estimated >= 21 else 0
+    valid_grid = (21 <= modules <= 177 and abs(logo.width / modules - pitch) <= max(1.5, pitch * .22)
+                  and abs(logo.height / modules - pitch) <= max(1.5, pitch * .22))
+    if valid_grid:
+        module_w = logo.width / modules
+        module_h = logo.height / modules
+        grid = Image.new('L', (modules + 8, modules + 8), 255)
+        source_px, target_px = logo.load(), grid.load()
+        for row in range(modules):
+            sy = max(0, min(logo.height - 1, int((row + .5) * module_h)))
+            for col in range(modules):
+                sx = max(0, min(logo.width - 1, int((col + .5) * module_w)))
+                if source_px[sx, sy] < 128:
+                    target_px[col + 4, row + 4] = 0
+        logo = grid
+
+    limits = {'small': 160, 'medium': 240, 'large': 320}
+    max_height = min(int(max_height or 320), limits.get(str(logo_size or 'medium'), 240))
+    # QR لا يُصغّر إلى كسر من الوحدة: nearest-neighbor بعامل صحيح يحافظ
+    # على عرض متساوٍ لكل module. إذا كان الرمز عالياً جداً نحتفظ ببكسل/وحدة.
+    factor = max(1, min(max(1, max_width // logo.width), max(1, max_height // logo.height)))
+    if factor > 1:
+        logo = logo.resize((logo.width * factor, logo.height * factor), Image.Resampling.NEAREST)
+    return logo
+
+
 def render_escpos_raster_payload(text, paper_width=80, font_size='medium', logo_data='', logo_size='medium', logo_alignment='center', text_alignment='center', print_density=80, print_quality='normal', logo_is_qr=False):
     """يرسم العربية بخط Tajawal ثم يحولها إلى صورة ESC/POS أحادية اللون.
 
@@ -4697,48 +4755,14 @@ def render_escpos_raster_payload(text, paper_width=80, font_size='medium', logo_
         try:
             encoded = logo_data.split(',', 1)[1]
             logo_bytes = base64.b64decode(encoded, validate=True)
-            logo = Image.open(BytesIO(logo_bytes)).convert('L')
+            source_logo = Image.open(BytesIO(logo_bytes))
             max_logo_width = width - 32
-            if logo_is_qr and logo.width > 0 and logo.height > 0:
-                # لا نفترض أن الصورة المربعة QR. عند التحديد الصريح فقط نستخدم
-                # nearest-neighbor وتكبيراً بعامل صحيح، مع quiet zone لا تقل عن
-                # أربع وحدات تقريبية حول مصفوفة الرمز.
-                logo = logo.point(lambda pixel: 0 if pixel < 128 else 255, mode='L')
-                # قص أي هامش أبيض موجود ثم تقدير حجم الوحدة من عرض نمط الزاوية
-                # (7 وحدات عرضاً) بدل افتراض أن كل وحدة بكسل واحد.
-                content_box = logo.point(lambda pixel: 255 if pixel < 128 else 0, mode='L').getbbox()
-                if content_box:
-                    logo = logo.crop(content_box)
-                finder_run = 0
-                for pixel in logo.crop((0, 0, logo.width, 1)).tobytes():
-                    if pixel != 0:
-                        break
-                    finder_run += 1
-                if finder_run >= 7:
-                    quiet = max(4, -(-4 * finder_run // 7))
-                else:
-                    dimension = min(logo.width, logo.height)
-                    version = max(0, round((dimension - 21) / 4))
-                    modules = 21 + 4 * version
-                    quiet = 4 * max(1, dimension // modules)
-                padded = Image.new('L', (logo.width + 2 * quiet, logo.height + 2 * quiet), 255)
-                padded.paste(logo, (quiet, quiet))
-                logo = padded
-                max_logo_height = {'small': 120, 'medium': 180, 'large': 240}.get(str(logo_size or 'medium'), 180)
-                max_logo_width = width - 32
-                scale_factor = max(1, min(max_logo_width // logo.width, max_logo_height // logo.height))
-                if scale_factor > 1:
-                    logo = logo.resize((logo.width * scale_factor, logo.height * scale_factor), Image.Resampling.NEAREST)
-                elif logo.width > max_logo_width or logo.height > max_logo_height:
-                    # التصغير لا يطمس وحدات الرمز بمرشح تنعيم؛ تبقى القيم ثنائية.
-                    logo.thumbnail((max_logo_width, max_logo_height), Image.Resampling.NEAREST)
-                    logo = logo.point(lambda pixel: 0 if pixel < 128 else 255, mode='L')
-                resampling = Image.Resampling.NEAREST
+            if logo_is_qr:
+                logo = prepare_qr_logo_image(source_logo, max_logo_width, 320, logo_size)
             else:
+                logo = source_logo.convert('L')
                 max_logo_height = {'small': 48, 'medium': 72, 'large': 104}.get(str(logo_size or 'medium'), 72)
-                resampling = Image.Resampling.LANCZOS
-                logo.thumbnail((width - 32, max_logo_height), resampling)
-            # thumbnail يصغر الصورة ولا يكبرها؛ لا نعتمد عليه لتكبير QR.
+                logo.thumbnail((max_logo_width, max_logo_height), Image.Resampling.LANCZOS)
             if logo.width and logo.height:
                 logo_canvas = Image.new('L', (width, logo.height + 16), 255)
                 if logo_alignment == 'right':
@@ -5125,6 +5149,9 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
             names = [name for name in names if name]
             if names:
                 lines.append('إضافات: ' + '، '.join(names))
+            item_note = str(item.get('note', '') or '').strip()
+            if item_note:
+                lines.append('ملاحظة الصنف: ' + item_note)
         if order.get('note'):
             lines.extend([divider, 'ملاحظة: ' + str(order.get('note'))])
     else:
@@ -5319,6 +5346,9 @@ def thermal_receipt_structured(data, order):
         # واضحة على الطابعة الحرارية ويجعل مربعات الجدول تبدو منفصلة.
         lines.append(cmd('ROW', 1, cols, 'r,c,c,c', 1, name, number_text(quantity),
                          money_text(unit_price), money_text(line_total)))
+        item_note = sanitize_order_item_note(item.get('note', ''))
+        if item_note:
+            lines.append(cmd('ROW', 0, '100', 'r', 0, 'ملاحظة الصنف: ' + item_note))
     # يبقى صف الملخص داخل الشبكة نفسها حتى تستمر الخطوط العمودية في جدول
     # الأصناف من رأس الأعمدة إلى آخر صف دون انقطاع أو تغيير في مواقعها.
     lines.append(cmd('ROW', 1, cols, 'r,c,r,c', 1, 'البنود', str(item_count), 'الكمية', number_text(quantity_total)))

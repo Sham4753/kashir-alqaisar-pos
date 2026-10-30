@@ -30,6 +30,20 @@ class CheckoutMathAudit(unittest.TestCase):
         r = self.post(items=[{'product_id': 3, 'quantity': 3}], discount_pct=7.5)
         self.assertEqual(r.get_json()['total'], 97125.0)
 
+    def test_item_note_is_saved_with_server_approved_order_line(self):
+        self.f.login('cashier', 'cashier-pass')
+        response = self.post(items=[{'product_id': 1, 'quantity': 1, 'note': 'بدون مخلل،\nصوص على جنب'}])
+        self.assertEqual(response.status_code, 200)
+        order = self.c.get(f"/api/order/{response.get_json()['id']}").get_json()
+        self.assertEqual(order['items'][0]['note'], 'بدون مخلل، صوص على جنب')
+
+    def test_held_cart_keeps_item_note(self):
+        items, error = server.sanitize_held_items([
+            {'id': 1, 'name': 'شاورما', 'price': 10, 'quantity': 1, 'note': 'بدون مخلل'}
+        ])
+        self.assertIsNone(error)
+        self.assertEqual(items[0]['note'], 'بدون مخلل')
+
     def test_client_cannot_inject_price_or_fractional_qty(self):
         self.f.login('cashier', 'cashier-pass')
         r = self.post(items=[{'product_id': 1, 'quantity': 1, 'price': 0.01}])

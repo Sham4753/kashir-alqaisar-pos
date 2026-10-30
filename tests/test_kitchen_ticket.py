@@ -19,11 +19,13 @@ class KitchenTicketTests(unittest.TestCase):
         data['settings']['printer'].update({'logo_caption': 'شعار لا يجب طباعته', 'paper_width': 80})
         order = {
             'id': 'ORD-KITCHEN-1', 'type': 'سفري', 'note': 'بدون بصل',
-            'items': [{'name': 'شاورما', 'quantity': 2, 'modifiers': [{'name': 'جبنة إضافية'}, 'حار']}],
+            'items': [{'name': 'شاورما', 'quantity': 2, 'note': 'بدون مخلل، صوص على جنب',
+                       'modifiers': [{'name': 'جبنة إضافية'}, 'حار']}],
         }
         ticket = server.thermal_receipt_text(data, order, 'kitchen')
         self.assertIn('ملاحظة: بدون بصل', ticket)
         self.assertIn('إضافات: جبنة إضافية، حار', ticket)
+        self.assertIn('ملاحظة الصنف: بدون مخلل، صوص على جنب', ticket)
         self.assertNotIn('شعار لا يجب طباعته', ticket)
 
     def test_kitchen_dispatch_strips_image_and_limits_to_one_copy(self):
