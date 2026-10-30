@@ -1833,6 +1833,9 @@ def orders():
                                  channel='card', reference_type='order', reference_id=o['id'],
                                  note='فاتورة ' + str(o['id']))
         consume_inventory_for_order(data, o['items'], o['id'])
+        # حاجز متانة: لا يجوز أن يصل إيصال أو نبضة درج إلى العتاد قبل أن
+        # تصبح الفاتورة نفسها قابلة للاسترجاع من SQLite والنسخ الاحتياطي.
+        save(data, [o['id']]); backup()
         receipt_print = queue_thermal_print(data, o, 'receipt')
         kitchen_print = queue_thermal_print(data, o, 'kitchen', wait=True) if kitchen_release == 'now' else {
             'ok': True, 'status': 'deferred', 'message': 'تذكرة المطبخ مؤجلة حتى إطلاق الطلب'}
@@ -6874,16 +6877,18 @@ def close_dine_in_session(session_id):
                              channel='card', reference_type='order', reference_id=order['id'],
                              note='فاتورة صالة ' + str(order['id']))
     consume_inventory_for_order(data, order['items'], order['id'])
+    session_row['status'] = 'closed'; session_row['closed_at'] = now; session_row['closed_order_id'] = order['id']
+    table = find_table(data, session_row.get('table_id'))
+    if table:
+        table['status'] = 'free'; table.pop('active_session_id', None); table.pop('active_since', None)
+    # كما في البيع المباشر، ثبّت فاتورة الصالة قبل أول خرج للطابعة أو الدرج.
+    save(data, [order['id']]); backup()
     receipt_print = queue_thermal_print(data, order, 'receipt')
     kitchen_print = queue_thermal_print(data, order, 'kitchen')
     order['print_status'] = {'receipt': receipt_print, 'kitchen': kitchen_print}
     drawer_result = maybe_auto_open_cash_drawer(data, order, payment_data.get('cash_amount', 0))
     if drawer_result:
         order['cash_drawer_status'] = drawer_result
-    session_row['status'] = 'closed'; session_row['closed_at'] = now; session_row['closed_order_id'] = order['id']
-    table = find_table(data, session_row.get('table_id'))
-    if table:
-        table['status'] = 'free'; table.pop('active_session_id', None); table.pop('active_since', None)
     save(data, [order['id']]); backup()
     return jsonify({'ok': True, 'id': order['id'], 'total': order['total'], 'order': order, 'print': {'receipt': receipt_print, 'kitchen': kitchen_print}, 'drawer': drawer_result})
 
