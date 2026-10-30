@@ -17,6 +17,10 @@ class PosDesktopGridTests(unittest.TestCase):
         tracks = re.findall(r'minmax\([^)]*\)|\d+px|\dfr', columns)
         self.assertEqual(len(tracks), 2, columns)
 
+    def test_cart_panel_is_wider_and_item_notes_have_a_visible_field(self):
+        self.assertIn('minmax(480px, 520px)', CSS)
+        self.assertIn('.cart-item-note', CSS)
+
 
 if __name__ == '__main__':
     unittest.main()

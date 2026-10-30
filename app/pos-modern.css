@@ -723,3 +723,32 @@ body.caesar-page-index .category-bar::-webkit-scrollbar-thumb { border-radius: 9
   body.caesar-page-index .add { width: 28px; height: 28px; flex-basis: 28px; font-size: 17px; border-radius: 8px; }
   body.caesar-page-index .order-panel { padding-inline: 24px; }
 }
+
+/* Larger POS basket and per-item kitchen notes. */
+@media (min-width: 1081px) {
+  body.caesar-page-index .app {
+    grid-template-columns: minmax(0, 1fr) minmax(480px, 520px) !important;
+  }
+}
+body.caesar-page-index .cart { min-height: 180px; }
+body.caesar-page-index .cart-item-info { min-width: 0; }
+body.caesar-page-index .cart-item-note {
+  display: block;
+  width: 100%;
+  min-height: 34px;
+  max-height: 72px;
+  margin-top: 6px;
+  padding: 7px 9px;
+  resize: vertical;
+  border: 1px solid var(--pos-line);
+  border-radius: 9px;
+  color: var(--pos-ink);
+  background: var(--pos-card);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.45;
+}
+body.caesar-page-index .cart-item-note::placeholder { color: var(--pos-muted); opacity: 1; }
+body.caesar-page-index .cart-item-note:focus { outline: 2px solid rgba(22, 132, 95, .22); border-color: var(--pos-emerald); }
+body.caesar-page-index .cart.cart-density-compact .cart-item-note,
+body.caesar-page-index .cart.cart-density-dense .cart-item-note { min-height: 31px; margin-top: 4px; padding-block: 5px; font-size: 10px; }

@@ -1628,6 +1628,11 @@ def sanitize_modifier_options(raw_options):
     return result
 
 
+def sanitize_order_item_note(value):
+    """ينظف ملاحظة المطبخ من محارف التحكم ويحد طولها قبل التخزين/الطباعة."""
+    return re.sub(r'[\x00-\x1f\x7f]+', ' ', str(value or '')).strip()[:200]
+
+
 def approved_order_items(data, raw_items):
     """يبني أصناف الفاتورة من منيو الخادم، فلا يعتمد السعر أو الاسم أو الكمية القادمة من المتصفح."""
     if not isinstance(raw_items, list) or not raw_items or len(raw_items) > 100:
@@ -1690,7 +1695,8 @@ def approved_order_items(data, raw_items):
                          'base_price': base_price, 'modifier_total': modifier_total,
                          'price': sum_money((base_price, modifier_total)), 'quantity': qty,
                          'unit_cost_snapshot': round(float(unit_cost), 4) if unit_cost is not None else None,
-                         'modifiers': modifiers, 'kitchen_station': station, 'recipe_snapshot': recipe_snapshot})
+                         'modifiers': modifiers, 'note': sanitize_order_item_note(item.get('note', '')),
+                         'kitchen_station': station, 'recipe_snapshot': recipe_snapshot})
     return approved, None
 
 
@@ -1977,6 +1983,7 @@ def sanitize_held_items(raw_items):
         items.append({
             'id': raw.get('id'), 'name': str(raw.get('name', ''))[:120],
             'price': price, 'quantity': quantity, 'category': str(raw.get('category', ''))[:60],
+            'note': sanitize_order_item_note(raw.get('note', '')),
         })
     if not items:
         return items, 'لا يمكن تعليق طلب فارغ'
@@ -5125,6 +5132,9 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
             names = [name for name in names if name]
             if names:
                 lines.append('إضافات: ' + '، '.join(names))
+            item_note = str(item.get('note', '') or '').strip()
+            if item_note:
+                lines.append('ملاحظة الصنف: ' + item_note)
         if order.get('note'):
             lines.extend([divider, 'ملاحظة: ' + str(order.get('note'))])
     else:
