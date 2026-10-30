@@ -464,10 +464,10 @@ def init_database():
         conn.execute('COMMIT')
     finally:
         conn.close()
-
     if not os.path.exists(marker_path):
         with open(marker_path, 'w', encoding='utf-8') as marker:
             marker.write(datetime.now().isoformat())
+
 
 init_database()
 
@@ -476,7 +476,7 @@ os.makedirs(LOG_DIR, exist_ok=True)
 
 COLD_ARCHIVE_DIR = os.path.join(VAULT_DIR, 'archive_cold')
 os.makedirs(COLD_ARCHIVE_DIR, exist_ok=True)
-# يبقى آخر 120 يومًا (~4 أشهر) من الفواتير المؤرشفة داخل data.json الحيّ؛ الأقدم
+# يبقى آخر 30 يومًا من الفواتير المؤرشفة داخل قاعدة البيانات الحية؛ الأقدم
 # يُنقل تلقائيًا لملفات شهرية باردة بمجلد archive_cold/ حتى لا يتضخم ملف البيانات
 # الأساسي عبر السنين ويُبطئ كل عملية قراءة/كتابة (معادل عملي لـ VACUUM بقواعد
 # البيانات التقليدية). لا شيء يُحذف نهائياً — فقط يُنقل، ويبقى قابلاً للاسترجاع.
@@ -7146,6 +7146,9 @@ def close_dine_in_session(session_id):
     payment_data, payment_error = normalize_payment(session_row.get('total', 0), payload)
     if payment_error:
         return jsonify({'ok': False, 'error': payment_error}), 400
+    inventory_error = inventory_shortage_for_order(data, session_row.get('items', []))
+    if inventory_error:
+        return jsonify({'ok': False, 'error': inventory_error}), 409
     now = datetime.now().isoformat()
     order = {
         'id': next_order_id(data), 'timestamp': now, 'items': session_row['items'],
@@ -7160,9 +7163,6 @@ def close_dine_in_session(session_id):
     if session_row.get('manager_approval'):
         order['manager_approval'] = session_row['manager_approval']
     snap = currency_snapshot(data, payload)
-    inventory_error = inventory_shortage_for_order(data, session_row.get('items', []))
-    if inventory_error:
-        return jsonify({'ok': False, 'error': inventory_error}), 409
     order['currency'] = snap['currency']; order['exchange_rate'] = snap['exchange_rate']
     data.setdefault('orders', []).append(order)
     if payment_data.get('cash_amount', 0):
