@@ -29,6 +29,13 @@ class _Connection:
 
 
 class RasterTransportTests(unittest.TestCase):
+    def setUp(self):
+        self.fixture = fixture_module.SecurityAndPrintTests()
+        self.fixture.setUp()
+
+    def tearDown(self):
+        self.fixture.tearDown()
+
     def test_feed_is_preserved_when_cut_is_disabled(self):
         payload = server.render_escpos_raster_payload_for_printer(
             'اختبار', {'paper_width': 58, 'cut_enabled': False, 'feed_before_cut': 3}
