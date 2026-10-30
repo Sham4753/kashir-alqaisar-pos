@@ -4216,6 +4216,11 @@ def _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visu
         value = str(value or '')
         if not value:
             return ['']
+        # أرقام الكمية والسعر والقيمة بيانات ذرية: تقسيم 1,481,472 إلى
+        # سطرين يغيّر معناه بصرياً. الأسماء فقط هي التي يسمح لها بالانقسام.
+        bare_value = value.replace('\u200e', '').replace('\u200f', '').strip()
+        if re.fullmatch(r'[-+]?[0-9٠-٩][0-9٠-٩,\.]*', bare_value or ''):
+            return [value]
         out, cur = [], ''
         for word in value.split(' '):
             cand = word if not cur else cur + ' ' + word
@@ -4274,9 +4279,23 @@ def _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visu
                 col_w = inner_w * ratios[idx] / total_ratio
                 xs.append((x_right - col_w, x_right))
                 x_right -= col_w
-            wrapped = [wrap_to(cell, max(10, (xs[i][1] - xs[i][0]) - 2 * pad), fnt) for i, cell in enumerate(cells)]
+            cell_fonts = []
+            wrapped = []
+            for i, cell in enumerate(cells):
+                cell_font = fnt
+                cell_width = max(10, (xs[i][1] - xs[i][0]) - 2 * pad)
+                bare_cell = str(cell or '').replace('\u200e', '').replace('\u200f', '').strip()
+                # 58mm يخصص أكثر من ربع السطر للأرقام، ومع ذلك نخفض خط
+                # الرقم فقط إن احتاج لتبقى الفواصل داخل عموده ولا نغير 80mm.
+                if width <= 384 and re.fullmatch(r'[-+]?[0-9٠-٩][0-9٠-٩,\.]*', bare_cell or '') and text_w(cell, cell_font) > cell_width:
+                    try:
+                        cell_font = cell_font.font_variant(size=max(10, int(getattr(cell_font, 'size', scale) * 0.72)))
+                    except (AttributeError, OSError, ValueError):
+                        pass
+                cell_fonts.append(cell_font)
+                wrapped.append(wrap_to(cell, cell_width, cell_font))
             rows = max(len(w) for w in wrapped)
-            ops.append({'k': 'row', 'sep': sep, 'dotted': dotted, 'xs': xs, 'aligns': aligns, 'font': fnt, 'cells': wrapped,
+            ops.append({'k': 'row', 'sep': sep, 'dotted': dotted, 'xs': xs, 'aligns': aligns, 'font': fnt, 'fonts': cell_fonts, 'cells': wrapped,
                         'h': rows * line_h + 8})
     height = sum(op['h'] for op in ops) + 20
     image = Image.new('L', (width, max(32, height)), 255)
@@ -4321,7 +4340,7 @@ def _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visu
                     # عندما تكون الخانة ضيقة، خصوصاً في 58mm الطولي.
                     draw.line([(x0, y), (x0, y + op['h'])], fill=0, width=1)
                 for j, part in enumerate(lines):
-                    put(part, op['font'], x0, x1, align, y + 4 + j * line_h)
+                    put(part, op['fonts'][i], x0, x1, align, y + 4 + j * line_h)
             if op['sep']:
                 if op.get('dotted'):
                     for x in range(margin, width - margin, 5):
@@ -4934,7 +4953,7 @@ def thermal_receipt_structured(data, order):
         narrow = False
     # نعطي الكمية والسعر والقيمة عرضاً ثابتاً كافياً للأرقام، ونمنع
     # تداخلها مع خط الفصل عند الطباعة الطولية، خصوصاً على رول 58mm.
-    cols = '38,18,22,22' if narrow else '40,17,22,21'
+    cols = '28,16,28,28' if narrow else '40,17,22,21'
 
     def cmd(*parts):
         return RS + US.join(str(part).replace('\n', ' ').replace(RS, '').replace(US, '') for part in parts)
