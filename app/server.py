@@ -1087,9 +1087,9 @@ def verify_password(stored_hash, password):
     legacy = hashlib.sha256((password or '').encode('utf-8')).hexdigest()
     return hmac.compare_digest(stored_hash, legacy)
 
-def currency_snapshot(data, payload=None):
+def currency_snapshot(data, payload=None, allow_payload=False):
     settings = data.get('settings', {})
-    payload = payload or {}
+    payload = payload or {} if allow_payload else {}
     currency = payload.get('currency') or settings.get('currency', 'SYP')
     if currency not in ('SYP', 'USD', 'EUR'):
         currency = 'SYP'
@@ -1112,7 +1112,7 @@ def amount_in_base(data, amount, currency='SYP', exchange_rate=None):
         code = currency if currency in ('SYP', 'USD', 'EUR') else 'SYP'
         if code == 'SYP':
             return float(value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
-        snap = currency_snapshot(data, {'currency': code, 'exchange_rate': exchange_rate})
+        snap = currency_snapshot(data, {'currency': code, 'exchange_rate': exchange_rate}, allow_payload=True)
         rate = Decimal(str(snap['exchange_rate']))
         if not rate.is_finite() or rate <= 0:
             return None
@@ -1145,7 +1145,17 @@ def next_order_id(data):
         data.setdefault('settings', {})['last_order_date'] = today
     used_numbers = set()
     used_ids = set()
-    for row in data.get('orders', []) + data.get('orders_archive', []):
+    historical_orders = data.get('orders', []) + data.get('orders_archive', [])
+    for month in list_cold_months():
+        try:
+            with open(_cold_archive_path(month), 'r', encoding='utf-8') as handle:
+                cold_rows = json.load(handle)
+            if isinstance(cold_rows, list):
+                historical_orders.extend(row for row in cold_rows if isinstance(row, dict))
+        except (OSError, ValueError):
+            error_logger.error('تعذر قراءة الأرشيف البارد %s أثناء توليد رقم فاتورة؛ تم إيقاف العملية', month, exc_info=True)
+            raise RuntimeError('تعذر التحقق من أرقام الفواتير في الأرشيف البارد')
+    for row in historical_orders:
         if not isinstance(row, dict):
             continue
         order_id = str(row.get('id', ''))
@@ -1529,7 +1539,7 @@ def consume_inventory_for_order(data, items, order_id=''):
     for i in items:
         name = i.get('name', '')
         qty_sold = i.get('quantity', i.get('qty', 1))
-        recipe = item_recipes.get(i.get('product_id', i.get('id'))) or item_recipes.get(name)
+        recipe = i.get('recipe_snapshot') or item_recipes.get(i.get('product_id', i.get('id'))) or item_recipes.get(name)
         if not recipe:
             continue
         for ing in recipe:
@@ -1539,6 +1549,26 @@ def consume_inventory_for_order(data, items, order_id=''):
             record_inventory_movement(data, material_name, -used_qty, 'sale_consumption',
                                       reference_type='order', reference_id=order_id,
                                       note='استهلاك وصفة عند بيع: ' + str(name))
+
+
+def inventory_shortage_for_order(data, items):
+    """يتحقق من كامل احتياجات الوصفات قبل تسجيل أي قبض أو حركة مخزون."""
+    recipes = build_item_recipes(data)
+    required = {}
+    for item in items or []:
+        recipe = item.get('recipe_snapshot') or recipes.get(item.get('product_id', item.get('id'))) or recipes.get(item.get('name', ''))
+        if not recipe:
+            continue
+        qty = float(item.get('quantity', item.get('qty', 1)) or 0)
+        for ingredient in recipe:
+            name = str(ingredient.get('material', '')).strip()
+            if name:
+                required[name] = required.get(name, 0.0) + float(ingredient.get('qty', 0) or 0) * qty
+    stock = {str(row.get('name', '')).strip(): float(row.get('stock', 0) or 0) for row in data.get('inventory', [])}
+    for name, amount in required.items():
+        if stock.get(name, 0.0) + 1e-9 < amount:
+            return f'المخزون غير كافٍ للمادة: {name}'
+    return None
 
 def round_money(value):
     try:
@@ -1651,11 +1681,12 @@ def approved_order_items(data, raw_items):
         if station not in KITCHEN_STATION_LABELS:
             station = 'main'
         unit_cost = compute_product_cost(data, product)
+        recipe_snapshot = json.loads(json.dumps(product.get('recipe', []) or [], ensure_ascii=False))
         approved.append({'product_id': product.get('id'), 'name': str(product.get('name', '')).strip(),
                          'base_price': base_price, 'modifier_total': modifier_total,
                          'price': sum_money((base_price, modifier_total)), 'quantity': qty,
                          'unit_cost_snapshot': round(float(unit_cost), 4) if unit_cost is not None else None,
-                         'modifiers': modifiers, 'kitchen_station': station})
+                         'modifiers': modifiers, 'kitchen_station': station, 'recipe_snapshot': recipe_snapshot})
     return approved, None
 
 
@@ -1828,6 +1859,9 @@ def orders():
         items, item_error = approved_order_items(data, payload.get('items'))
         if item_error:
             return jsonify({'ok': False, 'error': item_error}), 400
+        inventory_error = inventory_shortage_for_order(data, items)
+        if inventory_error:
+            return jsonify({'ok': False, 'error': inventory_error}), 409
         subtotal = sum_money(item['price'] * item['quantity'] for item in items)
         discount_pct = as_money(payload.get('discount_pct', 0), 0)
         discount_amount = as_money(payload.get('discount_amount', 0), 0)
@@ -2634,7 +2668,7 @@ def reload_menu():
 @app.route('/api/debts', methods=['GET'])
 def get_debts():
     data = load()
-    return jsonify(data.get('debts', []))
+    return jsonify([row for row in data.get('debts', []) if not row.get('voided')])
 
 @app.route('/api/debts', methods=['POST'])
 def add_debt():
@@ -2661,6 +2695,8 @@ def add_debt():
 def update_debt(did):
     data = load()
     for d in data.get('debts', []):
+        if d.get('voided'):
+            continue
         if d['id'] == did:
             payload = request.get_json(silent=True) or {}
             d['name'] = payload.get('name', d['name'])
@@ -2679,6 +2715,8 @@ def pay_debt(did):
     تدعم اختيار طريقة الدفع (نقدي/بطاقة) بدل تثبيتها نقدي دائماً."""
     data = load()
     for d in data.get('debts', []):
+        if d.get('voided'):
+            continue
         if d['id'] == did:
             payload = request.get_json(silent=True) or {}
             amount = as_money(payload.get('amount'), 0)
@@ -2689,7 +2727,7 @@ def pay_debt(did):
             if amount <= 0 or amount > remaining_before:
                 return jsonify({'ok': False, 'error': 'مبلغ الدفعة غير صالح أو أكبر من المتبقي'}), 400
             d['paid'] = round_money(as_money(d.get('paid'), 0) + amount)
-            snap = currency_snapshot(data, d)
+            snap = currency_snapshot(data, d, allow_payload=True)
             payment = {'amount': amount, 'method': method, 'date': datetime.now().isoformat(), 'currency': snap['currency'], 'exchange_rate': snap['exchange_rate']}
             d.setdefault('payments', []).append(payment)
             payment_order = {
@@ -2723,10 +2761,16 @@ def pay_debt(did):
 @app.route('/api/debts/<int:did>', methods=['DELETE'])
 def delete_debt(did):
     data = load()
-    data['debts'] = [d for d in data.get('debts', []) if d['id'] != did]
+    debt = next((row for row in data.get('debts', []) if row.get('id') == did and not row.get('voided')), None)
+    if not debt:
+        return jsonify({'ok': False, 'error': 'الدين غير موجود أو ملغى سابقاً'}), 404
+    debt['voided'] = True
+    debt['voided_at'] = datetime.now().isoformat()
+    debt['voided_by'] = session.get('username', 'غير محدد')
+    debt.setdefault('audit_log', []).append({'action': 'void', 'timestamp': debt['voided_at'], 'username': debt['voided_by'], 'note': 'إلغاء موثق دون حذف السجل'})
     save(data)
     backup()
-    return jsonify({"ok": True})
+    return jsonify({'ok': True, 'voided': True})
 
 @app.route('/api/orders/archive', methods=['POST'])
 def archive_orders():
@@ -2876,7 +2920,8 @@ def pay_salary(eid):
     emp = next((e for e in data.get('employees', []) if e['id'] == eid), None)
     if not emp:
         return jsonify({"ok": False, "error": "الموظف غير موجود"}), 404
-    amount = positive_amount(request.json.get('amount', emp.get('salary', 0)))
+    payload = request.get_json(silent=True) or {}
+    amount = positive_amount(payload.get('amount', emp.get('salary', 0)))
     if amount is None:
         return jsonify({'ok': False, 'error': 'مبلغ الراتب يجب أن يكون أكبر من صفر'}), 400
     timestamp = datetime.now().isoformat()
@@ -2909,10 +2954,26 @@ def add_employee_advance(eid):
 def delete_employee(eid):
     if not has_role('manager'):
         return permission_error()
-    """حذف موظف - ترجع السلفة (تُحذف كمصروف مرتبط)"""
+    """يعطل حذف الموظف دون إسقاط المصروفات؛ يعكس الحركات المادية المرتبطة."""
     data = load()
-    data['employees'] = [e for e in data.get('employees', []) if e['id'] != eid]
-    data['expenses'] = [x for x in data.get('expenses', []) if x.get('employee_id') != eid]
+    employee = next((row for row in data.get('employees', []) if row.get('id') == eid), None)
+    if not employee:
+        return jsonify({'ok': False, 'error': 'الموظف غير موجود'}), 404
+    employee['active'] = False
+    employee['deleted_at'] = datetime.now().isoformat()
+    employee['deleted_by'] = session.get('username', 'غير محدد')
+    employee_expenses = [row for row in data.get('expenses', []) if row.get('employee_id') == eid and not row.get('voided')]
+    for expense in employee_expenses:
+        expense['voided'] = True
+        expense['voided_at'] = employee['deleted_at']
+        expense['voided_by'] = employee['deleted_by']
+        reversal_amount = expense.get('amount', 0)
+        record_cash_movement(data, 'in', reversal_amount, 'عكس مصروف موظف بعد تعطيله',
+                             channel='card' if expense.get('payment') == 'بطاقة' else 'cash',
+                             reference_type='employee_expense_void', reference_id=expense.get('id', eid),
+                             note='عكس مصروف الموظف: ' + str(employee.get('name', '')),
+                             currency=expense.get('currency'), exchange_rate=expense.get('exchange_rate'),
+                             base_amount=expense_amount_base(data, expense))
     save(data)
     backup()
     return jsonify({"ok": True})
@@ -3637,7 +3698,7 @@ def get_analytics():
     total_debts = sum_money(
         amount_in_base(data, round_money(as_money(d.get('amount'), 0) - as_money(d.get('paid'), 0)),
                        d.get('currency', 'SYP'), d.get('exchange_rate')) or 0
-        for d in data.get('debts', [])
+        for d in data.get('debts', []) if not d.get('voided')
     )
 
     # تفصيل الكاش الفعلي مقابل البطاقة (مهم لجرد الكاش بالدرج مقابل ما يذهب للبنك مباشرة).
@@ -7085,6 +7146,9 @@ def close_dine_in_session(session_id):
     if session_row.get('manager_approval'):
         order['manager_approval'] = session_row['manager_approval']
     snap = currency_snapshot(data, payload)
+    inventory_error = inventory_shortage_for_order(data, session_row.get('items', []))
+    if inventory_error:
+        return jsonify({'ok': False, 'error': inventory_error}), 409
     order['currency'] = snap['currency']; order['exchange_rate'] = snap['exchange_rate']
     data.setdefault('orders', []).append(order)
     if payment_data.get('cash_amount', 0):

@@ -126,7 +126,7 @@ ROUTE_POLICIES = (
     ("POST", "/api/debts", MANAGEMENT_ROLES),
     ("PUT", "/api/debts/<did>", MANAGEMENT_ROLES),
     ("POST", "/api/debts/<did>/pay", MANAGEMENT_ROLES),
-    ("DELETE", "/api/debts/<did>", MANAGEMENT_ROLES),
+    ("DELETE", "/api/debts/<did>", MANAGER_ONLY),
     ("GET", "/api/attendance", OPERATIONAL_ROLES),
     ("POST", "/api/attendance/clock", OPERATIONAL_ROLES),
     ("GET", "/api/materials", MANAGEMENT_ROLES),
