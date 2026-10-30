@@ -4392,7 +4392,12 @@ def _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visu
             label = parts[1] if len(parts) > 1 else ''
             value = parts[2] if len(parts) > 2 else ''
             fnt = bold_font if len(parts) > 3 and parts[3] == '1' else font
-            ops.append({'k': 'kv', 'label': label, 'value': value, 'font': fnt, 'h': line_h + 4})
+            value_right = margin + inner_w * 0.45
+            label_lines = wrap_to(label, max(10, (width - margin - value_right) - 2 * pad), fnt)
+            value_lines = wrap_to(value, max(10, (value_right - margin) - 2 * pad), fnt)
+            rows = max(len(label_lines), len(value_lines))
+            ops.append({'k': 'kv', 'label_lines': label_lines, 'value_lines': value_lines, 'font': fnt,
+                        'value_right': value_right, 'h': rows * line_h + 8})
         elif cmd == 'ROW' and len(parts) >= 6:
             sep = parts[1] != '0'
             dotted = parts[1] == '2'
@@ -4456,8 +4461,10 @@ def _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visu
             for i, part in enumerate(op['lines']):
                 put(part, op['font'], margin, width - margin, 'c', y + i * fh + 3)
         elif kind == 'kv':
-            put(op['label'], op['font'], margin, width - margin, 'r', y + 3)
-            put(op['value'], op['font'], margin, width - margin, 'l', y + 3)
+            for i, part in enumerate(op['label_lines']):
+                put(part, op['font'], op['value_right'], width - margin, 'r', y + 4 + i * line_h)
+            for i, part in enumerate(op['value_lines']):
+                put(part, op['font'], margin, op['value_right'], 'l', y + 4 + i * line_h)
         elif kind == 'row':
             for i, lines in enumerate(op['cells']):
                 x0, x1 = op['xs'][i]
