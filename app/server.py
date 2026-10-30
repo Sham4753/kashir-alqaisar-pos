@@ -1566,6 +1566,10 @@ def inventory_shortage_for_order(data, items):
                 required[name] = required.get(name, 0.0) + float(ingredient.get('qty', 0) or 0) * qty
     stock = {str(row.get('name', '')).strip(): float(row.get('stock', 0) or 0) for row in data.get('inventory', [])}
     for name, amount in required.items():
+        # بعض الوصفات القديمة لا تُدار كمواد مخزنية (ولا تُخصم فعلياً).
+        # لا نحولها إلى رصيد صفر افتراضي يمنع البيع؛ الحماية تخص السجلات المتتبعة.
+        if name not in stock:
+            continue
         if stock.get(name, 0.0) + 1e-9 < amount:
             return f'المخزون غير كافٍ للمادة: {name}'
     return None

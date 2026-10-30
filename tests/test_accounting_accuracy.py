@@ -25,6 +25,7 @@ class AccountingAccuracyTests(unittest.TestCase):
     def test_foreign_expense_is_normalized_for_ledger_and_profit_report(self):
         data = server.load()
         data['settings']['usd_rate'] = 15000
+        data['settings']['currency'] = 'USD'
         server.save(data)
         response = self.client.post('/api/expenses', json={
             'note': 'اختبار مصروف بالدولار', 'amount': 10, 'currency': 'USD',
