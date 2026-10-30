@@ -45,12 +45,12 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev, LPSTR cmd, int show) {
     lstrcpyW(appdir, exe); PathRemoveFileSpecW(appdir);
     lstrcpyW(root, appdir); PathRemoveFileSpecW(root);
     if (!port_open() && !start_server(root, appdir)) {
-        MessageBoxW(NULL, L"تعذر بدء Python المضمّن. راجع الملف app\\server_error.log وتأكد من فك ضغط الحزمة كاملة.", L"كاشير قيصر قيصر", MB_ICONERROR | MB_OK);
+        MessageBoxW(NULL, L"تعذر بدء Python المضمّن. راجع الملف app\\server_error.log وتأكد من فك ضغط الحزمة كاملة.", L"كاشير قيصر", MB_ICONERROR | MB_OK);
         return 1;
     }
     for (i = 0; i < 60 && !port_open(); i++) Sleep(250);
     if (!port_open()) {
-        MessageBoxW(NULL, L"تعذر تشغيل خادم كاشير قيصر قيصر. راجع app\\server_error.log لمعرفة السبب.", L"كاشير قيصر قيصر", MB_ICONERROR | MB_OK);
+        MessageBoxW(NULL, L"تعذر تشغيل خادم كاشير قيصر. راجع app\\server_error.log لمعرفة السبب.", L"كاشير قيصر", MB_ICONERROR | MB_OK);
         return 1;
     }
     lstrcpyW(params, L"--app=http://127.0.0.1:8080/ --new-window --window-size=1280,820");

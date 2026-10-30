@@ -243,7 +243,7 @@
           if (label && label !== brand.querySelector('.q-appbar-brand-mark')) label.textContent = name;
         });
         document.querySelectorAll('[data-restaurant-name]').forEach((node) => { node.textContent = name; });
-        document.title = document.title.replace('كاشير قيصر قيصر', name);
+        document.title = document.title.replace('كاشير قيصر', name);
       }
       if (!logo.startsWith('data:image/')) return;
       document.querySelectorAll('.q-appbar-brand-mark, .brand-mark, .mark, [data-restaurant-logo]').forEach((mark) => {
