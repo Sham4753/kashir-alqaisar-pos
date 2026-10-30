@@ -41,5 +41,14 @@ class RegressionFixTests(unittest.TestCase):
     def test_expenses_ui_excludes_voided_rows_and_totals(self):
         self.assertIn('rows.filter(x=>!x.voided)', EXPENSES)
 
+    def test_legacy_duplicate_brand_strings_are_removed_from_app_text(self):
+        for suffix in ('.html', '.py', '.js', '.webmanifest', '.c'):
+            for path in (ROOT / 'app').rglob(f'*{suffix}'):
+                content = path.read_text(encoding='utf-8')
+                with self.subTest(path=path.name):
+                    self.assertNotIn('كاشير قيصر قيصر', content)
+                    self.assertNotIn('مبيعات كاشير قيصر', content)
+                    self.assertNotIn('AlCAESAR', content)
+
 if __name__ == '__main__':
     unittest.main()

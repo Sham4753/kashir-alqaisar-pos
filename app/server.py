@@ -1909,11 +1909,11 @@ def orders():
         o['currency'] = snap['currency']; o['exchange_rate'] = snap['exchange_rate']
         data.setdefault('orders', []).append(o)
         if payment_data.get('cash_amount', 0):
-            record_cash_movement(data, 'in', payment_data['cash_amount'], 'مبيعات كاشير قيصر',
+            record_cash_movement(data, 'in', payment_data['cash_amount'], 'مبيعات',
                                  channel='cash', reference_type='order', reference_id=o['id'],
                                  note='فاتورة ' + str(o['id']))
         if payment_data.get('card_amount', 0):
-            record_cash_movement(data, 'in', payment_data['card_amount'], 'مبيعات كاشير قيصر',
+            record_cash_movement(data, 'in', payment_data['card_amount'], 'مبيعات',
                                  channel='card', reference_type='order', reference_id=o['id'],
                                  note='فاتورة ' + str(o['id']))
         consume_inventory_for_order(data, o['items'], o['id'])
@@ -3972,7 +3972,7 @@ def create_financial_xlsx(report):
     """ينشئ ملف Excel حقيقيًا بأربع أوراق باستخدام مكتبات Python القياسية فقط."""
     summary = report['summary']
     sheets = [
-        ('الملخص المالي', [['تقرير مالي ومبيعات - كاشير قيصر قيصر'], ['الفترة', report['period']], ['من', report['from'] or '—'], ['إلى', report['to'] or '—'], [], ['البند', 'القيمة'], ['إجمالي المبيعات', summary['sales']], ['عدد الفواتير', summary['orders']], ['نقد داخل', summary['cash_in']], ['نقد خارج', summary['cash_out']], ['رصيد النقد', summary['cash_balance']], ['بطاقة داخل', summary['card_in']], ['بطاقة خارج', summary['card_out']], ['رصيد البطاقات', summary['card_balance']]]),
+        ('الملخص المالي', [['تقرير مالي ومبيعات - كاشير قيصر'], ['الفترة', report['period']], ['من', report['from'] or '—'], ['إلى', report['to'] or '—'], [], ['البند', 'القيمة'], ['إجمالي المبيعات', summary['sales']], ['عدد الفواتير', summary['orders']], ['نقد داخل', summary['cash_in']], ['نقد خارج', summary['cash_out']], ['رصيد النقد', summary['cash_balance']], ['بطاقة داخل', summary['card_in']], ['بطاقة خارج', summary['card_out']], ['رصيد البطاقات', summary['card_balance']]]),
         ('مبيعات الكاشير قيصر', [['الكاشير قيصر', 'عدد الفواتير', 'المبيعات', 'النقد', 'البطاقات', 'الخصومات', 'متوسط الفاتورة', 'صالة', 'سفري', 'ديليفري']] + [[row['cashier'], row['orders'], row['sales'], row['cash'], row['card'], row['discounts'], row['average_order'], row['dine_in_orders'], row['takeaway_orders'], row['delivery_orders']] for row in report['cashier_summary']]),
         ('الفواتير', [['رقم الفاتورة', 'التاريخ', 'الكاشير قيصر', 'النوع', 'الدفع', 'النقد', 'البطاقات', 'الخصم', 'الإجمالي', 'حالة الطباعة', 'الطاولة', 'الزبون', 'الأصناف']] + [[order.get('id', ''), order.get('timestamp') or order.get('date', ''), order.get('cashier_name', 'غير معروف'), order.get('type', 'سفري'), order.get('payment', ''), order.get('cash_amount', ''), order.get('card_amount', ''), order.get('discount_total', max(0, (order.get('subtotal') or 0) - (order.get('total') or 0))), order.get('total', 0), order_print_status_label(order), order.get('table', ''), order.get('customer', ''), '، '.join(f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', []))] for order in report['orders']]),
         ('دفتر الصندوق', [['التاريخ', 'الاتجاه', 'القناة', 'التصنيف', 'المبلغ', 'الكاشير قيصر/المستخدم', 'المرجع', 'الملاحظة']] + [[movement.get('timestamp', ''), movement.get('direction', ''), movement.get('channel', ''), movement.get('category', ''), movement.get('amount', 0), movement.get('created_by', ''), movement.get('reference_id', ''), movement.get('note', '')] for movement in report['cashbook']])
@@ -3993,7 +3993,7 @@ def create_financial_xlsx(report):
 def create_print_log_xlsx(rows):
     """ينشئ ملف Excel مستقلًا لسجل محاولات الطباعة لتتبع الأعطال لاحقًا."""
     status_labels = {'sent': 'تم الإرسال', 'failed': 'فشل الإرسال', 'skipped': 'لم يُنفذ', 'disabled': 'غير مفعّل'}
-    sheet_rows = [['سجل حالات الطباعة - كاشير قيصر قيصر'], ['تاريخ التصدير', datetime.now().isoformat(timespec='seconds')], [], ['التاريخ', 'رقم الطلب', 'النوع', 'الحالة', 'الطابعة', 'الرسالة']]
+    sheet_rows = [['سجل حالات الطباعة - كاشير قيصر'], ['تاريخ التصدير', datetime.now().isoformat(timespec='seconds')], [], ['التاريخ', 'رقم الطلب', 'النوع', 'الحالة', 'الطابعة', 'الرسالة']]
     sheet_rows.extend([[row.get('timestamp', ''), row.get('order_id', ''), 'إيصال العميل' if row.get('type') == 'receipt' else 'تذكرة المطبخ', status_labels.get(row.get('status'), row.get('status', '')), row.get('printer', ''), row.get('message', '')] for row in rows])
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
@@ -4044,9 +4044,9 @@ def create_financial_pdf(report):
     title_style = ParagraphStyle('CAESARTitle', parent=styles['Title'], fontName=font_name, fontSize=17, leading=22, alignment=TA_CENTER, spaceAfter=12)
     body_style = ParagraphStyle('CAESARBody', parent=styles['BodyText'], fontName=font_name, fontSize=9.5, leading=14, alignment=TA_RIGHT)
     small_style = ParagraphStyle('CAESARSmall', parent=body_style, fontSize=8, leading=11)
-    doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=34, bottomMargin=34, title='تقرير مبيعات كاشير قيصر قيصر')
+    doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=34, bottomMargin=34, title='تقرير مبيعات')
     summary = report.get('summary', {})
-    story = [Paragraph(_pdf_text('كاشير قيصر قيصر — تقرير المبيعات اليومية'), title_style)]
+    story = [Paragraph(_pdf_text('كاشير قيصر — تقرير المبيعات اليومية'), title_style)]
     meta = f"الفترة: {report.get('from') or 'اليوم'} إلى {report.get('to') or 'اليوم'} | الكاشير قيصر: {report.get('cashier_filter') or 'جميع الكاشير قيصرات'}"
     story.extend([Paragraph(_pdf_text(meta), body_style), Spacer(1, 10)])
     summary_rows = [
@@ -4978,7 +4978,7 @@ def open_cash_drawer_via_printer(printer_name, pulse_profile='pin2_standard'):
         if not winspool.OpenPrinterW(str(printer_name), ctypes.byref(handle), None):
             raise OSError('تعذر الاتصال بالطابعة المحددة')
         try:
-            doc = DOC_INFO_1W('CAESAR AlCAESAR Cash Drawer', None, 'RAW')
+            doc = DOC_INFO_1W('CAESAR Cash Drawer', None, 'RAW')
             winspool.StartDocPrinterW.argtypes = [wintypes.HANDLE, wintypes.DWORD, ctypes.c_void_p]
             winspool.StartDocPrinterW.restype = wintypes.DWORD
             if not winspool.StartDocPrinterW(handle, 1, ctypes.byref(doc)):
@@ -5044,7 +5044,7 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
     settings = data.get('settings', {})
     restaurant = settings.get('restaurant', {})
     printer = settings.get('printer', {})
-    restaurant_name = restaurant.get('name') or 'كاشير قيصر قيصر'
+    restaurant_name = restaurant.get('name') or 'كاشير قيصر'
     caption = str(printer.get('logo_caption', '') or '').strip()
     text_columns = {58: 32, 80: 42, 112: 60}
     try:
@@ -6003,7 +6003,7 @@ def test_printer():
     if width not in {58, 80, 112}:
         return jsonify({"ok": False, "message": "عرض ورق غير صالح للطباعة التجريبية"}), 400
     chars = 42 if width >= 80 else 32
-    restaurant = data.get('settings', {}).get('restaurant', {}).get('name', 'كاشير قيصر قيصر')
+    restaurant = data.get('settings', {}).get('restaurant', {}).get('name', 'كاشير قيصر')
     header = str(payload.get('receipt_header', printer.get('receipt_header', 'إيصال مبيعات')) or 'إيصال مبيعات')[:36]
     divider = '-' * chars
     pattern = str(payload.get('pattern', 'standard') or 'standard')
@@ -6572,7 +6572,7 @@ def get_order(order_id):
 
 
 
-# ========== ميزات كاشير قيصر قيصر المتقدمة ==========
+# ========== ميزات كاشير قيصر المتقدمة ==========
 def _store(data, key, default=None):
     if key not in data:
         data[key] = [] if default is None else default
@@ -7170,11 +7170,11 @@ def close_dine_in_session(session_id):
     order['currency'] = snap['currency']; order['exchange_rate'] = snap['exchange_rate']
     data.setdefault('orders', []).append(order)
     if payment_data.get('cash_amount', 0):
-        record_cash_movement(data, 'in', payment_data['cash_amount'], 'مبيعات كاشير قيصر',
+        record_cash_movement(data, 'in', payment_data['cash_amount'], 'مبيعات',
                              channel='cash', reference_type='order', reference_id=order['id'],
                              note='فاتورة صالة ' + str(order['id']))
     if payment_data.get('card_amount', 0):
-        record_cash_movement(data, 'in', payment_data['card_amount'], 'مبيعات كاشير قيصر',
+        record_cash_movement(data, 'in', payment_data['card_amount'], 'مبيعات',
                              channel='card', reference_type='order', reference_id=order['id'],
                              note='فاتورة صالة ' + str(order['id']))
     consume_inventory_for_order(data, order['items'], order['id'])
@@ -7485,7 +7485,7 @@ def sync_status():
 
 if __name__ == '__main__':
     print('='*50)
-    print('كاشير قيصر قيصر')
+    print('كاشير قيصر')
     print(f' Version: {CURRENT_VERSION}')
     print(f'  Vault: {VAULT_DIR}')
     print('='*50)
