@@ -1,3 +1,4 @@
+import contextlib
 import sqlite3
 
 import test_security_and_print as fixture_module
@@ -28,7 +29,7 @@ class VoidOrderPersistenceTests(fixture_module.SecurityAndPrintTests):
         self.assertTrue(first_void.get_json()['ok'])
         self.assertEqual(server.load()['inventory'][0]['stock'], 10)
 
-        with sqlite3.connect(server.DATABASE_FILE) as conn:
+        with contextlib.closing(sqlite3.connect(server.DATABASE_FILE)) as conn:
             row = conn.execute('SELECT voided FROM orders WHERE id=?', (order_id,)).fetchone()
         self.assertEqual(row[0], 1)
 
