@@ -428,9 +428,9 @@ class SecurityAndPrintTests(unittest.TestCase):
         self.assertEqual({row['id'] for row in recovery['orders_archive']}, {'ORD-0002', 'ORD-0003'})
 
     def test_page_role_matrix_covers_all_registered_html_pages(self):
-        operational_pages = ('index.html', 'orders_list.html', 'kitchen.html', 'tables.html', 'customers.html', 'delivery.html', 'waiting_screen.html', 'daily_guide.html', 'attendance.html', 'employees.html', 'raw_materials.html', 'mobile.html')
-        supervisor_pages = ('dashboard.html', 'debts.html')
-        manager_pages = ('settings.html', 'printer_settings.html', 'menu_manager.html', 'analytics.html', 'manager_ops.html', 'expenses.html')
+        operational_pages = ('index.html', 'orders_list.html', 'kitchen.html', 'tables.html', 'customers.html', 'delivery.html', 'waiting_screen.html', 'daily_guide.html', 'attendance.html', 'mobile.html')
+        supervisor_pages = ('dashboard.html', 'debts.html', 'raw_materials.html')
+        manager_pages = ('settings.html', 'printer_settings.html', 'menu_manager.html', 'analytics.html', 'manager_ops.html', 'expenses.html', 'employees.html')
 
         self.login('cashier', 'cashier-pass')
         for page_name in operational_pages:
