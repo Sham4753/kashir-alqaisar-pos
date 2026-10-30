@@ -596,6 +596,14 @@ def login_throttle_remaining(data, username, ip_address):
         return 0
 
 
+def login_throttle_error(data, username, ip_address):
+    """يعيد رد القفل الموحد، أو None إن كان إدخال كلمة المرور مسموحاً."""
+    remaining = login_throttle_remaining(data, username, ip_address)
+    if remaining:
+        return jsonify({'ok': False, 'error': f'محاولات كثيرة؛ أعد المحاولة بعد {remaining} ثانية'}), 429
+    return None
+
+
 def record_login_failure(data, username, ip_address):
     key = _login_throttle_key(username, ip_address)
     table = data.setdefault('_login_throttle', {})
@@ -1660,7 +1668,7 @@ def verify_manager_approval(data, payload, action, amount=0, reference_id=''):
     """يتحقق من اعتماد مدير حقيقي ولا يخزن كلمة المرور، ثم يجهز سجلًا موجزًا للعملية."""
     approval = payload.get('manager_approval', {}) if isinstance(payload, dict) else {}
     approval = approval if isinstance(approval, dict) else {}
-    users = data.get('settings', {}).get('users', [])
+    users = active_users(data)
     if not users:
         return {'action': action, 'approved_by': 'مدير النظام المحلي', 'approved_at': datetime.now().isoformat(),
                 'amount': round(float(amount or 0), 2), 'reference_id': str(reference_id)}, None
@@ -1669,10 +1677,16 @@ def verify_manager_approval(data, payload, action, amount=0, reference_id=''):
     else:
         username = str(approval.get('username', '')).strip()
         password = str(approval.get('password', ''))
+        ip_address = request.remote_addr or 'unknown'
+        throttled = login_throttle_error(data, username, ip_address)
+        if throttled:
+            return None, throttled
         manager = next((u for u in users if u.get('username') == username and u.get('role') == 'manager'), None)
         if not manager or not verify_password(manager.get('password_hash'), password):
+            record_login_failure(data, username, ip_address)
             return None, (jsonify({'ok': False, 'approval_required': True,
                                    'error': 'هذه العملية تحتاج موافقة مدير وكلمة مرور صحيحة'}), 403)
+        clear_login_failures(data, username, ip_address)
     record = {'id': uuid.uuid4().hex[:12], 'action': action, 'approved_by': username,
               'approved_at': datetime.now().isoformat(), 'amount': round(float(amount or 0), 2),
               'reference_id': str(reference_id)}
@@ -1932,6 +1946,10 @@ def check_manager_password(data, req_json):
         return True, None
     username = (req_json.get('username') or '').strip() if req_json else ''
     password = (req_json.get('password') or '') if req_json else ''
+    ip_address = request.remote_addr or 'unknown'
+    throttled = login_throttle_error(data, username, ip_address)
+    if throttled:
+        return False, throttled
     valid = any(
         u.get('username') == username
         and u.get('role', 'cashier') == 'manager'
@@ -1939,7 +1957,9 @@ def check_manager_password(data, req_json):
         for u in users
     )
     if not valid:
+        record_login_failure(data, username, ip_address)
         return False, (jsonify({"ok": False, "error": "كلمة مرور المدير غير صحيحة - العملية تحتاج موافقة مدير"}), 401)
+    clear_login_failures(data, username, ip_address)
     return True, None
 
 def build_item_recipes(data):
@@ -5825,10 +5845,16 @@ def verify_user():
     payload = request.get_json(silent=True) or {}
     username = (payload.get('username') or '').strip()
     password = payload.get('password') or ''
-    users = data.get('settings', {}).get('users', [])
+    ip_address = request.remote_addr or 'unknown'
+    throttled = login_throttle_error(data, username, ip_address)
+    if throttled:
+        return throttled
+    users = active_users(data)
     for u in users:
-        if u.get('username') == username and verify_password(u.get('password_hash'), password):
+        if u.get('username') == username and verify_password(u.get('password_hash', u.get('password', '')), password):
+            clear_login_failures(data, username, ip_address)
             return jsonify({"ok": True, "username": u['username'], "role": u.get('role', 'cashier')})
+    record_login_failure(data, username, ip_address)
     return jsonify({"ok": False, "error": "اسم المستخدم أو كلمة المرور غير صحيحة"}), 401
 
 
@@ -5841,9 +5867,15 @@ def verify_current_user():
     payload = request.get_json(silent=True) or {}
     password = payload.get('password') or ''
     data = load()
-    user = next((u for u in data.get('settings', {}).get('users', []) if u.get('username') == username), None)
-    if not user or not verify_password(user.get('password_hash'), password):
+    ip_address = request.remote_addr or 'unknown'
+    throttled = login_throttle_error(data, username, ip_address)
+    if throttled:
+        return throttled
+    user = next((u for u in active_users(data) if u.get('username') == username), None)
+    if not user or not verify_password(user.get('password_hash', user.get('password', '')), password):
+        record_login_failure(data, username, ip_address)
         return jsonify({'ok': False, 'error': 'رمز كاشير قيصر غير صحيح'}), 401
+    clear_login_failures(data, username, ip_address)
     if not str(user.get('password_hash', '')).startswith('pbkdf2_sha256$'):
         user['password_hash'] = hash_password(password)
         save(data)
@@ -6099,9 +6131,15 @@ def auth_unlock_screen():
     username = str(payload.get('username', '')).strip()
     password = str(payload.get('password', ''))
     data = load()
+    ip_address = request.remote_addr or 'unknown'
+    throttled = login_throttle_error(data, username, ip_address)
+    if throttled:
+        return throttled
     user = authenticate_pos_user(data, username, password)
     if not user:
+        record_login_failure(data, username, ip_address)
         return jsonify({'ok': False, 'error': 'اسم المستخدم أو كلمة المرور غير صحيحة'}), 401
+    clear_login_failures(data, username, ip_address)
     if not str(user.get('password_hash', '')).startswith('pbkdf2_sha256$'):
         user['password_hash'] = hash_password(password)
         save(data)
