@@ -5182,7 +5182,7 @@ def thermal_receipt_structured(data, order):
     printer = settings.get('printer', {})
     RS, US = RECEIPT_RS, RECEIPT_US
     try:
-        narrow = int(printer.get('paper_width', 80) or 80) <= 58
+        narrow = int(printer.get('paper_width', 80) or 80) == 58
     except (TypeError, ValueError):
         narrow = False
     # نعطي الكمية والسعر والقيمة عرضاً ثابتاً كافياً للأرقام، ونمنع
@@ -5368,15 +5368,16 @@ def _dispatch_print_job(job):
     return result
 
 
-def _print_worker():
-    while True:
-        job = PRINT_QUEUE.get()
-        try:
-            data, order, ticket_type, log_id = job
-            result = _dispatch_print_job(job)
-            # load() وsave() محميتان كل واحدة على حدة، لكن العامل يحتاج
-            # القفل نفسه طوال دورة القراءة والتعديل والحفظ حتى لا يكتب فوق
-            # فاتورة أو حركة نقدية حفظها طلب HTTP بالتزامن.
+def mark_print_job_failed(log_id, error):
+    """ينهي حالة queued عند أي استثناء غير معالج أثناء تصيير/إرسال المهمة."""
+    with DATA_LOCK:
+        latest = load()
+        row = next((item for item in latest.get('print_log', []) if item.get('id') == log_id), None)
+        if row:
+            row.update({'status': 'failed', 'message': str(error)[:220] or 'تعذر إرسال أمر الطباعة'})
+            save(latest)
+
+
             with DATA_LOCK:
                 latest = load()
                 row = next((item for item in latest.get('print_log', []) if item.get('id') == log_id), None)
@@ -5386,15 +5387,19 @@ def _print_worker():
                                 'job_id': result.get('job_id', ''),
                                 'document_name': result.get('document_name', '')})
                     save(latest)
+def _print_worker():
+    while True:
+        job = PRINT_QUEUE.get()
+        try:
+            data, order, ticket_type, log_id = job
+            result = _dispatch_print_job(job)
+            # load() وsave() محميتان كل واحدة على حدة، لكن العامل يحتاج
+            # القفل نفسه طوال دورة القراءة والتعديل والحفظ حتى لا يكتب فوق
+            # فاتورة أو حركة نقدية حفظها طلب HTTP بالتزامن.
         except Exception as exc:
             error_logger.error('خطأ في عامل الطباعة: %s', exc, exc_info=True)
             try:
-                with DATA_LOCK:
-                    latest = load()
-                    row = next((item for item in latest.get('print_log', []) if item.get('id') == log_id), None)
-                    if row:
-                        row.update({'status': 'failed', 'message': str(exc)[:220] or 'تعذر إرسال أمر الطباعة'})
-                        save(latest)
+                mark_print_job_failed(log_id, exc)
             except Exception:
                 error_logger.error('تعذر تثبيت فشل مهمة الطباعة %s', log_id, exc_info=True)
         finally:

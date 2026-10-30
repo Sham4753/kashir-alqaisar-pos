@@ -61,6 +61,22 @@ class RasterTransportTests(unittest.TestCase):
         self.assertEqual(received, [b'ab', b'cdef'])
         self.assertEqual(b''.join(received), b'abcdef')
 
+    def test_print_worker_failure_marks_queued_record_failed(self):
+        data = server.load()
+        data['print_log'] = [{'id': 'queued-exception', 'status': 'queued', 'message': ''}]
+        server.save(data)
+        server.mark_print_job_failed('queued-exception', RuntimeError('renderer crashed'))
+        row = next(row for row in server.load()['print_log'] if row['id'] == 'queued-exception')
+        self.assertEqual(row['status'], 'failed')
+        self.assertEqual(row['message'], 'renderer crashed')
+
+    def test_narrow_layout_matches_58mm_exactly(self):
+        for paper_width, expected in ((58, '28,16,28,28'), (80, '40,17,22,21'), (57, '40,17,22,21')):
+            data = {'settings': {'printer': {'paper_width': paper_width}}}
+            order = {'id': 'NARROW', 'items': []}
+            with self.subTest(paper_width=paper_width):
+                self.assertIn(expected, server.thermal_receipt_structured(data, order))
+
 
 if __name__ == '__main__':
     unittest.main()
