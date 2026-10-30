@@ -939,6 +939,12 @@ def _save_database(data, changed_order_ids=None):
         raise
     finally:
         conn.close()
+    # يبقى ملف JSON المتوافق نسخة كاملة وحديثة للاسترداد عند فقد SQLite، وليس
+    # لقطة مضغوطة راكدة تخلو من الأرشيف الساخن.
+    try:
+        atomic_write_json(DATA_FILE, data)
+    except OSError:
+        error_logger.error('فشل تحديث DATA_FILE الكامل بعد حفظ SQLite إلى %s', DATA_FILE, exc_info=True)
 
 
 def save(data, changed_order_ids=None):
@@ -952,6 +958,43 @@ def save(data, changed_order_ids=None):
 
 _last_backup_at = 0.0
 _last_backup_date = ''
+BACKUP_FORMAT_VERSION = 2
+DAILY_BACKUP_RETENTION_DAYS = 90
+
+
+def build_backup_bundle(data=None):
+    """ينشئ نسخة قابلة للاستعادة تشمل الحالة الساخنة والأرشيف البارد."""
+    state = data if data is not None else load()
+    state_copy = json.loads(json.dumps(state, ensure_ascii=False))
+    cold = {}
+    for month in list_cold_months():
+        try:
+            with open(_cold_archive_path(month), 'r', encoding='utf-8') as handle:
+                rows = json.load(handle)
+        except (OSError, ValueError) as exc:
+            raise ValueError(f'تعذر تضمين الأرشيف البارد للشهر {month}') from exc
+        if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+            raise ValueError(f'أرشيف الشهر {month} غير صالح')
+        cold[month] = rows
+    return {
+        'format_version': BACKUP_FORMAT_VERSION,
+        'created_at': datetime.now().isoformat(),
+        'state': state_copy,
+        'archive_cold': cold,
+    }
+
+
+def _prune_backup_family(prefix, keep):
+    try:
+        files = sorted(name for name in os.listdir(BACKUP_DIR)
+                       if name.startswith(prefix) and name.endswith('.json'))
+    except OSError:
+        return
+    for old in files[:-keep]:
+        try:
+            os.remove(os.path.join(BACKUP_DIR, old))
+        except OSError:
+            error_logger.warning('تعذر تقليم النسخة الاحتياطية %s', old, exc_info=True)
 
 
 def backup(force=False):
@@ -973,16 +1016,12 @@ def backup(force=False):
         _last_backup_at = now
         _last_backup_date = today
         ts = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
-        conn = db_connect()
-        try:
-            row = conn.execute('SELECT payload FROM app_state WHERE id=1').fetchone()
-            snapshot = json.loads(row['payload']) if row else {}
-        finally:
-            conn.close()
-        atomic_write_json(os.path.join(BACKUP_DIR, f'backup_{ts}.json'), snapshot)
-        backups = sorted(os.listdir(BACKUP_DIR))
-        for old in backups[:-30]:
-            os.remove(os.path.join(BACKUP_DIR, old))
+        bundle = build_backup_bundle()
+        atomic_write_json(os.path.join(BACKUP_DIR, f'backup_{ts}.json'), bundle)
+        # اليومية منفصلة عن حد النسخ السريعة؛ يحدّثها آخر حفظ ناجح في اليوم.
+        atomic_write_json(os.path.join(BACKUP_DIR, f'daily_{today}.json'), bundle)
+        _prune_backup_family('backup_', 30)
+        _prune_backup_family('daily_', DAILY_BACKUP_RETENTION_DAYS)
 
 def ensure_ids(data):
     """يضمن أن كل سجل بالقوائم (موظفين/ديون/مواد) عنده id فريد.
@@ -2381,10 +2420,98 @@ def safe_backup_export(value):
 
 @app.route('/api/backup/download', methods=['GET'])
 def download_backup():
-    data = safe_backup_export(load())
+    data = safe_backup_export(build_backup_bundle())
     stamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     payload = BytesIO(json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8'))
     return send_file(payload, as_attachment=True, download_name=f'CAESAR_POS_Backup_{stamp}.json', mimetype='application/json')
+
+
+def validate_backup_bundle(bundle):
+    if not isinstance(bundle, dict) or int(bundle.get('format_version', 0) or 0) != BACKUP_FORMAT_VERSION:
+        return None, 'صيغة النسخة الاحتياطية غير مدعومة'
+    state = bundle.get('state')
+    cold = bundle.get('archive_cold')
+    if not isinstance(state, dict) or not isinstance(cold, dict):
+        return None, 'محتوى النسخة الاحتياطية غير صالح'
+    if not isinstance(state.get('orders', []), list) or not isinstance(state.get('orders_archive', []), list):
+        return None, 'بيانات فواتير النسخة الاحتياطية غير صالحة'
+    if any(not isinstance(key, str) or not re.fullmatch(r'\d{4}-\d{2}|unknown', key)
+           or not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows)
+           for key, rows in cold.items()):
+        return None, 'الأرشيف البارد في النسخة الاحتياطية غير صالح'
+    return json.loads(json.dumps(bundle, ensure_ascii=False)), None
+
+
+def _preserve_current_restore_credentials(restored, current):
+    """يحافظ على التجزئات والمفتاح المحلي عند استعادة تنزيل مُنقّى."""
+    current_users = {str(row.get('username')): row for row in active_users(current) if isinstance(row, dict)}
+    for user in restored.get('settings', {}).get('users', []) or []:
+        existing = current_users.get(str(user.get('username')))
+        if isinstance(user, dict) and existing and not user.get('password_hash') and existing.get('password_hash'):
+            user['password_hash'] = existing['password_hash']
+    current_commercial = current.get('settings', {}).get('commercial', {})
+    commercial = restored.setdefault('settings', {}).setdefault('commercial', {})
+    for key in ('license_key', 'license_id', 'machine_id'):
+        if key not in commercial and key in current_commercial:
+            commercial[key] = current_commercial[key]
+
+
+@app.route('/api/backup/restore', methods=['POST'])
+def restore_backup():
+    payload = request.get_json(silent=True) or {}
+    if payload.get('confirmation') != 'RESTORE':
+        return jsonify({'ok': False, 'error': 'اكتب RESTORE لتأكيد الاستعادة'}), 400
+    bundle, error = validate_backup_bundle(payload.get('backup'))
+    if error:
+        return jsonify({'ok': False, 'error': error}), 400
+    current = load()
+    _preserve_current_restore_credentials(bundle['state'], current)
+    # لا نكمل إن تعذر إنشاء نقطة أمان كاملة قبل لمس الحالة الحالية.
+    backup(force=True)
+    restored = bundle['state']
+    restored.setdefault('orders', [])
+    restored.setdefault('orders_archive', [])
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+    staging = os.path.join(BACKUP_DIR, f'.restore_cold_{timestamp}')
+    os.makedirs(staging, exist_ok=False)
+    for month, rows in bundle['archive_cold'].items():
+        atomic_write_json(os.path.join(staging, f'orders_{month}.json'), rows)
+
+    previous_cold = os.path.join(BACKUP_DIR, f'archive_cold_pre_restore_{timestamp}')
+    with DATA_LOCK:
+        moved_old = False
+        try:
+            if os.path.isdir(COLD_ARCHIVE_DIR):
+                os.replace(COLD_ARCHIVE_DIR, previous_cold)
+                moved_old = True
+            os.replace(staging, COLD_ARCHIVE_DIR)
+            conn = db_connect()
+            try:
+                conn.execute('BEGIN IMMEDIATE')
+                conn.execute('DELETE FROM order_items')
+                conn.execute('DELETE FROM orders')
+                _write_order_rows(conn, restored['orders'] + restored['orders_archive'], prune=False)
+                compact = json.dumps(_compact_state_snapshot(restored), ensure_ascii=False, separators=(',', ':'))
+                conn.execute('UPDATE app_state SET payload=?, updated_at=? WHERE id=1', (compact, datetime.now().isoformat()))
+                integrity = conn.execute('PRAGMA integrity_check').fetchone()[0]
+                if integrity != 'ok':
+                    raise RuntimeError('فشل فحص سلامة SQLite بعد الاستعادة')
+                conn.execute('COMMIT')
+            except Exception:
+                conn.execute('ROLLBACK')
+                raise
+            finally:
+                conn.close()
+            atomic_write_json(DATA_FILE, restored)
+        except Exception as exc:
+            if moved_old and os.path.isdir(previous_cold):
+                failed_cold = os.path.join(BACKUP_DIR, f'archive_cold_failed_restore_{timestamp}')
+                if os.path.isdir(COLD_ARCHIVE_DIR):
+                    os.replace(COLD_ARCHIVE_DIR, failed_cold)
+                os.replace(previous_cold, COLD_ARCHIVE_DIR)
+            return jsonify({'ok': False, 'error': f'تعذرت الاستعادة بأمان: {str(exc)[:180]}'}), 500
+    return jsonify({'ok': True, 'message': 'تمت الاستعادة بعد إنشاء نسخة أمان مسبقة',
+                    'safety_archive': os.path.basename(previous_cold) if moved_old else None})
 
 @app.route('/api/version', methods=['GET'])
 def version():

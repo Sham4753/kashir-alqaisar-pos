@@ -34,8 +34,9 @@ class BackupDownloadTests(unittest.TestCase):
         self.assertEqual(response.mimetype, 'application/json')
         payload = json.loads(response.data.decode('utf-8'))
         self.assertFalse(contains_sensitive_key(payload))
-        self.assertEqual(payload['settings']['restaurant']['name'], 'مطعم الاختبار')
-        self.assertIn('license_id', payload['settings']['commercial'])
+        self.assertEqual(payload['format_version'], server.BACKUP_FORMAT_VERSION)
+        self.assertEqual(payload['state']['settings']['restaurant']['name'], 'مطعم الاختبار')
+        self.assertIn('license_id', payload['state']['settings']['commercial'])
 
 
 if __name__ == '__main__':

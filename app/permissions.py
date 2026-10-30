@@ -119,6 +119,7 @@ ROUTE_POLICIES = (
     ("POST", "/api/orders/archive", MANAGER_ONLY),
     ("POST", "/api/orders/<order_id>/void", MANAGER_ONLY),
     ("GET", "/api/backup/download", MANAGER_ONLY),
+    ("POST", "/api/backup/restore", MANAGER_ONLY),
     ("DELETE", "/api/orders", MANAGER_ONLY),
     ("DELETE", "/api/orders/<order_id>", MANAGER_ONLY),
     ("GET", "/api/debts", MANAGEMENT_ROLES),
