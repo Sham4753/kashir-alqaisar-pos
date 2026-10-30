@@ -4970,6 +4970,8 @@ def thermal_receipt_structured(data, order):
     header = str(printer.get('receipt_header', 'إيصال مبيعات') or '').strip()
     if header:
         lines.append(cmd('C', header, 1))
+    if order.get('is_reprint'):
+        lines.append(cmd('C', 'نسخة', 1))
     lines.append(cmd('GAP', 6))
 
     stamp = str(order.get('timestamp') or order.get('date', ''))[:19].replace('T', ' ')
@@ -5169,7 +5171,7 @@ def queue_thermal_print(data, order, ticket_type='receipt', wait=False):
 
 def unresolved_print_failures(data):
     """يعيد محاولات الإرسال الفاشلة التي لم يحلها إرسال ناجح لاحقًا."""
-    return [row for row in data.get('print_log', []) if row.get('status') in {'failed', 'timed_out', 'queued'} and not row.get('resolved', False)]
+    return [row for row in data.get('print_log', []) if row.get('status') in {'failed', 'timed_out'} and not row.get('resolved', False)]
 
 
 @app.route('/api/printer/list', methods=['GET'])
@@ -5598,10 +5600,12 @@ def reprint_order(order_id):
         return jsonify({'ok': False, 'error': 'حدد الطابعة أو عنوان طابعة الشبكة أولًا من الإعدادات'}), 400
     previous = printer.get('auto_print_receipt', False)
     printer['auto_print_receipt'] = True
-    result = queue_thermal_print(data, order, 'receipt')
+    reprint = dict(order)
+    reprint['is_reprint'] = True
+    result = queue_thermal_print(data, reprint, 'receipt')
     printer['auto_print_receipt'] = previous
     save(data)
-    return jsonify({'ok': result.get('status') in {'submitted', 'sent'}, 'print': result})
+    return jsonify({'ok': result.get('status') in {'queued', 'submitted', 'sent'}, 'print': result})
 
 
 @app.route('/api/printer/orders/<order_id>/retry', methods=['POST'])
@@ -5620,7 +5624,7 @@ def retry_failed_print(order_id):
     failures = [row for row in unresolved_print_failures(data)
                 if str(row.get('order_id')) == str(order_id)
                 and row.get('type') == ticket_type
-                and row.get('status') in {'failed', 'timed_out', 'queued'}]
+                and row.get('status') in {'failed', 'timed_out'}]
     if not failures:
         return jsonify({'ok': False, 'error': 'لا توجد محاولة طباعة فاشلة غير معالجة لهذا المستند'}), 409
     # Reserve the rows before dispatch so a second operator cannot retry the
@@ -5638,21 +5642,21 @@ def retry_failed_print(order_id):
     enabled_key = 'auto_print_receipt' if ticket_type == 'receipt' else 'auto_print_kitchen'
     previous = printer.get(enabled_key, False)
     printer[enabled_key] = True
-    result = queue_thermal_print(data, order, ticket_type, wait=True)
+    result = queue_thermal_print(data, order, ticket_type)
     printer[enabled_key] = previous
     order.setdefault('print_status', {})[ticket_type] = result
-    if result.get('status') in {'submitted', 'sent'}:
+    if result.get('status') in {'queued', 'submitted', 'sent'}:
         now = datetime.now().isoformat()
         for failure in failures:
             failure['resolved'] = True
             failure['resolved_at'] = now
-            failure['resolution'] = 'retry_submitted'
+            failure['resolution'] = 'retry_queued' if result.get('status') == 'queued' else 'retry_submitted'
     else:
         for failure in failures:
             failure['status'] = 'failed'
             failure['message'] = result.get('message', 'فشلت إعادة الطباعة')
     save(data); backup()
-    return jsonify({'ok': result.get('status') in {'submitted', 'sent'}, 'print': result, 'unresolved_count': len(unresolved_print_failures(data))})
+    return jsonify({'ok': result.get('status') in {'queued', 'submitted', 'sent'}, 'print': result, 'unresolved_count': len(unresolved_print_failures(data))})
 
 
 @app.route('/api/printer/errors', methods=['GET'])
