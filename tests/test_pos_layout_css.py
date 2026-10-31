@@ -17,11 +17,15 @@ class PosDesktopGridTests(unittest.TestCase):
         tracks = re.findall(r'minmax\([^)]*\)|\d+px|\dfr', columns)
         self.assertEqual(len(tracks), 2, columns)
 
-    def test_cart_panel_is_wider_and_item_notes_have_a_visible_field(self):
-        self.assertIn('minmax(560px, 600px)', CSS)
+    def test_cart_panel_stays_normal_width_and_gains_vertical_space(self):
+        self.assertIn('minmax(480px, 520px)', CSS)
+        self.assertNotIn('minmax(560px, 600px)', CSS)
         self.assertIn('.cart-item-note', CSS)
         self.assertIn('font-size: 9px;', CSS)
         self.assertIn('min-height: 220px;', CSS)
+        self.assertIn('min-height: 42px !important;', CSS)
+        self.assertIn('.order-tools .icon-button', CSS)
+        self.assertIn('min-height: 36px !important;', CSS)
 
 
 if __name__ == '__main__':

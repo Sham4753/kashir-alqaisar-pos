@@ -757,7 +757,7 @@ body.caesar-page-index .cart.cart-density-dense .cart-item-note { min-height: 31
 /* Keep the cashier's order list roomy while its item details stay compact. */
 @media (min-width: 1280px) {
   body.caesar-page-index .app {
-    grid-template-columns: minmax(0, 1fr) minmax(560px, 600px) !important;
+    grid-template-columns: minmax(0, 1fr) minmax(480px, 520px) !important;
   }
 }
 body.caesar-page-index .order-head { padding-bottom: 10px; }
@@ -792,4 +792,39 @@ body.caesar-page-index .cart.cart-density-dense .cart-item-note {
 body.caesar-page-index .print-state:empty { display: none; min-height: 0; margin: 0; }
 @media (max-width: 760px) {
   body.caesar-page-index .cart { min-height: 200px; max-height: 440px; }
+}
+
+/* Cash-only POS: reserve vertical space for the basket and keep the one
+   checkout action compact but unmistakably primary. */
+body.caesar-page-index .payment-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 5px 0 3px;
+}
+body.caesar-page-index .payment-label .field-label { margin: 0; }
+body.caesar-page-index .cash-only-method {
+  color: var(--pos-emerald-strong);
+  font-size: 10px;
+  font-weight: 900;
+}
+body.caesar-page-index .compact-action-bar { margin-top: 5px; }
+body.caesar-page-index .action-main {
+  min-height: 42px !important;
+  height: 42px;
+  padding-inline: 12px;
+  font-size: 12px;
+}
+
+body.caesar-page-index .order-tools .icon-button {
+  width: 36px;
+  height: 36px;
+  min-width: 36px !important;
+  min-height: 36px !important;
+}
+body.caesar-page-index .order-context .segment {
+  height: 36px;
+  min-height: 36px !important;
+  padding-inline: 4px;
+  font-size: 10px;
 }
