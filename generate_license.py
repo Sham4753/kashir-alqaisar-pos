@@ -50,6 +50,8 @@ def main(argv=None):
     parser.add_argument("--private-key", default=os.environ.get(PRIVATE_KEY_ENV),
                         help=f"Vendor Ed25519 private PEM path (or set {PRIVATE_KEY_ENV}); never put it in the application/repository.")
     parser.add_argument("--machine-id", help="Customer Machine ID; if omitted, prompt interactively.")
+    parser.add_argument("--no-pause", action="store_true",
+                        help="Do not pause after displaying the license (for wrapper scripts).")
     args = parser.parse_args(argv)
     if not args.private_key:
         parser.error(f"A vendor private key is required via --private-key or {PRIVATE_KEY_ENV}; no key is embedded or generated.")
@@ -59,7 +61,7 @@ def main(argv=None):
         raise SystemExit("Machine ID is required.")
     license_id, license_key = generate(machine_id, private_key)
     print(f"\nProduct: CAESAR POS\nLicense ID: {license_id}\nLicense Key: {license_key}")
-    if sys.stdin.isatty():
+    if sys.stdin.isatty() and not args.no_pause:
         input("\nاضغط Enter للخروج...")
     return 0
 
