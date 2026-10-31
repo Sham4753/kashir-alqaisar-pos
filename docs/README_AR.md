@@ -11,6 +11,7 @@
 - [HANDOFF.md](../HANDOFF.md) — موجز حالة العمل الحالي، الفحوص وما بقي.
 - [AI_HANDOFF_AR.md](../AI_HANDOFF_AR.md) — مرجع البنية التقنية ومسؤوليات النظام.
 - [CANONICAL_RUNTIME_AR.md](../CANONICAL_RUNTIME_AR.md) — نقطة تشغيل Windows والفصل بين المصدر وVault.
+- [OPERATIONS_AND_RECOVERY_AR.md](OPERATIONS_AND_RECOVERY_AR.md) — دليل موحد للتطوير والبناء والترخيص وتشخيص الأعطال وتحديث العميل مع الحفاظ على البيانات.
 
 ## التشغيل والتسليم والنشر
 
@@ -18,6 +19,7 @@
 - [تشغيل_من_USB_AR.md](../تشغيل_من_USB_AR.md) — تشغيل الحزمة من وسيط USB.
 - [BUILD_OFFLINE_AR.md](../BUILD_OFFLINE_AR.md) — بناء الحزمة دون اتصال.
 - [RELEASE_UPDATE_GUIDE_AR.md](../RELEASE_UPDATE_GUIDE_AR.md) — تجهيز تحديث GitHub وتثبيته يدويًا على جهاز العميل.
+- [OPERATIONS_AND_RECOVERY_AR.md](OPERATIONS_AND_RECOVERY_AR.md) — إجراءات إصلاح وتحديث تثبيت قائم وحماية Vault والترخيص المحلي.
 - [RUNTIME_ENTRYPOINT_AR.md](../RUNTIME_ENTRYPOINT_AR.md) — نقاط دخول التشغيل.
 - [RUNTIME_REPAIR_VERIFICATION_AR.md](../RUNTIME_REPAIR_VERIFICATION_AR.md) — تحقق إصلاحات runtime.
 - [INSTALLER_GUIDE_AR.md](../INSTALLER_GUIDE_AR.md) — إرشادات التثبيت.
