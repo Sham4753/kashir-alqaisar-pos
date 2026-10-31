@@ -13,7 +13,7 @@ permissions:
 jobs:
   test-and-package:
     runs-on: windows-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -23,59 +23,118 @@ jobs:
         with:
           node-version: 22
 
+      - name: Verify embedded CFFI and Ed25519 runtime
+        shell: pwsh
+        run: |
+          $env:PYTHONPATH = "$PWD\Lib\site-packages;$PWD\app;$PWD"
+          & .\python.exe -c "import _cffi_backend, cryptography; from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey; print('CFFI backend and Ed25519 ready')"
+          if ($LASTEXITCODE -ne 0) { throw "Embedded CFFI or Ed25519 import failed." }
+          if (-not (Get-ChildItem -LiteralPath .\Lib\site-packages -Filter "_cffi_backend*.pyd" -File -Recurse)) { throw "The Windows CFFI native backend is missing." }
+
       - name: Run Python unit tests
         shell: pwsh
         run: |
-          $env:PYTHONPATH = "$PWD\Lib\site-packages;$PWD"
+          $env:PYTHONPATH = "$PWD\Lib\site-packages;$PWD\app;$PWD"
           & .\python.exe -m unittest discover -s tests -p "test_*.py" -v
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($LASTEXITCODE -ne 0) { throw "Application Python tests failed." }
+          & .\python.exe -m unittest discover -s tools\tests -v
+          if ($LASTEXITCODE -ne 0) { throw "Update-package tests failed." }
 
       - name: Verify frontend
         shell: pwsh
         run: |
           node tests\verify_frontend.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($LASTEXITCODE -ne 0) { throw "Frontend verification failed." }
 
-      - name: Verify build fails closed without a license secret
+      - name: Verify the build refuses a missing public trust anchor
         shell: pwsh
         run: |
-          $candidates = @(".license_secret", "license.secret", "app/.license_secret", "app/license.secret")
-          foreach ($candidate in $candidates) {
-            if (Test-Path -LiteralPath $candidate -PathType Leaf) {
-              throw "A real license secret must never be committed to the repository."
-            }
-          }
-          $output = & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\Setup_CAESAR_OneFile.ps1 2>&1
-          $exitCode = $LASTEXITCODE
-          $output | ForEach-Object { Write-Host $_ }
-          if ($exitCode -eq 0 -or (($output | Out-String) -notmatch "LICENSE_SECRET_MISSING")) {
-            throw "The build must stop with LICENSE_SECRET_MISSING when no local secret is supplied."
-          }
-          exit 0
-
-      - name: Build Windows package with a disposable test secret (no artifact is published)
-        shell: pwsh
-        run: |
-          $secretPath = Join-Path $PWD ".license_secret"
-          $bytes = New-Object byte[] 32
-          $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+          $keyPath = Join-Path $PWD "app\license_public_key.pem"
+          $hadKey = Test-Path -LiteralPath $keyPath -PathType Leaf
+          $originalKey = if ($hadKey) { [System.IO.File]::ReadAllBytes($keyPath) } else { $null }
           try {
-            $rng.GetBytes($bytes)
-            [System.IO.File]::WriteAllText($secretPath, [Convert]::ToBase64String($bytes))
-            & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\Setup_CAESAR_OneFile.ps1
-            if ($LASTEXITCODE -ne 0) { throw "Windows package build failed with exit code $LASTEXITCODE." }
-            $exe = Join-Path $PWD "dist\CAESAR_POS\CAESAR_POS.exe"
-            if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "The expected CAESAR_POS.exe was not produced." }
-            $bundledSecret = Get-ChildItem -LiteralPath (Join-Path $PWD "dist\CAESAR_POS") -Filter ".license_secret" -File -Recurse | Select-Object -First 1
-            if (-not $bundledSecret) { throw "The build output is missing the license secret file." }
-            Write-Host "Windows packaging passed. This disposable test package is not published."
+            if ($hadKey) { Remove-Item -LiteralPath $keyPath -Force }
+            $output = & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\Setup_CAESAR_OneFile.ps1 2>&1
+            $exitCode = $LASTEXITCODE
+            $output | ForEach-Object { Write-Host $_ }
+            if ($exitCode -eq 0 -or (($output | Out-String) -notmatch "LICENSE_PUBLIC_KEY_MISSING")) {
+              throw "The build must stop with LICENSE_PUBLIC_KEY_MISSING when the trust anchor is absent."
+            }
+            $global:LASTEXITCODE = 0
           } finally {
-            $rng.Dispose()
-            if (Test-Path -LiteralPath $secretPath) { Remove-Item -LiteralPath $secretPath -Force }
+            if ($hadKey) { [System.IO.File]::WriteAllBytes($keyPath, $originalKey) }
+          }
+
+      - name: Build Windows package using a disposable test key (no artifact is published)
+        shell: pwsh
+        run: |
+          $publicKeyPath = Join-Path $PWD "app\license_public_key.pem"
+          $privateKeyPath = Join-Path $env:TEMP ("caesar-ci-private-" + [guid]::NewGuid().ToString("N") + ".pem")
+          $hadKey = Test-Path -LiteralPath $publicKeyPath -PathType Leaf
+          $originalKey = if ($hadKey) { [System.IO.File]::ReadAllBytes($publicKeyPath) } else { $null }
+          $keyScript = @'
+          import sys
+          from pathlib import Path
+          from cryptography.hazmat.primitives import serialization
+          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+          private = Ed25519PrivateKey.generate()
+          Path(sys.argv[1]).write_bytes(private.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
+          Path(sys.argv[2]).write_bytes(private.public_key().public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo))
+          '@
+          try {
+            & .\python.exe -c $keyScript $privateKeyPath $publicKeyPath
+            if ($LASTEXITCODE -ne 0) { throw "Could not create disposable CI signing keys." }
+            & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\Setup_CAESAR_OneFile.ps1
+            if ($LASTEXITCODE -ne 0) { throw "Windows OneFolder or update-package build failed." }
+            $exe = Join-Path $PWD "dist\CAESAR_POS\CAESAR_POS.exe"
+            $updateZip = Get-ChildItem -LiteralPath (Join-Path $PWD "dist") -Filter "CAESAR_POS_Update_v*.zip" -File | Select-Object -First 1
+            $commercialZip = Get-ChildItem -LiteralPath $PWD -Filter "CAESAR_POS_OneFolder_Commercial_v*.zip" -File | Select-Object -First 1
+            if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "The expected CAESAR_POS.exe was not produced." }
+            if (-not $updateZip -or -not $commercialZip) { throw "Expected customer or manual-update ZIP was not produced." }
+            $verifyZipScript = @'
+          import sys, zipfile
+          from pathlib import PurePosixPath
+          blocked = {".json", ".json5", ".jsonc", ".jsonl", ".ndjson", ".csv", ".tsv", ".db", ".sqlite", ".sqlite3", ".log", ".bak", ".key", ".pem", ".p12", ".pfx", ".p7b", ".p7c", ".env", ".lic", ".license", ".licence"}
+          safe = {("app", "factory_data.json"), ("_internal", "app", "factory_data.json"), ("runtime", "_internal", "app", "factory_data.json"), ("app", "license_public_key.pem"), ("_internal", "app", "license_public_key.pem"), ("runtime", "_internal", "app", "license_public_key.pem"), ("pythonnet", "runtime", "python.runtime.deps.json"), ("_internal", "pythonnet", "runtime", "python.runtime.deps.json"), ("runtime", "_internal", "pythonnet", "runtime", "python.runtime.deps.json")}
+          for archive_path in sys.argv[1:]:
+              with zipfile.ZipFile(archive_path) as archive:
+                  for item in archive.infolist():
+                      if item.is_dir():
+                          continue
+                      name = item.filename.replace("\\", "/")
+                      parts = tuple(part.casefold() for part in PurePosixPath(name).parts)
+                      leaf = parts[-1]
+                      if leaf == "generate_license.py" or any("vault" in part or "secret" in part for part in parts) or any("private" in part and part.endswith((".pem", ".key", ".p12", ".pfx")) for part in parts):
+                          raise SystemExit(f"Forbidden private/customer artifact in {archive_path}: {name}")
+                      if "payload" in parts:
+                          payload_index = parts.index("payload")
+                          relative_parts = parts[payload_index + 2:] if payload_index + 1 < len(parts) and parts[payload_index + 1] == "caesar_pos" else ()
+                      elif parts and parts[0] == "caesar_pos":
+                          relative_parts = parts[1:]
+                      else:
+                          relative_parts = ()
+                      is_safe_asset = tuple(relative_parts) in safe
+                      suffix = PurePosixPath(leaf).suffix.casefold()
+                      if suffix in blocked and not is_safe_asset:
+                          raise SystemExit(f"Unexpected data/credential file in {archive_path}: {name}")
+                      if leaf.endswith((".sqlite3-wal", ".sqlite3-shm", ".sqlite3-journal", ".sqlite-wal", ".sqlite-shm", ".sqlite-journal", ".db-wal", ".db-shm", ".db-journal")):
+                          raise SystemExit(f"SQLite sidecar in {archive_path}: {name}")
+          print("Customer and update ZIP contents passed the CI safety scan.")
+          '@
+            & .\python.exe -c $verifyZipScript $updateZip.FullName $commercialZip.FullName
+            if ($LASTEXITCODE -ne 0) { throw "A built ZIP failed the customer-data scan." }
+            & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\tools\tests\test_apply_update.ps1
+            if ($LASTEXITCODE -ne 0) { throw "Windows updater apply/rollback integration tests failed." }
+            Write-Host "Windows package build passed. Disposable private key and package artifacts will not be published."
+          } finally {
+            if (Test-Path -LiteralPath $privateKeyPath) { Remove-Item -LiteralPath $privateKeyPath -Force }
+            if ($hadKey) { [System.IO.File]::WriteAllBytes($publicKeyPath, $originalKey) } elseif (Test-Path -LiteralPath $publicKeyPath) { Remove-Item -LiteralPath $publicKeyPath -Force }
             $distPath = Join-Path $PWD "dist"
             if (Test-Path -LiteralPath $distPath) { Remove-Item -LiteralPath $distPath -Recurse -Force }
             $buildPath = Join-Path $PWD "build"
             if (Test-Path -LiteralPath $buildPath) { Remove-Item -LiteralPath $buildPath -Recurse -Force }
-            $zipPath = Join-Path $PWD "CAESAR_POS_OneFolder_Commercial_v4.zip"
-            if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
+            $commercialPackages = Get-ChildItem -LiteralPath $PWD -Filter "CAESAR_POS_OneFolder_Commercial_v*.zip" -File -ErrorAction SilentlyContinue
+            foreach ($package in $commercialPackages) { Remove-Item -LiteralPath $package.FullName -Force }
+            $buildLog = Join-Path $PWD "build_onedir.log"
+            if (Test-Path -LiteralPath $buildLog) { Remove-Item -LiteralPath $buildLog -Force }
           }

@@ -1,73 +1,42 @@
-# بناء CAESAR POS كملف EXE واحد دون إنترنت
+# بناء CAESAR POS على Windows
 
-## المتطلبات المحلية قبل البناء
+## المتطلبات
 
-تتضمن الحزمة نسخة Python 3.12 محمولة ومكتبات البناء والتشغيل داخل `Lib/site-packages`، ومنها `PyInstaller` و`pywebview` و`Flask`. يتضمن `offline_wheels` أيضاً wheel متوافقاً مع Python 3.12 على Windows x64 لـ CFFI وملحقه `pycparser`؛ يستخدمهما سكربت البناء فقط عند غياب CFFI المضمن أو ملحقه الأصلي، دون الاتصال بالإنترنت أو تثبيت الحزم في Python العام.
+يستخدم البناء Python 3.12 وبيئة التشغيل والمكتبات المحمولة في `Lib/site-packages`. تتضمن الحزمة PyInstaller وFlask وPyWebView و`cryptography`، وامتداد CFFI الأصلي `_cffi_backend.cp312-win_amd64.pyd` المطابق لـWindows x64 وCPython 3.12. يسجل `embedded_packages_manifest.json` تفاصيل المكتبات؛ لا يعتمد البناء على Python العام عند اكتمال runtime.
 
-قبل تشغيل البناء، تأكد من وجود:
+يجب إنشاء مفاتيح المورّد مرة واحدة قبل بناء نسخة توزيع: المفتاح العام Ed25519 في `app\license_public_key.pem`، والمفتاح الخاص المشفّر وعبارة مروره خارج المستودع. راجع [دليل الترخيص](docs/LICENSE_ED25519_AR.md). يرفض البناء غياب المفتاح العام أو ملف PEM غير صالح أو غير Ed25519، ويفحص شجرة `app` وملف OneFolder كاملًا لمنع ضم بيانات أو تراخيص أو مفاتيح خاصة.
 
-- `python.exe` وبيئة Python المضمنة الموجودة في الحزمة.
-- `Lib/site-packages` بالمحتوى المرفق.
-- `app` و`caesar_desktop.py` و`app\caesar_icon.ico`.
-- ملف سر الترخيص المحلي المصرّح به: `.license_secret` أو `license.secret` في جذر المشروع أو مجلد `app`. استعده من نسخة احتياطية آمنة؛ لا ترفعه إلى GitHub العام ولا ترسله في المحادثة. يرفض سكربت البناء الآن الإكمال إذا لم يجده.
-- `WebView2Runtime` اختياريًا؛ وجوده يتيح تشغيل التطبيق على أجهزة لا تحتوي WebView2 مسبقًا.
+## الاختبارات
 
-إذا كان أحد الاستيرادات المطلوبة مفقودًا فعلًا، يتوقف السكربت برسالة واضحة ويبحث فقط عن wheel المطابق لذلك الاعتماد داخل `offline_wheels`. لا يتم طلب تثبيت أو استخدام `pip` عند اكتمال المكتبات المضمنة، ولا يُستخدم الإنترنت كمسار خفي.
+من PowerShell في جذر المستودع:
 
-## البناء
-
-شغّل:
-
-```bat
-Setup_CAESAR_OneFile.bat
+```powershell
+$env:PYTHONPATH = "$PWD\Lib\site-packages;$PWD\app;$PWD"
+.\python.exe -m unittest discover -s tests -p "test_*.py" -v
+.\python.exe -m unittest discover -s tools\tests -v
+node tests\verify_frontend.mjs
 ```
 
-أو من PowerShell:
+يجب أن يجتاز المصدر Windows CI قبل النشر. نجاح اختبارات Linux أو ZIP لا يثبت نجاح PyInstaller أو تشغيل Windows.
+
+## بناء النسخة وحزم التسليم
 
 ```powershell
 .\Setup_CAESAR_OneFile.ps1
 ```
 
-يعرض السكربت أولًا حالة الاعتمادات. عند اكتمالها ستظهر رسالة شبيهة بـ:
+ينتج البناء مجلد OneFolder، ويتحقق من المفتاح العام ووجود شاشة الحسابات وتخطيط الواجهة وخلو الحزمة من بيانات العميل، ثم ينشئ:
 
 ```text
-Embedded Python environment is complete; skipping pip and offline_wheels installation.
+dist\CAESAR_POS\CAESAR_POS.exe
+CAESAR_POS_OneFolder_Commercial_v4.0.1.zip
+dist\CAESAR_POS_Update_v4.0.1.zip
 ```
 
-ينتج السكربت:
+يقرأ رقم الإصدار من `CURRENT_VERSION` في `app\server.py`. ZIP التجاري لعميل جديد، ويبدأ من دون رخصة. ZIP التحديث لتثبيت قائم فقط. يسمح التحديث بأصول التطبيق الثابتة المحددة في `app/factory_data.json` و`app/license_public_key.pem`، وبملف `Python.Runtime.deps.json` المحدد لمسارات pythonnet عند الحاجة؛ لا يُسمح بأي JSON آخر. ويستبعد بيانات المطعم وVault وقواعد SQLite وملفات WAL/SHM والسجلات والتراخيص والأسرار ومولّد التراخيص وحاويات الشهادات الخاصة.
 
-```text
-dist\CAESAR_POS.exe
-dist\generate_license.py
-CAESAR_POS_Commercial_v4.zip
-```
+## تسليم تحديث العميل عبر GitHub
 
-## ملاحظات التشغيل
+ارفع `CAESAR_POS_Update_v*.zip` كأصل GitHub Release وأرسل رابط تنزيل الأصل المباشر. لا ترسل رابط المستودع أو أرشيف المصدر. الرابط لا يثبت التحديث تلقائيًا. يفك العميل ضغط ZIP ويشغّل `Apply_CAESAR_Update.bat` ثم يحدد مجلد التثبيت الذي يحتوي `CAESAR_POS.exe`.
 
-الملف التنفيذي يشغّل خادم Flask محليًا على `127.0.0.1` ثم يفتح نافذة `pywebview` باستخدام EdgeChromium. لا يفتح متصفحًا عاديًا ولا يحتاج إلى اتصال خارجي. تُحفظ بيانات المستخدم في `CAESAR_Vault` القابل للكتابة، بينما تبقى ملفات الواجهة والخادم داخل الحزمة.
-
-وجود `WebView2Runtime` داخل الحزمة يضمن التشغيل على جهاز غير متصل بالإنترنت حتى إذا لم يكن WebView2 مثبتًا مسبقًا. إذا لم يضع الباني هذا المجلد، فلن يتمكن التطبيق من ضمان التشغيل على كل جهاز Windows؛ سيعتمد عندها على WebView2 المثبت مسبقًا دون تنزيل تلقائي.
-
-## اختبار قبل التسليم
-
-يجب تشغيل اختبارات المشروع أولًا من مجلد المصدر:
-
-```bat
-python.exe -m unittest discover -s tests -p "test_*.py" -v
-```
-
-ثم فحص الواجهة:
-
-```bat
-node tests\verify_frontend.mjs
-```
-
-وأخيرًا تشغيل `dist\CAESAR_POS\CAESAR_POS.exe` على جهاز Windows مفصول عن الإنترنت والتحقق من ظهور شاشة اختيار الحسابات، ثم التحقق من الترخيص، وإضافة/بيع صنف تجريبي، والطباعة والنسخ الاحتياطي. لا تستبدل نسخة المطعم العاملة قبل اجتياز هذه الفحوصات.
-
-نجاح PyInstaller وحده لا يثبت صلاحية التشغيل أو الترخيص. يفحص البناء الآن وجود سر الترخيص وصفحة اختيار الحسابات وتخطيط شبكة سطح المكتب داخل الحزمة، بينما تبقى صلاحية الترخيص الفعلية مرتبطة بالجهاز وبيانات `CAESAR_Vault`.
-
-## إصلاح خطأ Embedded package missing
-
-يستخدم `Setup_CAESAR_OneFile.ps1` الآن `python.exe` الموجود داخل مجلد الحزمة فقط، ويضيف `Lib\site-packages` إلى مسار الاستيراد صراحةً. لذلك سيتم اكتشاف Flask وPyInstaller وPyWebView حتى إذا لم يقرأ Windows ملف `python312._pth` بعد فك الضغط أو إعادة تسمية المجلد. لا يتم تشغيل pip عندما تكون الحزم المضمنة موجودة.
-
-إذا ظهرت مشكلة جديدة، سيطبع السكربت مسار Python ومسارات الحزم المستخدمة قبل إظهار الحزمة الناقصة، بدل إعطاء تحذير عام فقط.
+يستبدل المُحدّث الملفات الواردة فقط، ويحتفظ بنسخ مؤقتة للملفات المستبدلة ليتراجع عند الفشل. لا يلمس `CAESAR_Vault` أو الترخيص المحلي ولا يحذف ملفات أخرى. يبدأ العميل التطبيق يدويًا بعد رسالة النجاح. خذ نسخة احتياطية واختبر الحزمة على Windows قبل إرسالها.

@@ -1,36 +1,68 @@
 #!/usr/bin/env python3
-"""Generate an offline CAESAR POS HMAC-SHA256 license."""
-import hashlib, hmac, os
+"""Generate offline CAESAR POS licenses using an externally held Ed25519 key."""
+import argparse
+import base64
+from getpass import getpass
+import os
+import sys
+from pathlib import Path
 
-def load_secret():
-    """Require a vendor-only secret; never silently issue keys with a public default."""
-    value = os.environ.get("CAESAR_LICENSE_SECRET", "").strip()
-    if not value:
-        for name in ('.license_secret', 'license.secret'):
-            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), name)
-            try:
-                with open(path, 'r', encoding='utf-8') as handle:
-                    value = handle.read().strip()
-                if value:
-                    break
-            except OSError:
-                continue
-    if len(value) < 32:
-        raise SystemExit('CAESAR_LICENSE_SECRET or vendor .license_secret (32+ characters) is required.')
-    return value.encode('utf-8')
+APP_DIR = Path(__file__).resolve().parent / "app"
+sys.path.insert(0, str(APP_DIR))
 
-SECRET = load_secret()
-def normalize(machine_id):
-    return "".join(c for c in str(machine_id).strip().upper() if c.isalnum() or c in ":_-")
-def generate(machine_id):
-    machine_id = normalize(machine_id)
-    number = "CAESAR-" + hashlib.sha256(machine_id.encode()).hexdigest()[:12].upper()
-    digest = hmac.new(SECRET, f"{machine_id}|{number}".encode(), hashlib.sha256).hexdigest().upper()
-    return number, "-".join(digest[i:i+8] for i in range(0, 32, 8))
-def main():
-    machine_id = input("Machine ID: ").strip()
-    if not machine_id: raise SystemExit("Machine ID is required.")
-    number, key = generate(machine_id)
-    print(f"\nProduct: CAESAR POS\nLicense ID: {number}\nLicense Key: {key}")
-    input("\nاضغط Enter للخروج...")
-if __name__ == "__main__": main()
+from cryptography.hazmat.primitives import serialization  # noqa: E402
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # noqa: E402
+from license_crypto import license_message, license_number_for, normalize_machine_id  # noqa: E402
+
+PRIVATE_KEY_ENV = "CAESAR_LICENSE_PRIVATE_KEY_PATH"
+
+
+def load_private_key(path):
+    """Read only the caller-selected vendor key; there is no fallback or default."""
+    try:
+        pem = Path(path).expanduser().read_bytes()
+    except OSError as exc:
+        raise SystemExit(f"Cannot read the selected vendor key file: {exc}") from exc
+    if b"-----BEGIN ENCRYPTED PRIVATE KEY-----" not in pem:
+        raise SystemExit("The vendor signing key must be passphrase-encrypted; create it with tools/create_vendor_keys.py.")
+    passphrase = getpass("Vendor private-key passphrase: ")
+    try:
+        key = serialization.load_pem_private_key(pem, password=passphrase.encode("utf-8"))
+    except (ValueError, TypeError) as exc:
+        raise SystemExit("Cannot unlock the selected vendor private key; check the passphrase and PEM file.") from exc
+    if not isinstance(key, Ed25519PrivateKey):
+        raise SystemExit("The selected PEM file is not an Ed25519 private key.")
+    return key
+
+
+def generate(machine_id, private_key):
+    normalized_machine = normalize_machine_id(machine_id)
+    if not normalized_machine:
+        raise ValueError("Machine ID is required.")
+    license_id = license_number_for(normalized_machine)
+    signature = private_key.sign(license_message(normalized_machine, license_id))
+    license_key = base64.urlsafe_b64encode(signature).decode("ascii").rstrip("=")
+    return license_id, license_key
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Issue a CAESAR POS device-bound license.")
+    parser.add_argument("--private-key", default=os.environ.get(PRIVATE_KEY_ENV),
+                        help=f"Vendor Ed25519 private PEM path (or set {PRIVATE_KEY_ENV}); never put it in the application/repository.")
+    parser.add_argument("--machine-id", help="Customer Machine ID; if omitted, prompt interactively.")
+    args = parser.parse_args(argv)
+    if not args.private_key:
+        parser.error(f"A vendor private key is required via --private-key or {PRIVATE_KEY_ENV}; no key is embedded or generated.")
+    private_key = load_private_key(args.private_key)
+    machine_id = args.machine_id if args.machine_id is not None else input("Machine ID: ").strip()
+    if not machine_id:
+        raise SystemExit("Machine ID is required.")
+    license_id, license_key = generate(machine_id, private_key)
+    print(f"\nProduct: CAESAR POS\nLicense ID: {license_id}\nLicense Key: {license_key}")
+    if sys.stdin.isatty():
+        input("\nاضغط Enter للخروج...")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

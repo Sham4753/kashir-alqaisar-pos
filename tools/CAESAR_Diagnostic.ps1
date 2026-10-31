@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$CanonicalRoot = "C:\Users\$env:USERNAME\kashir-alqaisar-pos-source",
+    [string]$CanonicalRoot = "C:\CAESAR_POS",
     [int]$Port = 8080,
     [switch]$IncludeAllUserFiles
 )
@@ -49,7 +49,6 @@ Get-ChildItem -LiteralPath $desktop -Filter '*.lnk' -File -Force |
 
 Write-Host "`n=== Known runtime roots under the user profile ===" -ForegroundColor Cyan
 $roots = @(
-    (Join-Path $env:USERPROFILE 'kashir-alqaisar-pos-source'),
     (Join-Path $env:USERPROFILE 'Caesar'),
     'C:\CAESAR_POS',
     'C:\CAESAR',
@@ -75,10 +74,7 @@ Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
 
 Write-Host "`n=== License material presence (contents never printed) ===" -ForegroundColor Cyan
 $licenseCandidates = @(
-    (Join-Path $CanonicalRoot 'app\.license_secret'),
-    (Join-Path $CanonicalRoot 'app\license.secret'),
-    (Join-Path $CanonicalRoot '.license_secret'),
-    (Join-Path $CanonicalRoot 'license.secret'),
+    (Join-Path $CanonicalRoot 'app\license_public_key.pem'),
     'C:\CAESAR_Vault\license.json'
 )
 $licenseCandidates | ForEach-Object {
@@ -87,14 +83,14 @@ $licenseCandidates | ForEach-Object {
         Path = $_
         Exists = $null -ne $item
         Length = if ($item) { $item.Length } else { 0 }
-        Note = if ($_ -match 'secret') { 'secret content intentionally hidden' } else { 'metadata only' }
+        Note = if ($_ -match 'public_key') { 'public trust anchor; contents not printed' } else { 'local license metadata only; contents not printed' }
     }
 } | Format-Table -AutoSize
 
 if ($IncludeAllUserFiles) {
     Write-Host "`n=== Optional broad search (names only) ===" -ForegroundColor Yellow
     Get-ChildItem -LiteralPath $env:USERPROFILE -Recurse -File -Force -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -in @('Start.bat','launch.vbs','CAESAR_POS.exe','generate_license.py','Run_CAESAR_License_Generator.ps1') } |
+        Where-Object { $_.Name -in @('Start.bat','launch.vbs','CAESAR_POS.exe','generate_license.py','create_vendor_keys.py') } |
         Select-Object FullName, Length, LastWriteTime |
         Sort-Object FullName |
         Format-Table -AutoSize

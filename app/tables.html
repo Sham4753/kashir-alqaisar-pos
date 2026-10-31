@@ -23,7 +23,7 @@
   </nav>
   <main class="dine-main">
     <section class="dine-head">
-      <div><h1>إدارة الصالة والطاولات</h1><p>افتح طلبًا للطاولة، تابع المطبخ، وانقل الطلب بين الطاولات قبل الدفع.</p></div>
+      <div><h1>إدارة الصالة والطاولات</h1></div>
       <div class="dine-actions"><button type="button" class="dine-action dine-primary" onclick="addTable()">إضافة طاولة</button><a class="dine-action dine-muted" href="index.html">فتح الكاشير قيصر</a></div>
     </section>
     <section class="dine-stats" aria-label="ملخص الصالة"><div class="dine-stat"><span>إجمالي الطاولات</span><b id="totalTables">0</b></div><div class="dine-stat"><span>الطاولات الشاغرة</span><b id="freeTables">0</b></div><div class="dine-stat busy"><span>طلبات صالة مفتوحة</span><b id="busyTables">0</b></div><div class="dine-stat ready"><span>جاهز للتقديم</span><b id="readyTables">0</b></div></section>
@@ -46,7 +46,7 @@
     }).join(''):'<div class="empty-state"><b>لا توجد طاولات بعد</b><p>أضف طاولات الصالة لتبدأ استقبال الطلبات داخل المطعم.</p></div>';
   }
   async function loadTables(){try{const r=await fetch('/api/tables',{cache:'no-store'});const data=await r.json();if(!r.ok)throw new Error(data.error||'تعذر تحميل الطاولات');tables=Array.isArray(data)?data:[];render()}catch(e){toast(' '+e.message)}}
-  async function addTable(){const name=prompt('اسم أو رقم الطاولة (مثال: طاولة 1):');if(!name?.trim())return;const seats=prompt('عدد المقاعد:', '4');if(seats===null)return;const zone=prompt('اسم القسم أو المنطقة:', 'الصالة');if(zone===null)return;try{const r=await fetch('/api/tables',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim(),seats:Number(seats)||4,zone:zone.trim()||'الصالة'})});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||'تعذر إضافة الطاولة');toast(' تمت إضافة '+data.table.name);loadTables()}catch(e){toast(' '+e.message)}}
+  async function addTable(){const name=prompt('اسم أو رقم الطاولة:');if(!name?.trim())return;const seats=prompt('عدد المقاعد:', '4');if(seats===null)return;const zone=prompt('اسم القسم أو المنطقة:', 'الصالة');if(zone===null)return;try{const r=await fetch('/api/tables',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim(),seats:Number(seats)||4,zone:zone.trim()||'الصالة'})});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||'تعذر إضافة الطاولة');toast(' تمت إضافة '+data.table.name);loadTables()}catch(e){toast(' '+e.message)}}
   async function moveSession(id){const choices=tables.filter(t=>t.status==='free');if(!choices.length)return toast('لا توجد طاولة شاغرة لنقل الطلب إليها');const text=choices.map((t,i)=>`${i+1}. ${t.name}`).join('\n');const selected=prompt(`اختر رقم طاولة الوجهة:\n${text}`);const index=Number(selected)-1;if(!Number.isInteger(index)||!choices[index])return;try{const r=await fetch(`/api/dine-in/sessions/${encodeURIComponent(id)}/move`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({table_id:choices[index].id})});const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||'تعذر نقل الطلب');toast(' تم نقل الطلب إلى '+data.session.table_name);loadTables()}catch(e){toast(' '+e.message)}}
   async function copyTableName(name){try{await navigator.clipboard.writeText(name);toast('تم نسخ '+name)}catch(e){toast(name)}}
   window.addEventListener('caesar:currency-changed',render);loadTables();setInterval(loadTables,8000);

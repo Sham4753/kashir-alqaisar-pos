@@ -33,7 +33,7 @@
 
         <div id="inventorySummary" class="hidden bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-red-800">
             <div id="inventorySummaryText" class="font-bold"></div>
-            <p class="text-xs mt-1">استخدم زر «حد التنبيه» لكل مادة لتحديد متى يظهر التحذير.</p>
+
         </div>
 
         <div id="cashbookCards" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"></div>
@@ -61,7 +61,7 @@
                 <span id="secSupplierPayments-icon" class="text-gray-400">▼</span>
             </button>
             <div id="secSupplierPayments" class="hidden px-6 pb-6 space-y-3">
-                <p class="text-xs text-gray-500">سجّل أي دفعة لاحقة للمورد. تؤثر في رصيد الصندوق ولا تسجّل تكلفة شراء ثانية.</p>
+
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
                     <select id="paymentSupplier" class="border border-gray-300 rounded-lg px-3 py-2.5"><option value="">اختر المورد</option></select>
                     <input type="number" id="supplierPaymentAmount" class="border border-gray-300 rounded-lg px-3 py-2.5" placeholder="المبلغ" step="0.01" min="0">
@@ -139,7 +139,7 @@
                 <span id="secInv-icon" class="text-gray-400">▼</span>
             </button>
             <div id="secInv" class="hidden px-6 pb-6 space-y-3">
-            <p class="text-xs text-gray-400">يتحدث تلقائياً: يزيد مع كل شراء، وينقص تلقائياً مع البيع لو حددت وصفة للمنتج من "إدارة المنيو"</p>
+
             <div id="inventoryList" class="space-y-2 max-h-72 overflow-y-auto"></div>
             </div>
         </div>
@@ -150,7 +150,7 @@
                 <span id="secMovements-icon" class="text-gray-400">▼</span>
             </button>
             <div id="secMovements" class="hidden px-6 pb-6 space-y-3">
-                <p class="text-xs text-gray-500">يوثق هذا السجل الشراء والاستهلاك المرتبط بالفواتير، ويعرض الرصيد بعد كل حركة.</p>
+
                 <div id="inventoryMovementsList" class="space-y-2 max-h-72 overflow-y-auto"></div>
             </div>
         </div>

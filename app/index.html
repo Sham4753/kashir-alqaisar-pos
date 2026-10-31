@@ -86,7 +86,7 @@
         <div class="page-heading">
           <p class="eyebrow" id="todayLabel">العمليات اليومية</p>
           <h1 id="restaurantHeading" data-restaurant-name>نقطة البيع</h1>
-          <p class="page-subtitle">أنشئ الطلب التالي بأقل عدد من الخطوات.</p>
+
         </div>
         <div class="top-actions">
           <button class="menu-toggle" id="menuToggle" type="button" aria-label="فتح قائمة الأقسام" aria-expanded="false" aria-controls="sidebarNav"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>القائمة</span></button>
@@ -99,8 +99,8 @@
 
       <section class="counter-strip" aria-label="العدادات التشغيلية">
         <article class="counter-card counter-card-orders"><span class="counter-icon"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6"/></svg></span><div><span>طلبات اليوم</span><strong id="counterOrders">0</strong></div><small>إجمالي الفواتير</small></article>
-        <article class="counter-card counter-card-ready"><span class="counter-icon"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/><circle cx="12" cy="12" r="9"/></svg></span><div><span>جاهز للتسليم</span><strong id="counterReady">0</strong></div><small>تابع من شاشة المطبخ</small></article>
-        <article class="counter-card counter-card-sales"><span class="counter-icon"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><div><span>مبيعات اليوم</span><strong id="counterSales">0</strong></div><small>قبل الإغلاق اليومي</small></article>
+        <article class="counter-card counter-card-ready"><span class="counter-icon"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/><circle cx="12" cy="12" r="9"/></svg></span><div><span>جاهز للتسليم</span><strong id="counterReady">0</strong></div></article>
+        <article class="counter-card counter-card-sales"><span class="counter-icon"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><div><span>مبيعات اليوم</span><strong id="counterSales">0</strong></div></article>
       </section>
 
       <section class="catalog-shell" aria-label="كتالوج المنتجات">
@@ -146,7 +146,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="lock-screen" id="lockScreen" role="dialog" aria-modal="true" aria-labelledby="lockTitle"><section class="lock-card"><div class="lock-mark"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div><h2 id="lockTitle">الشاشة مقفلة</h2><p>لحماية العمليات اليومية، لا يمكن استئناف العمل إلا بعد التحقق من بيانات مستخدم مخوّل.</p><form class="unlock-form" id="unlockForm" novalidate><label for="managerUsername">اسم المستخدم</label><input id="managerUsername" name="username" autocomplete="username" required><label for="managerPassword">كلمة المرور</label><input id="managerPassword" name="password" type="password" autocomplete="current-password" required><button type="submit">فتح الشاشة</button></form><div class="unlock-error" id="unlockError" aria-live="polite"></div></section></div>
-  <div class="held-overlay" id="heldOverlay" role="dialog" aria-modal="true" aria-labelledby="heldTitle"><section class="held-card"><div class="modal-heading"><div><span class="section-kicker">إدارة المسودات</span><h3 id="heldTitle">الطلبات المعلّقة</h3></div><button class="modal-close" type="button" id="heldCloseButton" aria-label="إغلاق">×</button></div><p>استرجع طلبًا محفوظًا إلى السلة الحالية، أو احذفه نهائيًا.</p><div class="held-list" id="heldList"></div></section></div>
+  <div class="held-overlay" id="heldOverlay" role="dialog" aria-modal="true" aria-labelledby="heldTitle"><section class="held-card"><div class="modal-heading"><div><span class="section-kicker">إدارة المسودات</span><h3 id="heldTitle">الطلبات المعلّقة</h3></div><button class="modal-close" type="button" id="heldCloseButton" aria-label="إغلاق">×</button></div><div class="held-list" id="heldList"></div></section></div>
 
   <script>
     'use strict';

@@ -81,7 +81,15 @@
     {
       "distribution": "cffi",
       "import": "cffi",
-      "version": "2.1.1"
+      "version": "2.1.1",
+      "windows_native_import": "_cffi_backend",
+      "windows_native_file": "Lib/site-packages/_cffi_backend.cp312-win_amd64.pyd",
+      "windows_abi": "CPython 3.12 x64"
+    },
+    {
+      "distribution": "cryptography",
+      "import": "cryptography",
+      "version": "45.0.7"
     },
     {
       "distribution": "pycparser",
