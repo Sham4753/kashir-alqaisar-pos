@@ -60,6 +60,7 @@ jobs:
             if ($exitCode -eq 0 -or (($output | Out-String) -notmatch "LICENSE_PUBLIC_KEY_MISSING")) {
               throw "The build must stop with LICENSE_PUBLIC_KEY_MISSING when the trust anchor is absent."
             }
+            $global:LASTEXITCODE = 0
           } finally {
             if ($hadKey) { [System.IO.File]::WriteAllBytes($keyPath, $originalKey) }
           }
