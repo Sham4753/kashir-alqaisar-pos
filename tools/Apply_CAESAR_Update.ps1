@@ -11,7 +11,13 @@ function Test-RelativePathAllowed([string] $RelativePath) {
     $normalized = $RelativePath.Replace('/', '\')
     if ([IO.Path]::IsPathRooted($normalized) -or $normalized -match '(^|\\)\.\.(\\|$)') { return $false }
     $parts = $normalized -split '\\'
-    if ($normalized -match '(?i)^(app\\vendor|_internal\\app\\vendor|runtime\\_internal\\app\\vendor)\\[^\\]+\.dist-info\\(license(?:\.txt)?|notice(?:\.txt)?|copying(?:\.txt)?)$') { return $true }
+    if ($parts.Length -ge 4) {
+        $metadataFolder = $parts[-2].ToLowerInvariant()
+        $leaf = $parts[-1].ToLowerInvariant()
+        $prefix = ($parts[0..($parts.Length - 3)] -join '\').ToLowerInvariant()
+        if ($metadataFolder.EndsWith('.dist-info') -and $leaf -in @('license', 'license.txt', 'notice', 'notice.txt', 'copying', 'copying.txt') -and
+            $prefix -in @('app\vendor', '_internal\app\vendor', 'runtime\_internal\app\vendor')) { return $true }
+    }
     $knownStaticAsset = $normalized -in @(
         'app\factory_data.json', '_internal\app\factory_data.json', 'runtime\_internal\app\factory_data.json',
         'app\license_public_key.pem', '_internal\app\license_public_key.pem', 'runtime\_internal\app\license_public_key.pem',
