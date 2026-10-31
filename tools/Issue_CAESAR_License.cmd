@@ -5,7 +5,7 @@ REM Vendor-only launcher. The private key and passphrase are never stored here.
 set "ROOT=%~dp0.."
 set "PYTHON=%ROOT%\python.exe"
 set "GENERATOR=%ROOT%\generate_license.py"
-set "PRIVATE_KEY=C:\CAESAR-Keys\caesar-vendor-private-v2.pem"
+set "PRIVATE_KEY=C:\CAESAR-Keys\caesar-vendor-private-v3.pem"
 
 title CAESAR POS - License Issuer
 cls
