@@ -21,9 +21,9 @@
         .layout-item{display:flex;align-items:center;gap:.55rem;border:1px solid #bfdbfe;border-radius:8px;background:#fff;padding:.58rem .65rem;cursor:grab;user-select:none}.layout-item:active{cursor:grabbing}.layout-item.dragging{opacity:.45;border-style:dashed}.layout-handle{color:#2563eb;font-size:1.1rem}.layout-label{font-weight:700;flex:1}.layout-move{border:1px solid #bfdbfe;border-radius:8px;color:#1d4ed8;background:#eff6ff;padding:.08rem .42rem;font-weight:700}.file-import-label{display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
         .thermal-mode-toggle{border:1px solid #475569;background:#fff;color:#0f172a;border-radius:8px;padding:.55rem .8rem;font-weight:700;font-size:.8rem;transition:.18s}.thermal-mode-toggle.active{background:#334155;color:#fff;border-color:#334155}.receipt-preview-shell.thermal-sim{background:#111827;border-color:#111827}.receipt-paper.thermal-sim{background:#fff;border:2px solid #000;box-shadow:none;filter:grayscale(1) contrast(1.65)}.receipt-paper.thermal-sim pre{color:#000;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;opacity:var(--thermal-ink,.9)}.receipt-paper.thermal-sim .receipt-preview-logo{filter:grayscale(1) contrast(4);opacity:var(--thermal-ink,.9)}.receipt-raster-preview{display:block;width:min(100%,576px);height:auto;margin:auto;background:#fff;image-rendering:auto}.receipt-raster-preview.hidden{display:none}.range-control{accent-color:#2563eb;width:100%}
     </style>
-  <link rel="stylesheet" href="design-system.css">
-  <link rel="stylesheet" href="palette-v3.css">
-  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="design-system.css?v=20261031-theme-v1">
+  <link rel="stylesheet" href="palette-v3.css?v=20261031-theme-v1">
+  <link rel="stylesheet" href="theme.css?v=20261031-theme-v1">
 </head>
 <body class="bg-gray-100 min-h-screen">
 <nav class="q-appbar" aria-label="التنقل الرئيسي">
@@ -271,7 +271,7 @@
                 document.getElementById('receipt_density').value = config.receipt_density || 'standard';
                 document.getElementById('receipt_show_cashier').checked = config.receipt_show_cashier !== false;
                 document.getElementById('receipt_show_order_type').checked = config.receipt_show_order_type !== false;
-                document.getElementById('logo_size').value = config.logo_is_qr ? 'large' : (config.logo_size || 'medium');
+                document.getElementById('logo_size').value = config.logo_size || 'medium';
                 document.getElementById('logo_alignment').value = config.logo_alignment || 'center';
                 document.getElementById('logo_is_qr').checked = !!config.logo_is_qr;
                 document.getElementById('receipt_font_family').value = config.receipt_font_family || 'system';
@@ -527,7 +527,6 @@
                 const qrDetected = response.headers.get('X-Printer-QR-Detected') === 'true';
                 if (qrDetected) {
                     document.getElementById('logo_is_qr').checked = true;
-                    document.getElementById('logo_size').value = 'large';
                 }
                 if (exactPreviewUrl) URL.revokeObjectURL(exactPreviewUrl);
                 exactPreviewUrl = URL.createObjectURL(blob); image.src = exactPreviewUrl; image.classList.remove('hidden'); blocks.classList.add('hidden');
@@ -667,7 +666,6 @@
 
         ['paper_width','paper_orientation','font_size','footer_text','restaurant_name','logo_caption','logo_size','logo_alignment','receipt_font_family','receipt_font_scale','receipt_header','receipt_alignment','receipt_divider','receipt_density','receipt_show_cashier','receipt_show_order_type','social_facebook','social_instagram','social_whatsapp'].forEach(id => document.getElementById(id).addEventListener('input', updateReceiptPreview));
         document.getElementById('logo_is_qr').addEventListener('change', event => {
-            if (event.target.checked) document.getElementById('logo_size').value = 'large';
             updateReceiptPreview();
         });
         loadSettings();

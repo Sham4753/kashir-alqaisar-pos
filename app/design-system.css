@@ -14,58 +14,11 @@
   font-display: swap;
 }
 :root {
-  /* Modern Dark Theme — the product default */
-  --q-bg: #0f172a;
-  --q-surface: #1e293b;
-  --q-surface-soft: #172235;
-  --q-surface-muted: #263449;
-  --q-ink: #f8fafc;
-  --q-ink-soft: #cbd5e1;
-  --q-muted: #94a3b8;
-  --q-line: #334155;
-  --q-line-strong: #475569;
-  --q-brand: #2563eb;
-  --q-brand-strong: #60a5fa;
-  --q-brand-soft: #172f62;
-  --q-blue: #3b82f6;
-  --q-blue-soft: #172f62;
-  --q-success: #34d399;
-  --q-success-soft: #123d38;
-  --q-warning: #f59e0b;
-  --q-warning-soft: #422f0b;
-  --q-danger: #dc2626;
-  --q-danger-soft: #451a1a;
-  --q-shadow: 0 18px 44px rgba(0, 0, 0, .32);
-  --q-shadow-soft: 0 7px 20px rgba(0, 0, 0, .18);
   --q-radius-lg: 10px;
   --q-radius-md: 9px;
   --q-radius: 8px;
 }
-
-body.light {
-  --q-bg: #f3f6fb;
-  --q-surface: #ffffff;
-  --q-surface-soft: #f8fafc;
-  --q-surface-muted: #eef3f8;
-  --q-ink: #111827;
-  --q-ink-soft: #475569;
-  --q-muted: #64748b;
-  --q-line: #dce5ef;
-  --q-line-strong: #cbd5e1;
-  --q-brand: #2563eb;
-  --q-brand-strong: #1d4ed8;
-  --q-brand-soft: #eaf1ff;
-  --q-blue: #2563eb;
-  --q-blue-soft: #eaf1ff;
-  --q-success: #0f9f6e;
-  --q-success-soft: #e8f8f1;
-  --q-warning: #d97706;
-  --q-warning-soft: #fff7e6;
-  --q-danger: #dc3d4b;
-  --q-danger-soft: #fff0f2;
-  --q-shadow: 0 16px 38px rgba(15, 23, 42, .08);
-  --q-shadow-soft: 0 5px 16px rgba(15, 23, 42, .05);
-}
+body.light { color-scheme: light; }
 
 html { background: var(--q-bg); }
 body.caesar-ui {
@@ -188,7 +141,7 @@ body.caesar-ui [class*="bg-rose-"], body.caesar-ui [class*="bg-red-50"] { backgr
 
 /* Login, welcome, and initial setup */
 body.caesar-page-login, body.caesar-page-welcome, body.caesar-page-setup {
-  background: radial-gradient(circle at 85% 8%, rgba(37, 99, 235, .25), transparent 28%), linear-gradient(135deg, #0d1524, #17243a 56%, #102c3d) !important;
+  background: var(--q-bg) !important;
 }
 body.caesar-page-login .bg-white, body.caesar-page-welcome .bg-white, body.caesar-page-setup .bg-white,
 body.caesar-page-login .card, body.caesar-page-setup .card {
@@ -196,10 +149,10 @@ body.caesar-page-login .card, body.caesar-page-setup .card {
 }
 body.caesar-page-login h1, body.caesar-page-setup h1,
 body.caesar-page-login h2, body.caesar-page-setup h2 { color: var(--q-ink) !important; }
-body.caesar-page-welcome h1, body.caesar-page-welcome h2 { color: #fff !important; }
-body.caesar-page-welcome p, body.caesar-page-welcome #dateTime { color: #dbeafe !important; }
+body.caesar-page-welcome h1, body.caesar-page-welcome h2 { color: var(--q-ink) !important; }
+body.caesar-page-welcome p, body.caesar-page-welcome #dateTime { color: var(--q-muted) !important; }
 body.caesar-page-welcome .profile-card { border-radius: var(--q-radius) !important; transition: .16s ease !important; }
-body.caesar-page-welcome .profile-card:hover { transform: translateY(-2px); border-color: rgba(96, 165, 250, .8) !important; }
+body.caesar-page-welcome .profile-card:hover { transform: translateY(-2px); border-color: var(--q-brand) !important; }
 
 /* صفحة الإعدادات: عرض مكتبي منظم بدل العمود الضيق القديم. */
 body.caesar-page-settings .container {
@@ -248,7 +201,7 @@ body.caesar-page-tables #tablesGrid > * { min-height: 116px; }
   border: 1px solid var(--q-line); border-radius: var(--q-radius); background: var(--q-surface); box-shadow: var(--q-shadow-soft); direction: rtl;
 }
 .q-appbar-brand { display: inline-flex; align-items: center; gap: 8px; margin-left: 7px; color: var(--q-ink) !important; font-size: 13px; font-weight: 900; white-space: nowrap; }
-.q-appbar-brand-mark { width: 31px; height: 31px; display: grid; place-items: center; border-radius: var(--q-radius); color: #fff; background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+.q-appbar-brand-mark { width: 31px; height: 31px; display: grid; place-items: center; border-radius: var(--q-radius); color: #fff; background: linear-gradient(135deg, var(--q-brand), var(--q-brand-strong)); }
 .q-appbar-brand-mark img, .brand-mark img { width: 100%; height: 100%; object-fit: contain; border-radius: inherit; display: block; }
 .caesar-ui [id$="LogoPreview"], .caesar-ui [id$="logoPreview"] { object-fit: contain !important; background: var(--q-surface) !important; }
 .q-appbar-brand-mark.has-restaurant-logo, .brand-mark.has-restaurant-logo { background: var(--q-surface) !important; border: 1px solid var(--q-line); overflow: hidden; }
@@ -366,7 +319,7 @@ body.caesar-ui.light.caesar-page-settings .field label { color: var(--q-ink) !im
 
 /* ── Unified POS design-system finishing layer ──────────────────────────── */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --q-font-body: Tajawal, "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
   --q-font-mono: "Cascadia Mono", "Segoe UI", Tahoma, sans-serif;
   --q-control-height: 44px;
@@ -414,23 +367,10 @@ body.caesar-ui :is(.toast, #toast) { color: var(--q-ink); }
 
 /* ── Unified interaction and information hierarchy across all app pages ─── */
 :root {
-  --q-brand: #2563eb;
-  --q-brand-strong: #1d4ed8;
-  --q-blue: #2563eb;
-  --q-blue-soft: #182d4d;
   --q-radius: 12px;
   --q-radius-md: 14px;
   --q-radius-lg: 18px;
   --q-control-height: 46px;
-}
-body.light {
-  --q-brand: #2563eb;
-  --q-brand-strong: #1d4ed8;
-  --q-blue: #2563eb;
-  --q-blue-soft: #eaf1ff;
-  --q-radius: 12px;
-  --q-radius-md: 14px;
-  --q-radius-lg: 18px;
 }
 body.caesar-ui { font-size: 14px; line-height: 1.55; }
 body.caesar-ui :is(main, main > .container, .container, .mx-auto) { min-width: 0; }
@@ -549,61 +489,14 @@ body.caesar-ui [class*="overflow-x-auto"] { scrollbar-color: var(--q-line-strong
 }
 
 
-/* ── CAESAR Restaurant Modern v7: ivory, emerald and warm gold ─────────── */
+/* Color values live in palette-v3.css; layout tokens remain in this file. */
 :root {
   color-scheme: light;
-  --q-bg: #f7faf7;
-  --q-surface: #ffffff;
-  --q-surface-soft: #fbfdfb;
-  --q-surface-muted: #eef6f0;
-  --q-ink: #183229;
-  --q-ink-soft: #36564a;
-  --q-muted: #6c8177;
-  --q-line: #dce9df;
-  --q-line-strong: #c5d8ca;
-  --q-brand: #16845f;
-  --q-brand-strong: #0d684b;
-  --q-brand-soft: #e5f5ec;
-  --q-blue: #16845f;
-  --q-blue-soft: #e5f5ec;
-  --q-success: #16845f;
-  --q-success-soft: #e5f5ec;
-  --q-warning: #c58a20;
-  --q-warning-soft: #fff6df;
-  --q-danger: #c83d4d;
-  --q-danger-soft: #fff0f2;
-  --q-shadow: 0 18px 42px rgba(24, 50, 41, .08);
-  --q-shadow-soft: 0 7px 20px rgba(24, 50, 41, .055);
   --q-radius: 14px;
   --q-radius-md: 17px;
   --q-radius-lg: 22px;
 }
-
-body.dark {
-  color-scheme: dark;
-  --q-bg: #10221b;
-  --q-surface: #173128;
-  --q-surface-soft: #142a22;
-  --q-surface-muted: #214236;
-  --q-ink: #f1faf4;
-  --q-ink-soft: #c6ded0;
-  --q-muted: #9cb7a8;
-  --q-line: #2d5141;
-  --q-line-strong: #3e6a54;
-  --q-brand: #35b982;
-  --q-brand-strong: #75d8a9;
-  --q-brand-soft: #1e4937;
-  --q-blue: #35b982;
-  --q-blue-soft: #1e4937;
-  --q-success: #35b982;
-  --q-success-soft: #1e4937;
-  --q-warning: #e8b84d;
-  --q-warning-soft: #4c3b18;
-  --q-danger: #f0717e;
-  --q-danger-soft: #4b222a;
-  --q-shadow: 0 18px 44px rgba(0, 0, 0, .25);
-  --q-shadow-soft: 0 7px 20px rgba(0, 0, 0, .16);
-}
+body.dark { color-scheme: dark; }
 
 body.caesar-ui {
   background: var(--q-bg) !important;
@@ -663,7 +556,7 @@ body.caesar-ui :is(button, a, summary, [tabindex]):focus-visible {
   border-color: var(--q-brand) !important;
 }
 
-/* Intent colors: green confirms, gold highlights, red is reserved for danger. */
+/* Intent colors: green confirms, amber warns, and red is reserved for danger. */
 body.caesar-ui :is(button, a)[class*="bg-blue"],
 body.caesar-ui :is(button, a)[class*="bg-indigo"],
 body.caesar-ui :is(button, a)[data-action="primary"] {
@@ -719,7 +612,7 @@ body.caesar-page-index .payment-button.active {
   body.caesar-ui :is(button, a[role="button"], input[type="button"], input[type="submit"]) { min-height: 48px; }
 }
 
-/* ── Final identity pass: ivory, emerald and warm gold ────────────────────
+/* ── Final identity pass: map legacy utility colors to semantic tokens ─────
    Some legacy pages still carry Tailwind color classes or small inline
    layouts. Keep their behaviour intact while mapping presentation to the
    approved restaurant palette in one place. */
@@ -762,7 +655,7 @@ body.caesar-ui :is(.border-blue-200, .border-blue-300, .border-indigo-100,
 body.caesar-ui :is(.focus\:ring-blue-500, .focus\:ring-green-500,
   .focus\:ring-indigo-500, .focus\:border-blue-500) { --tw-ring-color: color-mix(in srgb, var(--q-brand) 24%, transparent) !important; }
 
-/* Gold is reserved for attention, filters and secondary actions. */
+/* Amber is reserved for attention and caution states. */
 body.caesar-ui :is(.bg-amber-50, .bg-orange-50, .bg-yellow-50) {
   background: var(--q-warning-soft) !important;
   color: var(--q-warning) !important;
