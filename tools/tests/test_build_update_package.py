@@ -41,6 +41,7 @@ class BuildUpdatePackageTests(unittest.TestCase):
         customer_license = self.source / "app" / "license" / "customer-license.txt"
         customer_license.parent.mkdir()
         customer_license.write_text("per-customer license", encoding="utf-8")
+        (self.source / "app" / "customer-license.txt").write_text("per-customer license key", encoding="utf-8")
         (self.source / "app" / ".license_secret").write_text("signing secret", encoding="utf-8")
         (self.source / "app" / ".license").write_text("preconfigured license", encoding="utf-8")
         (self.source / "vault").mkdir()
@@ -72,6 +73,7 @@ class BuildUpdatePackageTests(unittest.TestCase):
             self.assertIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/app/license_public_key.pem", names)
             self.assertIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/app/vendor/qrcode-8.2.dist-info/LICENSE", names)
             self.assertNotIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/app/license/customer-license.txt", names)
+            self.assertNotIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/app/customer-license.txt", names)
             self.assertNotIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/misc/app/factory_data.json", names)
             self.assertNotIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/misc/app/license_public_key.pem", names)
             self.assertIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/_internal/python312.dll", names)

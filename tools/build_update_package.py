@@ -123,7 +123,7 @@ def is_sensitive_or_nonpayload(relative: PurePosixPath) -> bool:
     suffix = PurePosixPath(name).suffix.casefold()
     if suffix in BLOCKED_SUFFIXES:
         return True
-    if "license" in name and suffix not in {".py", ".pyc"}:
+    if "license" in name and suffix == ".txt":
         return True
     if name in {".license", "license", "license.secret", ".license_secret"}:
         return True

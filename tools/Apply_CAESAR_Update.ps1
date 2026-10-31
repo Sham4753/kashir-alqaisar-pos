@@ -11,13 +11,6 @@ function Test-RelativePathAllowed([string] $RelativePath) {
     $normalized = $RelativePath.Replace('/', '\')
     if ([IO.Path]::IsPathRooted($normalized) -or $normalized -match '(^|\\)\.\.(\\|$)') { return $false }
     $parts = $normalized -split '\\'
-    if ($parts.Length -ge 4) {
-        $metadataFolder = $parts[-2].ToLowerInvariant()
-        $leaf = $parts[-1].ToLowerInvariant()
-        $prefix = ($parts[0..($parts.Length - 3)] -join '\').ToLowerInvariant()
-        if ($metadataFolder.EndsWith('.dist-info') -and $leaf -in @('license', 'license.txt', 'notice', 'notice.txt', 'copying', 'copying.txt') -and
-            $prefix -in @('app\vendor', '_internal\app\vendor', 'runtime\_internal\app\vendor')) { return $true }
-    }
     $knownStaticAsset = $normalized -in @(
         'app\factory_data.json', '_internal\app\factory_data.json', 'runtime\_internal\app\factory_data.json',
         'app\license_public_key.pem', '_internal\app\license_public_key.pem', 'runtime\_internal\app\license_public_key.pem',
@@ -31,15 +24,18 @@ function Test-RelativePathAllowed([string] $RelativePath) {
         }
         return $true
     }
+    $partIndex = 0
     foreach ($part in $parts) {
         $lower = $part.ToLowerInvariant()
+        $isLicenseDirectory = $partIndex -lt ($parts.Length - 1) -and $lower -in @('license', 'licenses')
         if ($lower -match 'secret|vault|log|database|(^|[._-])data([._-]|$)' -or
-            $lower -in @('license', 'licenses', 'backup', 'backups', 'sqlite', 'sqlite3', 'db', '__pycache__')) { return $false }
+            $isLicenseDirectory -or $lower -in @('backup', 'backups', 'sqlite', 'sqlite3', 'db', '__pycache__')) { return $false }
+        $partIndex++
     }
     $name = [IO.Path]::GetFileName($normalized).ToLowerInvariant()
     $extension = [IO.Path]::GetExtension($normalized).ToLowerInvariant()
     if ($name -eq 'generate_license.py' -or $extension -in @('.json', '.json5', '.jsonc', '.jsonl', '.ndjson', '.csv', '.tsv', '.db', '.sqlite', '.sqlite3', '.log', '.bak', '.key', '.pem', '.p12', '.pfx', '.p7b', '.p7c', '.env', '.lic', '.license', '.licence')) { return $false }
-    if ($name -match 'license' -and $extension -notin @('.py', '.pyc')) { return $false }
+    if ($name -match 'license' -and $extension -eq '.txt') { return $false }
     if ($name -match '\.(sqlite|sqlite3|db)([-.](wal|shm|journal))?(\.|$)') { return $false }
     if ($name -match '\.log(\.|$)') { return $false }
     return $true

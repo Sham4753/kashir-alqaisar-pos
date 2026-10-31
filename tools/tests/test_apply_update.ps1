@@ -84,7 +84,14 @@ try {
     if ($unsafe.ExitCode -eq 0) { throw 'An update containing a SQLite sidecar was accepted.' }
     Assert-Equal ([IO.File]::ReadAllText((Join-Path $unsafeRoot 'CAESAR_POS.exe'))) 'unsafe target unchanged' 'Unsafe ZIP changed the target'
 
-    Write-Host 'Windows updater integration passed: apply, Vault preservation, rollback, and unsafe-payload rejection.' -ForegroundColor Green
+    Remove-Item -LiteralPath $unsafePayload -Force
+    $unsafeLicensePayload = Join-Path $unpackedRoot 'payload\CAESAR_POS\app\customer-license.txt'
+    [IO.File]::WriteAllText($unsafeLicensePayload, 'per-customer license key')
+    $unsafeLicense = Invoke-Updater $updateScript $unsafeRoot
+    if ($unsafeLicense.ExitCode -eq 0) { throw 'An update containing a customer license text file was accepted.' }
+    Assert-Equal ([IO.File]::ReadAllText((Join-Path $unsafeRoot 'CAESAR_POS.exe'))) 'unsafe target unchanged' 'License-file rejection changed the target'
+
+    Write-Host 'Windows updater integration passed: apply, third-party license notice, Vault preservation, rollback, and unsafe-payload rejection.' -ForegroundColor Green
     $completed = $true
 } finally {
     if ($completed -and (Test-Path -LiteralPath $testRoot)) {
