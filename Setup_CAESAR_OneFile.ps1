@@ -333,7 +333,10 @@ if ($ForbiddenBundledFiles.Count -gt 0) {
 $BundledWelcome = Join-Path $BundledAppDir "welcome.html"
 if (-not (Test-Path -LiteralPath $BundledWelcome -PathType Leaf)) { throw "Bundled app\welcome.html is missing; the account-selection screen cannot be verified." }
 $WelcomeHtml = Get-Content -LiteralPath $BundledWelcome -Raw -Encoding UTF8
-if (-not $WelcomeHtml.Contains('اختر حسابك للمتابعة')) { throw "Bundled welcome page is missing the account-selection screen text." }
+$WelcomeMarkers = @('id="profilesBox"', 'async function loadProfiles()', "fetch('/api/settings/users')", 'function openPwModal', "fetch('/api/auth/login'")
+foreach ($marker in $WelcomeMarkers) {
+    if (-not $WelcomeHtml.Contains($marker)) { throw "Bundled welcome page is missing account-selection/login marker: $marker" }
+}
 $BundledHtml = Get-Content -LiteralPath $BundledIndex.FullName -Raw
 $BundledCss = Get-Content -LiteralPath (Join-Path $BundledAppDir "pos-modern.css") -Raw
 foreach ($CounterId in @('counterOrders', 'counterReady', 'counterSales')) {
