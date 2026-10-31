@@ -11,9 +11,14 @@ function Assert-Equal([string]$Actual, [string]$Expected, [string]$Message) {
 }
 
 function Invoke-Updater([string]$ScriptPath, [string]$TargetRoot) {
-    $output = @(& powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $ScriptPath -InstallRoot $TargetRoot -NoPause 2>&1)
-    $code = $LASTEXITCODE
-    [PSCustomObject]@{ ExitCode = $code; Output = ($output | Out-String) }
+    $token = [Guid]::NewGuid().ToString('N')
+    $stdoutPath = Join-Path $testRoot ($token + '.stdout.log')
+    $stderrPath = Join-Path $testRoot ($token + '.stderr.log')
+    $arguments = '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{0}" -InstallRoot "{1}" -NoPause' -f $ScriptPath, $TargetRoot
+    $process = Start-Process -FilePath 'powershell.exe' -ArgumentList $arguments -Wait -PassThru -NoNewWindow -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+    $stdout = if (Test-Path -LiteralPath $stdoutPath) { [IO.File]::ReadAllText($stdoutPath) } else { '' }
+    $stderr = if (Test-Path -LiteralPath $stderrPath) { [IO.File]::ReadAllText($stderrPath) } else { '' }
+    [PSCustomObject]@{ ExitCode = $process.ExitCode; Output = ($stdout + [Environment]::NewLine + $stderr) }
 }
 
 try {
