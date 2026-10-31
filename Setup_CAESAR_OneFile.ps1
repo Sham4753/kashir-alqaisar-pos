@@ -322,8 +322,10 @@ $null = Assert-Ed25519PublicKey $BundledPublicKey
 Remove-PythonBytecodeCache $ProductDir
 Assert-NoCustomerArtifacts $ProductDir
 $ForbiddenBundledFiles = @(Get-ChildItem -LiteralPath $ProductDir -File -Recurse -Force | Where-Object {
-    $_.Name -in @(".license_secret", "license.secret", ".license", "license.txt", "license.json", "generate_license.py") -or
-    $_.Name -match "(?i)(private|secret).*\.pem$"
+    $relativePath = $_.FullName.Substring($ProductDir.Length).TrimStart('\')
+    (-not (Test-ThirdPartyLicenseMetadata -RelativePath $relativePath)) -and
+        ($_.Name -in @(".license_secret", "license.secret", ".license", "license.txt", "license.json", "generate_license.py") -or
+        $_.Name -match "(?i)(private|secret).*\.pem$")
 })
 if ($ForbiddenBundledFiles.Count -gt 0) {
     throw ("Customer package contains forbidden signing/license file(s): " + (($ForbiddenBundledFiles | ForEach-Object { $_.FullName }) -join ", "))
