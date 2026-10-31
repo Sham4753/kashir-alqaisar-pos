@@ -33,7 +33,8 @@ function Test-RelativePathAllowed([string] $RelativePath) {
     $knownStaticAsset = $normalized -in @(
         'app\factory_data.json', '_internal\app\factory_data.json', 'runtime\_internal\app\factory_data.json',
         'app\license_public_key.pem', '_internal\app\license_public_key.pem', 'runtime\_internal\app\license_public_key.pem',
-        'pythonnet\runtime\Python.Runtime.deps.json', '_internal\pythonnet\runtime\Python.Runtime.deps.json', 'runtime\_internal\pythonnet\runtime\Python.Runtime.deps.json'
+        'pythonnet\runtime\Python.Runtime.deps.json', '_internal\pythonnet\runtime\Python.Runtime.deps.json', 'runtime\_internal\pythonnet\runtime\Python.Runtime.deps.json',
+        'pythonnet\runtime\System.Data.Common.dll', '_internal\pythonnet\runtime\System.Data.Common.dll', 'runtime\_internal\pythonnet\runtime\System.Data.Common.dll'
     )
     if ($knownStaticAsset) {
         foreach ($part in $parts[0..($parts.Length - 2)]) {

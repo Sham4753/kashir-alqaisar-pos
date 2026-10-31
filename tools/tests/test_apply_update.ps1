@@ -27,6 +27,9 @@ try {
     [IO.File]::WriteAllText((Join-Path $sourceRoot 'CAESAR_POS.exe'), 'new executable payload')
     [IO.File]::WriteAllText((Join-Path $sourceRoot '_internal\runtime.txt'), 'new runtime payload')
     [IO.File]::WriteAllText((Join-Path $sourceRoot 'app\welcome.html'), 'new application payload')
+    $systemDataAssembly = Join-Path $sourceRoot '_internal\pythonnet\runtime\System.Data.Common.dll'
+    New-Item -ItemType Directory -Path (Split-Path -Parent $systemDataAssembly) -Force | Out-Null
+    [IO.File]::WriteAllText($systemDataAssembly, 'approved .NET runtime assembly')
     $vendorLicense = Join-Path $sourceRoot 'app\vendor\qrcode-8.2.dist-info\LICENSE'
     New-Item -ItemType Directory -Path (Split-Path -Parent $vendorLicense) -Force | Out-Null
     [IO.File]::WriteAllText($vendorLicense, 'third-party license notice')
@@ -56,6 +59,7 @@ try {
     if ($success.ExitCode -ne 0) { throw "Valid update did not apply: $($success.Output)" }
     Assert-Equal ([IO.File]::ReadAllText((Join-Path $successRoot 'CAESAR_POS.exe'))) 'new executable payload' 'Executable was not updated'
     Assert-Equal ([IO.File]::ReadAllText((Join-Path $successRoot '_internal\runtime.txt'))) 'new runtime payload' 'Runtime file was not updated'
+    Assert-Equal ([IO.File]::ReadAllText((Join-Path $successRoot '_internal\pythonnet\runtime\System.Data.Common.dll'))) 'approved .NET runtime assembly' 'pythonnet runtime assembly was not updated'
     Assert-Equal ([IO.File]::ReadAllText((Join-Path $successRoot 'app\welcome.html'))) 'new application payload' 'App file was not updated'
     Assert-Equal ([IO.File]::ReadAllText((Join-Path $successRoot 'app\vendor\qrcode-8.2.dist-info\LICENSE'))) 'third-party license notice' 'Third-party license notice was not updated'
     Assert-Equal ([IO.File]::ReadAllText((Join-Path $successRoot '_internal\click-8.4.2.dist-info\licenses\LICENSE.txt'))) 'click third-party license notice' 'Nested third-party license notice was not updated'

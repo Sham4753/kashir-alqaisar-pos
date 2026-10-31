@@ -71,6 +71,9 @@ SAFE_STATIC_APP_PATHS = {
     ("pythonnet", "runtime", "python.runtime.deps.json"),
     ("_internal", "pythonnet", "runtime", "python.runtime.deps.json"),
     ("runtime", "_internal", "pythonnet", "runtime", "python.runtime.deps.json"),
+    ("pythonnet", "runtime", "system.data.common.dll"),
+    ("_internal", "pythonnet", "runtime", "system.data.common.dll"),
+    ("runtime", "_internal", "pythonnet", "runtime", "system.data.common.dll"),
 }
 
 

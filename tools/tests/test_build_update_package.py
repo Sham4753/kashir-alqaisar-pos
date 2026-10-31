@@ -38,6 +38,7 @@ class BuildUpdatePackageTests(unittest.TestCase):
         pythonnet_runtime = self.source / "_internal" / "pythonnet" / "runtime"
         pythonnet_runtime.mkdir(parents=True)
         (pythonnet_runtime / "Python.Runtime.deps.json").write_text('{"runtimeTarget": "netstandard2.0"}', encoding="utf-8")
+        (pythonnet_runtime / "System.Data.Common.dll").write_bytes(b"approved pythonnet runtime assembly")
         # Files that must never be shipped, even if present in a dirty build.
         (self.source / "app" / "restaurant.json").write_text('{"customers": ["private"]}', encoding="utf-8")
         (self.source / "app" / "license.json").write_text('{"license": "customer"}', encoding="utf-8")
@@ -82,6 +83,7 @@ class BuildUpdatePackageTests(unittest.TestCase):
             self.assertNotIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/misc/app/license_public_key.pem", names)
             self.assertIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/_internal/python312.dll", names)
             self.assertIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/_internal/pythonnet/runtime/Python.Runtime.deps.json", names)
+            self.assertIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/_internal/pythonnet/runtime/System.Data.Common.dll", names)
             self.assertIn("CAESAR_POS_Update_test-1/Apply_CAESAR_Update.ps1", names)
             self.assertIn("CAESAR_POS_Update_test-1/Apply_CAESAR_Update.bat", names)
             self.assertIn("CAESAR_POS_Update_test-1/README_UPDATE_AR.txt", names)
