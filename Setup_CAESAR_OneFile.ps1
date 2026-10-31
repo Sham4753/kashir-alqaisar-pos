@@ -120,6 +120,7 @@ function Test-CustomerArtifact([string]$Path, [string]$Root) {
         'pythonnet\runtime\Python.Runtime.deps.json', '_internal\pythonnet\runtime\Python.Runtime.deps.json', 'runtime\_internal\pythonnet\runtime\Python.Runtime.deps.json'
     )
     if ($relative -in $safeStatic) { return $false }
+    if ($relative -match '(?i)^(app\\vendor|_internal\\app\\vendor|runtime\\_internal\\app\\vendor)\\[^\\]+\.dist-info\\(license(?:\.txt)?|notice(?:\.txt)?|copying(?:\.txt)?)$') { return $false }
     $parts = $relative -split '\\'
     foreach ($part in $parts) {
         if ($part -match '(?i)secret|vault|backup|database|(^|[._-])data([._-]|$)|^(__pycache__|\.git)$') { return $true }

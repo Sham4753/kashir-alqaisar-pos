@@ -25,6 +25,9 @@ class BuildUpdatePackageTests(unittest.TestCase):
         (self.source / "app" / "welcome.html").write_text("<h1>CAESAR</h1>", encoding="utf-8")
         (self.source / "app" / "license_crypto.py").write_text("# app licensing logic", encoding="utf-8")
         (self.source / "app" / "factory_data.json").write_text('{"menu": {}}', encoding="utf-8")
+        vendor_license = self.source / "app" / "vendor" / "qrcode-8.2.dist-info" / "LICENSE"
+        vendor_license.parent.mkdir(parents=True)
+        vendor_license.write_text("Third-party package license notice", encoding="utf-8")
         public_key = Ed25519PrivateKey.generate().public_key().public_bytes(
             serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
         (self.source / "app" / "license_public_key.pem").write_bytes(public_key)
@@ -35,6 +38,9 @@ class BuildUpdatePackageTests(unittest.TestCase):
         # Files that must never be shipped, even if present in a dirty build.
         (self.source / "app" / "restaurant.json").write_text('{"customers": ["private"]}', encoding="utf-8")
         (self.source / "app" / "license.json").write_text('{"license": "customer"}', encoding="utf-8")
+        customer_license = self.source / "app" / "license" / "customer-license.txt"
+        customer_license.parent.mkdir()
+        customer_license.write_text("per-customer license", encoding="utf-8")
         (self.source / "app" / ".license_secret").write_text("signing secret", encoding="utf-8")
         (self.source / "app" / ".license").write_text("preconfigured license", encoding="utf-8")
         (self.source / "vault").mkdir()
@@ -64,6 +70,8 @@ class BuildUpdatePackageTests(unittest.TestCase):
             self.assertIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/app/license_crypto.py", names)
             self.assertIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/app/factory_data.json", names)
             self.assertIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/app/license_public_key.pem", names)
+            self.assertIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/app/vendor/qrcode-8.2.dist-info/LICENSE", names)
+            self.assertNotIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/app/license/customer-license.txt", names)
             self.assertNotIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/misc/app/factory_data.json", names)
             self.assertNotIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/misc/app/license_public_key.pem", names)
             self.assertIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/_internal/python312.dll", names)

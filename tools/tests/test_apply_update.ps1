@@ -27,6 +27,9 @@ try {
     [IO.File]::WriteAllText((Join-Path $sourceRoot 'CAESAR_POS.exe'), 'new executable payload')
     [IO.File]::WriteAllText((Join-Path $sourceRoot '_internal\runtime.txt'), 'new runtime payload')
     [IO.File]::WriteAllText((Join-Path $sourceRoot 'app\welcome.html'), 'new application payload')
+    $vendorLicense = Join-Path $sourceRoot 'app\vendor\qrcode-8.2.dist-info\LICENSE'
+    New-Item -ItemType Directory -Path (Split-Path -Parent $vendorLicense) -Force | Out-Null
+    [IO.File]::WriteAllText($vendorLicense, 'third-party license notice')
     [IO.File]::WriteAllText((Join-Path $sourceRoot 'zzz_marker.bin'), 'last payload entry')
 
     $zipPath = Join-Path $testRoot 'valid-update.zip'
@@ -51,6 +54,7 @@ try {
     Assert-Equal ([IO.File]::ReadAllText((Join-Path $successRoot 'CAESAR_POS.exe'))) 'new executable payload' 'Executable was not updated'
     Assert-Equal ([IO.File]::ReadAllText((Join-Path $successRoot '_internal\runtime.txt'))) 'new runtime payload' 'Runtime file was not updated'
     Assert-Equal ([IO.File]::ReadAllText((Join-Path $successRoot 'app\welcome.html'))) 'new application payload' 'App file was not updated'
+    Assert-Equal ([IO.File]::ReadAllText((Join-Path $successRoot 'app\vendor\qrcode-8.2.dist-info\LICENSE'))) 'third-party license notice' 'Third-party license notice was not updated'
     Assert-Equal ([IO.File]::ReadAllText((Join-Path $successRoot 'app\license.json'))) 'local app license' 'Local license file changed'
     Assert-Equal ([IO.File]::ReadAllText((Join-Path $successRoot 'app\old-only.txt'))) 'keep old file' 'Unlisted old file was deleted'
     Assert-Equal ([IO.File]::ReadAllText((Join-Path $successRoot 'CAESAR_Vault\license.json'))) 'vault license marker' 'Vault license changed'

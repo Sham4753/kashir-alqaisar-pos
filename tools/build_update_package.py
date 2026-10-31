@@ -89,10 +89,25 @@ def validate_onefolder(folder: Path) -> Path:
     return folder
 
 
+def _is_vendor_license_metadata(parts: tuple[str, ...]) -> bool:
+    """Allow third-party notices only beneath PyInstaller's vendored dist-info folders."""
+    if len(parts) < 4 or not parts[-2].endswith(".dist-info"):
+        return False
+    if parts[-1] not in {"license", "license.txt", "notice", "notice.txt", "copying", "copying.txt"}:
+        return False
+    return parts[:-2] in {
+        ("app", "vendor"),
+        ("_internal", "app", "vendor"),
+        ("runtime", "_internal", "app", "vendor"),
+    }
+
+
 def is_sensitive_or_nonpayload(relative: PurePosixPath) -> bool:
-    """Deny customer/runtime data; allow only exact factory, trust-anchor, and pythonnet metadata paths."""
+    """Deny customer/runtime data; allow exact static assets and vendored third-party notices."""
     parts = tuple(part.casefold() for part in relative.parts)
     name = parts[-1]
+    if _is_vendor_license_metadata(parts):
+        return False
     if parts in SAFE_STATIC_APP_PATHS:
         return False
     if any(part in BLOCKED_DIRS for part in parts):
