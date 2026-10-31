@@ -37,7 +37,7 @@ for (const guidance of [
 if (!html.includes('placeholder="بحث"') || !html.includes('id="printState" aria-live="polite"></div>')) {
   throw new Error('اختصار حقل البحث أو عرض حالة الطباعة عند الحاجة غير مكتمل');
 }
-if (!html.includes('pos-modern.css?v=20261031-cash-only')) {
+if (!html.includes('pos-modern.css?v=20261031-orange-v3')) {
   throw new Error('معرّف تحديث CSS مفقود؛ قد يحتفظ المتصفح بالتنسيق القديم');
 }
 for (const removedControl of ['data-payment="بطاقة"', 'data-payment="مختلط"', 'id="paymentType"', 'id="paymentButton"', 'id="tableButton"']) {

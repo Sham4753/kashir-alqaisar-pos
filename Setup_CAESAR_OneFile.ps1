@@ -347,7 +347,7 @@ foreach ($CounterId in @('counterOrders', 'counterReady', 'counterSales')) {
 if (-not $BundledHtml.Contains('/api/dashboard/counters') -or -not $BundledCss.Contains('.counter-strip { display: grid !important;')) {
     throw "Bundled POS counter API binding or visibility fallback is missing from the built package."
 }
-if (-not $BundledCss.Contains('grid-template-columns: minmax(0, 1fr) minmax(450px, 480px) !important;')) {
+if (-not $BundledCss.Contains('grid-template-columns: minmax(0, 1fr) minmax(350px, 390px) !important;')) {
     throw "Bundled POS desktop grid is stale; expected the two-track catalogue/order layout."
 }
 Write-Host "Built package contains the account-selection page and verified two-track POS layout."

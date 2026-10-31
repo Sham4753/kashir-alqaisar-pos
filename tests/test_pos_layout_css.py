@@ -18,7 +18,7 @@ class PosDesktopGridTests(unittest.TestCase):
         self.assertEqual(len(tracks), 2, columns)
 
     def test_cart_panel_stays_normal_width_and_gains_vertical_space(self):
-        self.assertIn('minmax(480px, 520px)', CSS)
+        self.assertIn('minmax(350px, 390px)', CSS)
         self.assertNotIn('minmax(560px, 600px)', CSS)
         self.assertIn('.cart-item-note', CSS)
         self.assertIn('font-size: 9px;', CSS)

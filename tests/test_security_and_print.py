@@ -329,7 +329,7 @@ class SecurityAndPrintTests(unittest.TestCase):
     def test_pos_density_and_receipt_preview_use_compact_layout(self):
         pos_css = (APP_DIR / 'pos-modern.css').read_text(encoding='utf-8')
         printer_html = (APP_DIR / 'printer_settings.html').read_text(encoding='utf-8')
-        self.assertIn('minmax(450px, 480px)', pos_css)
+        self.assertIn('minmax(340px, 380px)', pos_css)
         self.assertIn('minmax(128px, 1fr)', pos_css)
         self.assertIn("document.getElementById('receipt_font_scale').value = 'small'", printer_html)
         self.assertIn("small:'9px',medium:'10px',large:'12px'", printer_html)

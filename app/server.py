@@ -4624,12 +4624,18 @@ def prepare_qr_logo_image(source, max_width, max_height, logo_size='medium'):
         logo = grid
 
     limits = {'small': 200, 'medium': 352, 'large': 800}
-    max_height = min(int(max_height or 320), limits.get(str(logo_size or 'medium'), 240))
-    # QR لا يُصغّر إلى كسر من الوحدة: nearest-neighbor بعامل صحيح يحافظ
-    # على عرض متساوٍ لكل module. إذا كان الرمز عالياً جداً نحتفظ ببكسل/وحدة.
-    factor = max(1, min(max(1, max_width // logo.width), max(1, max_height // logo.height)))
-    if factor > 1:
-        logo = logo.resize((logo.width * factor, logo.height * factor), Image.Resampling.NEAREST)
+    max_width = max(1, int(max_width or 1))
+    max_height = min(max(1, int(max_height or 320)), limits.get(str(logo_size or 'medium'), 352))
+    # نحافظ على وحدات QR متساوية عند التكبير بعامل صحيح. الرمز المكتشف
+    # يعاد بناؤه أولًا على شبكة الوحدات، ثم يُكبّر ضمن الحد المختار فقط.
+    factor = min(max_width // logo.width, max_height // logo.height)
+    if factor >= 1:
+        if factor > 1:
+            logo = logo.resize((logo.width * factor, logo.height * factor), Image.Resampling.NEAREST)
+    else:
+        # الصور غير المنتظمة/غير المعاد بناؤها قد تكون أكبر من اختيار المستخدم؛
+        # nearest-neighbor يفرض الحد من دون إضافة تمويه لرمز QR.
+        logo.thumbnail((max_width, max_height), Image.Resampling.NEAREST)
     return logo
 
 
@@ -4758,8 +4764,7 @@ def render_escpos_raster_payload(text, paper_width=80, font_size='medium', logo_
             max_logo_width = width - 32
             qr_detected = image_is_qr_code(source_logo)
             if logo_is_qr or qr_detected:
-                qr_size = 'large' if qr_detected or not logo_is_qr else logo_size
-                logo = prepare_qr_logo_image(source_logo, max_logo_width, max_logo_width, qr_size)
+                logo = prepare_qr_logo_image(source_logo, max_logo_width, max_logo_width, logo_size)
             else:
                 logo = source_logo.convert('L')
                 max_logo_height = {'small': 48, 'medium': 72, 'large': 104}.get(str(logo_size or 'medium'), 72)

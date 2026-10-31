@@ -589,24 +589,24 @@ body.caesar-page-index .category.active,
 body.caesar-ui .q-settings-tab.active,
 body.caesar-page-settings .tab.active,
 body.caesar-ui .tab.active {
-  background: var(--q-warning) !important;
-  border-color: var(--q-warning) !important;
-  color: #2b1720 !important;
+  background: var(--q-brand-soft) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-brand-strong) !important;
 }
 body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.danger, .remove-cart-item, .discard, [class*="bg-red-"], [class*="bg-rose-"]) {
   background: var(--q-danger) !important;
   border-color: var(--q-danger) !important;
-  color: #fff !important;
+  color: var(--q-on-danger) !important;
 }
 body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.warning, .lateMuteButton, [class*="bg-amber-"], [class*="bg-orange-"], [class*="bg-yellow-"]) {
   background: var(--q-warning) !important;
   border-color: var(--q-warning) !important;
-  color: #2b1720 !important;
+  color: var(--q-on-warning) !important;
 }
 body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.success, [class*="bg-green-"], [class*="bg-emerald-"]) {
   background: var(--q-success) !important;
   border-color: var(--q-success) !important;
-  color: #fff !important;
+  color: var(--q-on-success) !important;
 }
 body.caesar-ui .q-appbar a.q-appbar-link:not(.active) {
   background: transparent !important;
@@ -615,27 +615,27 @@ body.caesar-ui .q-appbar a.q-appbar-link:not(.active) {
 }
 body.caesar-ui .q-appbar a.q-appbar-link.active,
 body.caesar-ui .q-appbar a.q-appbar-link:hover {
-  background: var(--q-warning) !important;
-  border-color: var(--q-warning) !important;
-  color: #2b1720 !important;
+  background: var(--q-brand-soft) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-brand-strong) !important;
 }
 body.caesar-page-index .nav a.active {
-  background: var(--q-warning) !important;
-  border-color: var(--q-warning) !important;
-  color: #2b1720 !important;
+  background: var(--q-brand-soft) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-brand-strong) !important;
 }
 body.caesar-page-index .nav a:not(.active) {
   background: transparent !important;
   border-color: transparent !important;
-  color: #f5e7eb !important;
+  color: var(--q-ink) !important;
 }
 body.caesar-page-index .nav a:hover {
-  background: var(--q-warning) !important;
-  border-color: var(--q-warning) !important;
-  color: #2b1720 !important;
+  background: var(--q-brand-soft) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-brand-strong) !important;
 }
 body.caesar-page-index .nav a:is(.active, :hover) .nav-icon {
-  color: #2b1720 !important;
+  color: var(--q-brand-strong) !important;
 }
 
 /* Keep the cashier order panel and its inner surfaces on one neutral background. */
@@ -655,10 +655,10 @@ html body.caesar-page-index .order-panel .total-row :is(span, strong) {
 html body.caesar-page-index .order-panel .compact-action-bar :is(#checkoutButton, #paymentButton, #tableButton) {
   background: var(--q-brand) !important;
   border-color: var(--q-brand) !important;
-  color: #fff !important;
+  color: var(--q-on-brand) !important;
 }
 html body.caesar-page-index .nav-scrim {
-  background: rgba(77, 15, 32, .10) !important;
+  background: rgba(27, 43, 37, .10) !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
@@ -688,15 +688,15 @@ html body.caesar-ui.caesar-page-index .sidebar .nav a:not(.active) {
   color: var(--q-ink) !important;
 }
 html body.caesar-ui.caesar-page-index .sidebar .nav a:is(.active, :hover) {
-  background: var(--q-warning) !important;
-  border-color: var(--q-warning) !important;
-  color: #2b1720 !important;
+  background: var(--q-brand-soft) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-brand-strong) !important;
 }
 html body.caesar-ui.caesar-page-index .sidebar .nav a:not(.active):not(:hover) .nav-icon {
   color: var(--q-brand) !important;
 }
 html body.caesar-ui.caesar-page-index .sidebar .nav a:is(.active, :hover) .nav-icon {
-  color: #2b1720 !important;
+  color: var(--q-brand-strong) !important;
 }
 
 /* Final shared color layer: every application page uses the same palette. */
@@ -754,4 +754,162 @@ html body.caesar-page-waiting_screen #readyGrid > .col-span-full {
   background: var(--q-surface-muted) !important;
   border-color: var(--q-line) !important;
   color: var(--q-muted) !important;
+}
+
+
+/* Final coordinated restaurant palette bridge: light/dark aliases and semantic controls. */
+html body.caesar-ui {
+  --color-bg: var(--q-bg);
+  --color-surface: var(--q-surface);
+  --color-surface-soft: var(--q-surface-soft);
+  --color-surface-muted: var(--q-surface-muted);
+  --color-surface-raised: var(--q-surface);
+  --color-text: var(--q-ink);
+  --color-text-secondary: var(--q-ink-soft);
+  --color-text-muted: var(--q-muted);
+  --color-text-disabled: var(--q-muted);
+  --color-text-on-primary: var(--q-on-brand);
+  --color-border: var(--q-line);
+  --color-border-strong: var(--q-line-strong);
+  --color-focus: var(--q-brand);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--q-brand) 20%, transparent);
+  --color-primary: var(--q-brand);
+  --color-primary-hover: var(--q-brand-strong);
+  --color-primary-active: var(--q-brand-strong);
+  --color-primary-soft: var(--q-brand-soft);
+  --color-success: var(--q-success);
+  --color-success-soft: var(--q-success-soft);
+  --color-warning: var(--q-warning);
+  --color-warning-soft: var(--q-warning-soft);
+  --color-danger: var(--q-danger);
+  --color-danger-soft: var(--q-danger-soft);
+  --color-info: var(--q-blue);
+  --color-info-soft: var(--q-blue-soft);
+  color-scheme: light;
+  background: var(--q-bg) !important;
+  color: var(--q-ink) !important;
+}
+html body.caesar-ui.dark { color-scheme: dark; }
+
+/* Neutral actions stay quiet; primary, status and destructive actions are semantic. */
+html body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):not(.profile-card) {
+  background: var(--q-surface-muted) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-ink) !important;
+}
+html body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.btn-secondary, .btn-ghost, .secondary, .action-secondary, .icon-button, .modal-close, .segment:not(.active), .q-settings-tab:not(.active), .category:not(.active), .dine-muted, .receipt-preset, .move, .thermal-mode-toggle:not(.active), [class*="bg-gray-"], [class*="bg-slate-"], .bg-white) {
+  background: var(--q-surface-muted) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-ink) !important;
+}
+html body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.primary, .primary-action, .btn-primary, .action-main, .primary-checkout, .add, .numpad-confirm, .dine-primary, [class*="bg-blue-"], [class*="bg-indigo-"], [class*="bg-sky-"], [class*="bg-violet-"], [class*="bg-purple-"], [class*="bg-teal-"], [class*="bg-green-"], [class*="bg-emerald-"]) {
+  background: var(--q-brand) !important;
+  border-color: var(--q-brand) !important;
+  color: var(--q-on-brand) !important;
+}
+html body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.success) {
+  background: var(--q-success) !important;
+  border-color: var(--q-success) !important;
+  color: var(--q-on-success) !important;
+}
+html body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.danger, .remove-cart-item, .discard, [class*="bg-red-"], [class*="bg-rose-"]) {
+  background: var(--q-danger) !important;
+  border-color: var(--q-danger) !important;
+  color: var(--q-on-danger) !important;
+}
+html body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.warning, .lateMuteButton, [class*="bg-amber-"], [class*="bg-orange-"], [class*="bg-yellow-"]) {
+  background: var(--q-warning) !important;
+  border-color: var(--q-warning) !important;
+  color: var(--q-on-warning) !important;
+}
+html body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):hover:not(:disabled) {
+  filter: brightness(.97);
+}
+html body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+
+/* One calm active state for app navigation, tabs, categories and segmented controls. */
+html body.caesar-ui .q-appbar a.q-appbar-link:is(.active, :hover),
+html body.caesar-ui .q-settings-tab.active,
+html body.caesar-ui .tab.active,
+html body.caesar-ui .segment.active,
+html body.caesar-ui .category.active,
+html body.caesar-page-index .nav a:is(.active, :hover),
+html body.caesar-page-index .sidebar .nav a:is(.active, :hover) {
+  background: var(--q-brand-soft) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-brand-strong) !important;
+  box-shadow: none !important;
+}
+html body.caesar-page-index .nav a:is(.active, :hover) .nav-icon,
+html body.caesar-page-index .nav a:not(.active):not(:hover) .nav-icon {
+  color: var(--q-brand) !important;
+}
+html body.caesar-ui a:not([role="button"]):not(.q-appbar-link) { color: var(--q-brand-strong); }
+html body.caesar-ui :is(input, select, textarea):focus-visible {
+  border-color: var(--q-brand) !important;
+  outline-color: var(--q-brand) !important;
+  box-shadow: var(--focus-ring) !important;
+}
+
+/* Entry/setup pages follow the same light restaurant workspace rather than a separate blue theme. */
+html body.caesar-page-welcome {
+  background: var(--q-bg) !important;
+  color: var(--q-ink) !important;
+}
+html body.caesar-page-welcome :is(.profile-card, .password-dialog) {
+  background: var(--q-surface) !important;
+  border-color: var(--q-line) !important;
+  color: var(--q-ink) !important;
+  box-shadow: var(--q-shadow-soft) !important;
+}
+html body.caesar-page-welcome .profile-card:hover {
+  background: var(--q-brand-soft) !important;
+  border-color: var(--q-line-strong) !important;
+}
+html body.caesar-page-welcome :is(.welcome-identity-mark, .login-identity-mark, .profile-icon) {
+  background: var(--q-brand-soft) !important;
+  border-color: var(--q-line) !important;
+}
+html body.caesar-page-welcome .welcome-identity-mark,
+html body.caesar-page-welcome .login-identity-mark { background: var(--q-surface) !important; }
+html body.caesar-page-welcome :is(.text-white, .text-blue-100, .text-blue-200, .text-blue-300) {
+  color: var(--q-ink-soft) !important;
+}
+html body.caesar-page-welcome #restaurantName { color: var(--q-ink) !important; }
+html body.caesar-page-welcome :is(#dateTime, #supportBox) { color: var(--q-muted) !important; }
+html body.caesar-page-welcome .bg-black.bg-opacity-30 {
+  background: var(--q-surface-muted) !important;
+  color: var(--q-muted) !important;
+}
+html body.caesar-page-setup { background: var(--q-bg) !important; }
+html body.caesar-page-mobile { --ink: var(--q-ink); --line: var(--q-line); --orange: var(--q-brand); }
+
+/* Orange is the shared accent; readable text stays black in light mode and white in dark mode. */
+html body.caesar-ui :is(p, small, label, h1, h2, h3, h4, span, strong, em, b, i, li, td, th, dt, dd, summary, a:not([role="button"])) {
+  color: var(--q-ink) !important;
+}
+html body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]) :is(span, strong, small, svg) {
+  color: inherit !important;
+}
+html body.caesar-ui :is(.nav-icon, .button-icon, .counter-icon, .product-image-placeholder, .q-line-icon, .welcome-identity svg, .profile-icon svg) {
+  color: var(--q-brand) !important;
+  stroke: currentColor !important;
+}
+html body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.primary, .primary-action, .btn-primary, .action-main, .primary-checkout, .add, .numpad-confirm, .dine-primary) {
+  background: var(--q-brand) !important;
+  border-color: var(--q-brand) !important;
+  color: var(--q-on-brand) !important;
+}
+html body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.success, .danger, .warning, .remove-cart-item, .discard, .lateMuteButton) {
+  color: #ffffff !important;
+}
+html body.caesar-page-index > header {
+  background: var(--q-brand) !important;
+  color: var(--q-on-brand) !important;
+}
+html body.caesar-page-index > header :is(p, small, label, h1, h2, h3, h4, span, strong, em, b, i, a:not([role="button"])) {
+  color: var(--q-on-brand) !important;
 }
