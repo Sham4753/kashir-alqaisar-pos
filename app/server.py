@@ -1,4 +1,4 @@
-import os, sys, json, shutil, threading, hashlib, hmac, base64, secrets, tempfile, subprocess, socket, uuid, re, traceback, time, platform, sqlite3, queue, math
+import os, sys, json, shutil, threading, hashlib, hmac, base64, secrets, tempfile, subprocess, socket, uuid, re, traceback, time, platform, sqlite3, queue, math, ipaddress
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import zipfile
@@ -11,6 +11,7 @@ from bidi.algorithm import get_display
 APP_SOURCE_PATH = os.path.dirname(os.path.abspath(__file__))
 if APP_SOURCE_PATH not in sys.path:
     sys.path.insert(0, APP_SOURCE_PATH)
+from license_crypto import LICENSE_ALGORITHM, license_number_for as _license_number_for, normalize_machine_id as _normalize_license_machine_id, verify_license_signature
 from flask import Flask, request, jsonify, send_from_directory, send_file, session, redirect, Response
 from io import BytesIO
 from permissions import (
@@ -46,85 +47,7 @@ except ImportError:
     qrcode = None
     SvgPathImage = None
 
-CURRENT_VERSION = "4.0.0"
-
-# Stable HMAC contract shared with the owner-only generate_license.py utility.
-#
-# ترتيب تحميل مفتاح الترخيص: ملف مورّد محلي أو متغير بيئة فقط. لا يوجد سر
-# افتراضي داخل الخادم؛ غياب السر يجعل التحقق يفشل بدلاً من قبول مفتاح منشور.
-_LICENSE_SECRET_FILENAMES = ('.license_secret', 'license.secret')
-
-
-def _license_secret_search_dirs():
-    app_dir = os.path.dirname(os.path.abspath(__file__))
-    dirs = [app_dir, os.path.dirname(app_dir)]
-    exe_dir = os.path.dirname(os.path.abspath(sys.argv[0])) if getattr(sys, 'frozen', False) else None
-    if exe_dir:
-        dirs.append(exe_dir)
-    if getattr(sys, 'frozen', False):
-        dirs.append(os.path.dirname(sys.executable))
-    return dirs
-
-
-def load_license_secret():
-    """يحمّل سر HMAC من ملف مورّد أو متغير بيئة، وإلا يعيد فراغًا."""
-    for directory in _license_secret_search_dirs():
-        for filename in _LICENSE_SECRET_FILENAMES:
-            try:
-                path = os.path.join(directory, filename)
-                if os.path.isfile(path):
-                    with open(path, 'r', encoding='utf-8') as f:
-                        value = f.read().strip()
-                    if value:
-                        return value
-            except OSError:
-                continue
-    return os.environ.get('CAESAR_LICENSE_SECRET', '').strip()
-
-
-LICENSE_SECRET = load_license_secret().encode('utf-8')
-LICENSE_ALGORITHM = 'HMAC-SHA256'
-
-_LICENSE_FILE_FILENAMES = ('.license', 'license.txt')
-
-
-def load_shipped_license():
-    """يقرأ رقم/مفتاح ترخيص مُجهَّز مسبقاً من ملف .license بجانب البرنامج
-    (JSON بمفاتيح license_id/license_key، أو سطرين LICENSE_ID=/LICENSE_KEY=)
-    لتسهيل النشر المسبق عند التوزيع للعميل. هذا لا يُفعّل الترخيص تلقائياً؛
-    فقط يُستخدم لتعبئة شاشة الإعداد مسبقاً، ويبقى verify_license() هو الحارس
-    الوحيد الذي يقرر قبول أي ترخيص فعلياً. أي عطل بقراءة الملف يُتجاهل بصمت."""
-    for directory in _license_secret_search_dirs():
-        for filename in _LICENSE_FILE_FILENAMES:
-            path = os.path.join(directory, filename)
-            try:
-                if not os.path.isfile(path):
-                    continue
-                with open(path, 'r', encoding='utf-8') as f:
-                    content = f.read().strip()
-                if not content:
-                    continue
-                license_id = license_key = ''
-                try:
-                    parsed = json.loads(content)
-                    license_id = str(parsed.get('license_id', '')).strip().upper()
-                    license_key = str(parsed.get('license_key', '')).strip().upper()
-                except (ValueError, AttributeError):
-                    for line in content.splitlines():
-                        if '=' not in line:
-                            continue
-                        key, _, value = line.partition('=')
-                        key = key.strip().upper(); value = value.strip().upper()
-                        if key == 'LICENSE_ID':
-                            license_id = value
-                        elif key == 'LICENSE_KEY':
-                            license_key = value
-                if license_id and license_key:
-                    return {'license_id': license_id, 'license_key': license_key}
-            except OSError:
-                continue
-    return None
-
+CURRENT_VERSION = "4.0.1"
 def version_tuple(v):
     """تحويل رقم الإصدار إلى tuple للمقارنة الصحيحة"""
     return tuple(int(x) for x in v.strip().split('.'))
@@ -1183,7 +1106,7 @@ def commercial_setup_complete(data=None):
 
 
 def normalize_machine_id(value):
-    return re.sub(r'[^A-Za-z0-9:_-]', '', str(value or '').strip()).upper()
+    return _normalize_license_machine_id(value)
 
 
 def local_machine_id():
@@ -1196,33 +1119,18 @@ def local_machine_id():
 
 
 def license_number_for(machine_id):
-    machine_id = normalize_machine_id(machine_id)
-    return 'CAESAR-' + hashlib.sha256(machine_id.encode('utf-8')).hexdigest()[:12].upper()
-
-
-def license_key_for(machine_id, number=None, secret=None):
-    machine_id = normalize_machine_id(machine_id)
-    number = (number or license_number_for(machine_id)).strip().upper()
-    payload = f'{machine_id}|{number}'.encode('utf-8')
-    digest = hmac.new(secret or LICENSE_SECRET, payload, hashlib.sha256).hexdigest().upper()
-    return '-'.join(digest[i:i + 8] for i in range(0, 32, 8))
+    return _license_number_for(machine_id)
 
 
 def verify_license(machine_id, number, key):
-    """يتحقق من الترخيص بالسر المورّد المحمّل فقط، ويفشل مغلقًا عند غيابه."""
-    if not LICENSE_SECRET:
-        return False
-    expected_number = license_number_for(machine_id)
-    if not hmac.compare_digest(str(number or '').strip().upper(), expected_number):
-        return False
-    submitted_key = str(key or '').strip().upper()
-    return hmac.compare_digest(submitted_key, license_key_for(machine_id, expected_number))
+    """يتحقق من توقيع Ed25519 بمفتاح عام فقط، ويفشل مغلقًا عند غيابه."""
+    return verify_license_signature(machine_id, number, key)
 
 
 def installation_license_valid(data):
     """يتحقق من الترخيص المسجل في كل تشغيل وطلب، لا في شاشة الإعداد فقط."""
     commercial = data.get('settings', {}).get('commercial', {})
-    if not commercial.get('setup_completed'):
+    if not commercial_setup_complete(data):
         return True
     current_machine = local_machine_id()
     stored_machine = normalize_machine_id(commercial.get('machine_id', ''))
@@ -1234,7 +1142,7 @@ def write_local_license(data):
     settings = data.setdefault('settings', {})
     commercial = settings.setdefault('commercial', {})
     license_data = {
-        'product': 'CAESAR Al-CAESAR', 'edition': 'Standalone Restaurant',
+        'product': 'CAESAR POS', 'edition': 'Standalone Restaurant',
         'license_id': commercial.get('license_id'), 'license_key': commercial.get('license_key', ''),
         'machine_id': commercial.get('machine_id', ''), 'algorithm': LICENSE_ALGORITHM,
         'instance_id': commercial.get('instance_id'),
@@ -1247,13 +1155,19 @@ def write_local_license(data):
 
 @app.route('/')
 def index():
-    if not commercial_setup_complete():
+    data = load()
+    if not commercial_setup_complete(data):
+        return redirect('/setup.html')
+    if not installation_license_valid(data):
         return redirect('/setup.html')
     return send_from_directory(BASE_DIR, 'welcome.html')
 
 @app.route('/welcome.html')
 def welcome_page():
-    if not commercial_setup_complete():
+    data = load()
+    if not commercial_setup_complete(data):
+        return redirect('/setup.html')
+    if not installation_license_valid(data):
         return redirect('/setup.html')
     return send_from_directory(BASE_DIR, 'welcome.html')
 
@@ -1264,11 +1178,8 @@ def setup_status():
     response = {'setup_completed': commercial_setup_complete(data), 'is_commercial_template': not commercial_setup_complete(data),
                     'restaurant_name': settings.get('restaurant', {}).get('name', ''),
                     'license_id': commercial.get('license_id', ''), 'machine_id': local_machine_id(),
-                    'license_required': not commercial_setup_complete(data)}
-    if not commercial_setup_complete(data):
-        shipped = load_shipped_license()
-        if shipped and verify_license(local_machine_id(), shipped['license_id'], shipped['license_key']):
-            response['shipped_license'] = shipped
+                    'license_required': not commercial_setup_complete(data),
+                    'license_valid': installation_license_valid(data)}
     return jsonify(response)
 
 @app.route('/api/setup/initialize', methods=['POST'])
@@ -1281,10 +1192,10 @@ def setup_initialize():
     manager_username = str(payload.get('manager_username', '')).strip()
     manager_password = str(payload.get('manager_password', ''))
     license_id = str(payload.get('license_id', '')).strip().upper()
-    license_key = str(payload.get('license_key', '')).strip().upper()
+    license_key = str(payload.get('license_key', '')).strip()
     if not restaurant_name or not manager_username or len(manager_password) < 8:
         return jsonify({'ok': False, 'error': 'اسم المطعم واسم المدير وكلمة مرور من 8 أحرف على الأقل مطلوبة'}), 400
-    if not license_id or not license_key or not verify_license(local_machine_id(), license_id, license_key):
+    if not license_id or len(license_id) > 32 or not license_key or len(license_key) > 128 or not verify_license(local_machine_id(), license_id, license_key):
         return jsonify({'ok': False, 'error': 'رقم الترخيص أو مفتاح الترخيص غير صالحين لهذا الجهاز'}), 403
     settings = data.setdefault('settings', {})
     settings['restaurant'] = {'name': restaurant_name, 'phone': str(payload.get('phone', '')).strip(), 'address': str(payload.get('address', '')).strip()}
@@ -1297,11 +1208,41 @@ def setup_initialize():
     # يبقى قالب المصنع نظيفًا داخل المصدر، بينما تحفظ بيانات العميل في الخزنة المحلية فقط.
     return jsonify({'ok': True, 'license_id': settings['commercial']['license_id']})
 
+
+@app.route('/api/license/reactivate', methods=['POST'])
+def reactivate_license():
+    """Update only license fields on an existing installation; never reset restaurant data."""
+    data = load()
+    if not commercial_setup_complete(data):
+        return jsonify({'ok': False, 'error': 'أكمل الإعداد الأولي أولاً.'}), 409
+    payload = request.get_json(silent=True) or {}
+    machine_id = local_machine_id()
+    license_id = str(payload.get('license_id', '')).strip().upper()
+    license_key = str(payload.get('license_key', '')).strip()
+    if (not license_id or len(license_id) > 32 or not license_key or len(license_key) > 128
+            or not verify_license(machine_id, license_id, license_key)):
+        return jsonify({'ok': False, 'error': 'رقم الترخيص أو مفتاحه غير صالحين لهذا الجهاز.'}), 403
+
+    settings = data.setdefault('settings', {})
+    commercial = settings.setdefault('commercial', {})
+    commercial.update({
+        'setup_completed': True,
+        'machine_id': machine_id,
+        'license_id': license_id,
+        'license_key': license_key,
+        'license_algorithm': LICENSE_ALGORITHM,
+        'license_updated_at': datetime.now().isoformat(),
+    })
+    backup()
+    save(data)
+    write_local_license(data)
+    return jsonify({'ok': True, 'license_id': license_id, 'data_preserved': True})
+
 @app.route('/api/license', methods=['GET'])
 def local_license():
     path = os.path.join(VAULT_DIR, 'license.json')
     if not os.path.exists(path):
-        return jsonify({'ok': False, 'error': 'لا يوجد ترخيص محلي بعد'}), 404
+        return jsonify({'ok': False, 'error': 'لم يُحفظ سجل الترخيص لهذا التثبيت بعد'}), 404
     with open(path, encoding='utf-8') as f:
         return jsonify(json.load(f))
 
@@ -4583,6 +4524,64 @@ def _draw_structured_receipt(text, width, font, bold_font, big_font, scale, visu
     return image.crop((0, 0, width, max(y + 10, 32)))
 
 
+def image_is_qr_code(source):
+    """Detect a QR image from its three standard finder patterns."""
+    try:
+        logo = source.convert('L').point(lambda pixel: 0 if pixel < 160 else 255, mode='L')
+        content_box = logo.point(lambda pixel: 255 if pixel < 128 else 0, mode='L').getbbox()
+        if not content_box:
+            return False
+        logo = logo.crop(content_box)
+        if not logo.width or not logo.height or abs(logo.width - logo.height) > max(2, logo.width * .04):
+            return False
+
+        first_row = logo.crop((0, 0, logo.width, 1)).tobytes()
+        finder_run = 0
+        for pixel in first_row:
+            if pixel >= 128:
+                break
+            finder_run += 1
+        if finder_run < 7:
+            return False
+        pitch = finder_run / 7.0
+        estimated = round(logo.width / pitch)
+        modules = 21 + 4 * round((estimated - 21) / 4) if estimated >= 21 else 0
+        if not 21 <= modules <= 177:
+            return False
+        module_w, module_h = logo.width / modules, logo.height / modules
+        if abs(module_w - pitch) > max(1.5, pitch * .22) or abs(module_h - pitch) > max(1.5, pitch * .22):
+            return False
+
+        pixels = logo.load()
+        def finder_matches(offset_x, offset_y):
+            mismatches = 0
+            for row in range(7):
+                for col in range(7):
+                    expected_black = (row in (0, 6) or col in (0, 6)
+                                      or (2 <= row <= 4 and 2 <= col <= 4))
+                    x = max(0, min(logo.width - 1, int((offset_x + col + .5) * module_w)))
+                    y = max(0, min(logo.height - 1, int((offset_y + row + .5) * module_h)))
+                    if (pixels[x, y] < 128) != expected_black:
+                        mismatches += 1
+            return mismatches <= 3
+
+        return (finder_matches(0, 0) and finder_matches(modules - 7, 0)
+                and finder_matches(0, modules - 7))
+    except (AttributeError, OSError, ValueError):
+        return False
+
+
+def logo_data_url_is_qr(logo_data):
+    if not isinstance(logo_data, str) or not logo_data.startswith('data:image/') or ',' not in logo_data:
+        return False
+    try:
+        image = Image.open(BytesIO(base64.b64decode(logo_data.split(',', 1)[1], validate=True)))
+        image.load()
+        return image_is_qr_code(image)
+    except (OSError, ValueError, binascii.Error):
+        return False
+
+
 def prepare_qr_logo_image(source, max_width, max_height, logo_size='medium'):
     """يعيد بناء QR ثنائي الوحدات ثم يكبر كل وحدة بعدد بكسلات صحيح للطباعة."""
     if 'A' in source.getbands():
@@ -4624,7 +4623,7 @@ def prepare_qr_logo_image(source, max_width, max_height, logo_size='medium'):
                     target_px[col + 4, row + 4] = 0
         logo = grid
 
-    limits = {'small': 160, 'medium': 240, 'large': 320}
+    limits = {'small': 200, 'medium': 352, 'large': 800}
     max_height = min(int(max_height or 320), limits.get(str(logo_size or 'medium'), 240))
     # QR لا يُصغّر إلى كسر من الوحدة: nearest-neighbor بعامل صحيح يحافظ
     # على عرض متساوٍ لكل module. إذا كان الرمز عالياً جداً نحتفظ ببكسل/وحدة.
@@ -4757,8 +4756,10 @@ def render_escpos_raster_payload(text, paper_width=80, font_size='medium', logo_
             logo_bytes = base64.b64decode(encoded, validate=True)
             source_logo = Image.open(BytesIO(logo_bytes))
             max_logo_width = width - 32
-            if logo_is_qr:
-                logo = prepare_qr_logo_image(source_logo, max_logo_width, 320, logo_size)
+            qr_detected = image_is_qr_code(source_logo)
+            if logo_is_qr or qr_detected:
+                qr_size = 'large' if qr_detected or not logo_is_qr else logo_size
+                logo = prepare_qr_logo_image(source_logo, max_logo_width, max_logo_width, qr_size)
             else:
                 logo = source_logo.convert('L')
                 max_logo_height = {'small': 48, 'medium': 72, 'large': 104}.get(str(logo_size or 'medium'), 72)
@@ -5583,6 +5584,7 @@ def get_printer_settings():
         "cash_drawer_printer": p.get('cash_drawer_printer', p.get('printer_name', '')),
         "cash_drawer_pulse_profile": p.get('cash_drawer_pulse_profile', 'pin2_standard'),
         "logo_data": p.get('logo_data', ''),
+        "logo_is_qr": bool(p.get('logo_is_qr', False) or logo_data_url_is_qr(p.get('logo_data', ''))),
         "logo_caption": p.get('logo_caption', ''),
         "receipt_header": p.get('receipt_header', 'إيصال مبيعات'),
         "receipt_alignment": p.get('receipt_alignment', 'center'),
@@ -5648,6 +5650,7 @@ def printer_preview():
     bitmap.save(output, format='PNG')
     response = send_file(BytesIO(output.getvalue()), mimetype='image/png', max_age=0)
     response.headers['X-Printer-Preview'] = 'escpos-raster'
+    response.headers['X-Printer-QR-Detected'] = 'true' if (bool(printer.get('logo_is_qr')) or logo_data_url_is_qr(printer.get('logo_data', ''))) else 'false'
     return response
 
 @app.route('/api/printer/settings', methods=['POST'])
@@ -6298,6 +6301,15 @@ def is_screen_locked():
     return bool(session.get('screen_locked'))
 
 
+def request_is_loopback():
+    try:
+        address = ipaddress.ip_address(request.remote_addr or '')
+        mapped_address = getattr(address, 'ipv4_mapped', None)
+        return address.is_loopback or bool(mapped_address and mapped_address.is_loopback)
+    except ValueError:
+        return False
+
+
 @app.before_request
 def enforce_api_access():
     """يفرض الإعداد الأولي والجلسة والصلاحية على الواجهة البرمجية، وليس على الأزرار فقط."""
@@ -6313,6 +6325,8 @@ def enforce_api_access():
     data = load_snapshot_only() if direct_order_read else load()
     path = request.path
     method = request.method
+    if path in {'/api/setup/status', '/api/setup/initialize', '/api/license/reactivate'} and not request_is_loopback():
+        return jsonify({'ok': False, 'error': 'يُسمح بإعداد أو تفعيل النظام من هذا الكمبيوتر فقط.'}), 403
     if method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
         origin = request.headers.get('Origin', '').strip().rstrip('/')
         expected_origin = request.host_url.rstrip('/')
@@ -6325,6 +6339,12 @@ def enforce_api_access():
     if not commercial_setup_complete(data):
         if path not in {'/api/setup/status', '/api/setup/initialize', '/api/network/info'}:
             return jsonify({'ok': False, 'error': 'يجب إكمال الإعداد الأولي للمطعم أولاً'}), 423
+        return None
+
+    # تتيح شاشة التفعيل قراءة حالة الترخيص وتجديده بتوقيع المورّد فقط؛ لا تعيد تهيئة Vault.
+    if path == '/api/setup/status' and method == 'GET':
+        return None
+    if path == '/api/license/reactivate' and method == 'POST':
         return None
 
     # المعاينة صورة محلية غير تشغيلية ولا ترسل شيئًا للطابعة؛ نُبقيها متاحة

@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>إعداد نسخة المطعم — كاشير قيصر</title>
+  <title>إعداد/تفعيل كاشير قيصر</title>
   <link rel="stylesheet" href="tailwind.css">
   <script defer src="design-system.js"></script><script defer src="currency-manager.js"></script>
   <style>body{min-height:100vh;background:linear-gradient(135deg,#0f172a,#1e3a5f);font-family:Tahoma,Arial}.card{box-shadow:0 24px 70px #0004}</style>
@@ -12,28 +12,51 @@
 </head>
 <body class="p-4 flex items-center justify-center">
 <main class="card w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8">
-  <div class="text-center mb-6"><p class="text-orange-600 font-bold text-sm mt-3">كاشير قيصر — نسخة تجارية مستقلة</p><h1 class="text-2xl font-black text-slate-800 mt-1">إعداد مطعم جديد</h1><p class="text-sm text-slate-500 mt-2">تُحفظ البيانات على هذا الكمبيوتر فقط، ولا يمكن تفعيل النسخة إلا بمفتاح صالح لهذا الجهاز.</p></div>
-  <form id="setupForm" class="space-y-3">
-    <input id="restaurantName" required class="w-full border rounded-xl p-3" placeholder="اسم المطعم">
-    <input id="ownerName" class="w-full border rounded-xl p-3" placeholder="اسم صاحب المطعم (اختياري)">
-    <div class="grid grid-cols-2 gap-3"><input id="phone" class="w-full border rounded-xl p-3" placeholder="رقم الهاتف"><select id="currency" class="w-full border rounded-xl p-3"><option value="SYP">الليرة السورية ل.س</option><option value="USD">الدولار $</option><option value="EUR">اليورو €</option></select></div>
-    <input id="address" class="w-full border rounded-xl p-3" placeholder="العنوان (اختياري)">
-    <hr class="my-3"><h2 class="font-bold text-slate-700">ترخيص هذا الجهاز</h2>
-    <p class="text-xs text-slate-500">Machine ID: <code id="machineId" class="font-bold" style="user-select:all !important;-webkit-user-select:all !important;-moz-user-select:all !important;cursor:text"></code></p>
-    <input id="licenseId" required class="w-full border rounded-xl p-3" placeholder="License Number — رقم الترخيص">
-    <input id="licenseKey" required class="w-full border rounded-xl p-3" placeholder="License Key — مفتاح الترخيص">
-    <hr class="my-3"><h2 class="font-bold text-slate-700">حساب المدير الأول</h2>
-    <input id="managerUsername" required class="w-full border rounded-xl p-3" placeholder="اسم المستخدم للمدير">
-    <input id="managerPassword" required minlength="8" type="password" class="w-full border rounded-xl p-3" placeholder="كلمة المرور (8 أحرف على الأقل)">
-    <p id="error" class="hidden text-sm text-red-600 bg-red-50 p-3 rounded-xl"></p>
-    <button class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl p-3.5">تفعيل النسخة وبدء العمل</button>
-  </form>
-  <p class="text-[11px] text-slate-400 text-center leading-5 mt-5">لا تشارك مفتاح الترخيص أو كلمة مرور المدير.</p>
+  <div class="text-center mb-6">
+    <p class="text-orange-600 font-bold text-sm mt-3">كاشير قيصر</p>
+    <h1 id="pageTitle" class="text-2xl font-black text-slate-800 mt-1">إعداد مطعم جديد</h1>
+    <p id="pageDescription" class="text-sm text-slate-500 mt-2">يُفعّل النظام برخصة مرتبطة بهذا الجهاز.</p>
+  </div>
+
+  <section id="initialSetup">
+    <form id="setupForm" class="space-y-3">
+      <input id="restaurantName" required class="w-full border rounded-xl p-3" placeholder="اسم المطعم">
+      <input id="ownerName" class="w-full border rounded-xl p-3" placeholder="اسم صاحب المطعم (اختياري)">
+      <div class="grid grid-cols-2 gap-3"><input id="phone" class="w-full border rounded-xl p-3" placeholder="رقم الهاتف"><select id="currency" class="w-full border rounded-xl p-3"><option value="SYP">الليرة السورية ل.س</option><option value="USD">الدولار $</option><option value="EUR">اليورو €</option></select></div>
+      <input id="address" class="w-full border rounded-xl p-3" placeholder="العنوان (اختياري)">
+      <hr class="my-3"><h2 class="font-bold text-slate-700">ترخيص هذا الجهاز</h2>
+      <p class="text-xs text-slate-500">أرسل Machine ID إلى المورّد لاستلام License ID وLicense Key.</p>
+      <p class="text-xs text-slate-500">Machine ID: <code id="machineId" class="font-bold" style="user-select:all !important;-webkit-user-select:all !important;-moz-user-select:all !important;cursor:text"></code></p>
+      <input id="licenseId" required maxlength="32" class="w-full border rounded-xl p-3" placeholder="License ID">
+      <input id="licenseKey" required maxlength="128" class="w-full border rounded-xl p-3" placeholder="License Key">
+      <hr class="my-3"><h2 class="font-bold text-slate-700">حساب المدير الأول</h2>
+      <input id="managerUsername" required class="w-full border rounded-xl p-3" placeholder="اسم المستخدم للمدير">
+      <input id="managerPassword" required minlength="8" type="password" class="w-full border rounded-xl p-3" placeholder="كلمة المرور (8 أحرف على الأقل)">
+      <p id="setupError" class="hidden text-sm text-red-600 bg-red-50 p-3 rounded-xl"></p>
+      <button id="setupButton" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl p-3.5">تفعيل النسخة وبدء العمل</button>
+    </form>
+  </section>
+
+  <section id="reactivation" class="hidden">
+    <p class="text-sm text-slate-600 mb-2">بيانات المطعم محفوظة. أرسل Machine ID إلى المورّد لاستلام ترخيص جديد.</p>
+    <p class="text-sm font-bold text-slate-700 mb-2">المطعم: <span id="reactivationRestaurant"></span></p>
+    <p class="text-xs text-slate-500 mb-4">Machine ID: <code id="reactivationMachineId" class="font-bold" style="user-select:all !important;-webkit-user-select:all !important;-moz-user-select:all !important;cursor:text"></code></p>
+    <form id="reactivationForm" class="space-y-3">
+      <input id="reactivationLicenseId" required maxlength="32" class="w-full border rounded-xl p-3" placeholder="License ID">
+      <input id="reactivationLicenseKey" required maxlength="128" class="w-full border rounded-xl p-3" placeholder="License Key">
+      <p id="reactivationError" class="hidden text-sm text-red-600 bg-red-50 p-3 rounded-xl"></p>
+      <button id="reactivationButton" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl p-3.5">تفعيل الترخيص مع حفظ البيانات</button>
+    </form>
+  </section>
+  <p class="text-[11px] text-slate-400 text-center leading-5 mt-5">لا تشارك License Key أو كلمة مرور المدير.</p>
 </main>
 <script>
 const $=id=>document.getElementById(id);
-$('setupForm').addEventListener('submit',async e=>{e.preventDefault();const err=$('error');err.classList.add('hidden');const p={restaurant_name:$('restaurantName').value,owner_name:$('ownerName').value,phone:$('phone').value,address:$('address').value,currency:$('currency').value,manager_username:$('managerUsername').value,manager_password:$('managerPassword').value,license_id:$('licenseId').value,license_key:$('licenseKey').value};try{const r=await fetch('/api/setup/initialize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});const d=await r.json();if(!r.ok||!d.ok){err.textContent=d.error||'تعذر إكمال الإعداد';err.classList.remove('hidden');return}location.href='/welcome.html'}catch(x){err.textContent='تعذر الاتصال بالخادم المحلي';err.classList.remove('hidden')}});
-fetch('/api/setup/status').then(r=>r.json()).then(d=>{if(d.machine_id)$('machineId').textContent=d.machine_id;if(d.setup_completed){location.href='/welcome.html';return}if(d.shipped_license){$('licenseId').value=d.shipped_license.license_id||'';$('licenseKey').value=d.shipped_license.license_key||''}}).catch(()=>{});
+const showError=(id,message)=>{const el=$(id);el.textContent=message;el.classList.remove('hidden')};
+$('setupForm').addEventListener('submit',async e=>{e.preventDefault();$('setupError').classList.add('hidden');const p={restaurant_name:$('restaurantName').value,owner_name:$('ownerName').value,phone:$('phone').value,address:$('address').value,currency:$('currency').value,manager_username:$('managerUsername').value,manager_password:$('managerPassword').value,license_id:$('licenseId').value.trim(),license_key:$('licenseKey').value.trim()};try{const r=await fetch('/api/setup/initialize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});const d=await r.json();if(!r.ok||!d.ok){showError('setupError',d.error||'تعذر إكمال الإعداد');return}location.href='/welcome.html'}catch(x){showError('setupError','تعذر الاتصال بالخادم المحلي')}});
+$('reactivationForm').addEventListener('submit',async e=>{e.preventDefault();$('reactivationError').classList.add('hidden');const p={license_id:$('reactivationLicenseId').value.trim(),license_key:$('reactivationLicenseKey').value.trim()};try{const r=await fetch('/api/license/reactivate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});const d=await r.json();if(!r.ok||!d.ok){showError('reactivationError',d.error||'تعذر إعادة التفعيل');return}location.href='/welcome.html'}catch(x){showError('reactivationError','تعذر الاتصال بالخادم المحلي')}});
+fetch('/api/setup/status').then(r=>r.json()).then(d=>{if(d.setup_completed){if(d.license_valid){location.href='/welcome.html';return}$('initialSetup').classList.add('hidden');$('reactivation').classList.remove('hidden');$('pageTitle').textContent='إعادة تفعيل النظام';$('pageDescription').textContent='سيبقى المطعم والمستخدمون والبيانات كما هي.';$('reactivationRestaurant').textContent=d.restaurant_name||'';$('reactivationMachineId').textContent=d.machine_id||'';$('reactivationLicenseId').value=d.license_id||'';return}if(d.machine_id)$('machineId').textContent=d.machine_id}).catch(()=>{});
 $('machineId').addEventListener('click',()=>{const node=$('machineId');const range=document.createRange();range.selectNodeContents(node);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range)});
+$('reactivationMachineId').addEventListener('click',()=>{const node=$('reactivationMachineId');const range=document.createRange();range.selectNodeContents(node);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range)});
 </script>
 </body></html>

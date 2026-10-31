@@ -1,4 +1,5 @@
 import json
+import base64
 import os
 import sqlite3
 import sys
@@ -8,17 +9,38 @@ import atexit
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 APP_DIR = Path(__file__).resolve().parents[1] / 'app'
 sys.path.insert(0, str(APP_DIR))
 TEST_VAULT = tempfile.TemporaryDirectory()
 atexit.register(TEST_VAULT.cleanup)
 os.environ.setdefault('CAESAR_VAULT_DIR', TEST_VAULT.name)
-os.environ.setdefault('CAESAR_LICENSE_SECRET', 'test-only-secret-for-caesar-pos-tests-2026-32chars')
+TEST_LICENSE_KEY_DIR = tempfile.TemporaryDirectory()
+atexit.register(TEST_LICENSE_KEY_DIR.cleanup)
+TEST_LICENSE_PRIVATE_KEY = Ed25519PrivateKey.generate()
+TEST_LICENSE_PUBLIC_PATH = Path(TEST_LICENSE_KEY_DIR.name) / 'test-public.pem'
+TEST_LICENSE_PUBLIC_PATH.write_bytes(TEST_LICENSE_PRIVATE_KEY.public_key().public_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PublicFormat.SubjectPublicKeyInfo,
+))
+import license_crypto  # noqa: E402
+license_crypto.PUBLIC_KEY_PATH = TEST_LICENSE_PUBLIC_PATH
 import server  # noqa: E402
+from license_crypto import license_message  # noqa: E402
+import generate_license  # noqa: E402
 
 
 class SecurityAndPrintTests(unittest.TestCase):
+    license_private_key = TEST_LICENSE_PRIVATE_KEY
+
+    @classmethod
+    def sign_license(cls, machine_id, license_id=None):
+        license_id = license_id or server.license_number_for(machine_id)
+        signature = cls.license_private_key.sign(license_message(machine_id, license_id))
+        return base64.urlsafe_b64encode(signature).decode('ascii').rstrip('=')
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         vault = Path(self.temp.name)
@@ -49,7 +71,7 @@ class SecurityAndPrintTests(unittest.TestCase):
         fixture['settings']['commercial'].update({
             'machine_id': server.local_machine_id(),
             'license_id': server.license_number_for(server.local_machine_id()),
-            'license_key': server.license_key_for(server.local_machine_id()),
+            'license_key': self.sign_license(server.local_machine_id()),
         })
         Path(server.DATA_FILE).write_text(json.dumps(fixture, ensure_ascii=False), encoding='utf-8')
         server.app.config['TESTING'] = True
@@ -86,6 +108,100 @@ class SecurityAndPrintTests(unittest.TestCase):
             response = self.client.get('/api/menu')
         self.assertEqual(response.status_code, 423)
         self.assertIn('الترخيص', response.get_json()['error'])
+
+    def test_legacy_setup_marker_cannot_bypass_license_validation(self):
+        for marker in (None, False):
+            data = server.load()
+            commercial = data['settings']['commercial']
+            commercial['license_key'] = 'legacy-hmac-license-key'
+            if marker is None:
+                commercial.pop('setup_completed', None)
+            else:
+                commercial['setup_completed'] = marker
+            server.save(data)
+            self.assertTrue(server.commercial_setup_complete(data))
+            self.assertFalse(server.installation_license_valid(data))
+
+    def test_legacy_install_reactivates_without_resetting_restaurant_data(self):
+        data = server.load()
+        data['orders'] = [{'id': 'ORD-0042', 'total': 1250}]
+        data['settings']['commercial']['license_key'] = 'legacy-hmac-license-key'
+        server.save(data)
+
+        status = self.client.get('/api/setup/status')
+        self.assertEqual(status.status_code, 200)
+        self.assertFalse(status.get_json()['license_valid'])
+        self.assertEqual(self.client.get('/').headers.get('Location'), '/setup.html')
+
+        machine_id = server.local_machine_id()
+        license_id = server.license_number_for(machine_id)
+        response = self.client.post('/api/license/reactivate', json={
+            'license_id': license_id,
+            'license_key': self.sign_license(machine_id, license_id),
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()['data_preserved'])
+
+        saved = server.load()
+        self.assertEqual(saved['settings']['restaurant']['name'], 'مطعم الاختبار')
+        self.assertEqual(saved['orders'], [{'id': 'ORD-0042', 'total': 1250}])
+        self.assertEqual(len(saved['settings']['users']), 3)
+        self.assertEqual(saved['settings']['commercial']['license_algorithm'], 'Ed25519')
+        self.assertTrue(server.installation_license_valid(saved))
+
+    def test_ed25519_license_accepts_correct_signature_for_current_machine(self):
+        machine_id = server.local_machine_id()
+        license_id = server.license_number_for(machine_id)
+        self.assertTrue(server.verify_license(machine_id, license_id, self.sign_license(machine_id, license_id)))
+
+    def test_vendor_generator_emits_a_verifiable_base64url_signature(self):
+        machine_id = server.local_machine_id()
+        license_id, signature = generate_license.generate(machine_id, self.license_private_key)
+        self.assertEqual(license_id, server.license_number_for(machine_id))
+        self.assertEqual(len(signature), 86)
+        self.assertTrue(server.verify_license(machine_id, license_id, signature))
+
+    def test_ed25519_license_rejects_modified_signature(self):
+        machine_id = server.local_machine_id()
+        license_id = server.license_number_for(machine_id)
+        signature = self.sign_license(machine_id, license_id)
+        altered = ('A' if signature[0] != 'A' else 'B') + signature[1:]
+        self.assertFalse(server.verify_license(machine_id, license_id, altered))
+
+    def test_ed25519_license_rejects_signature_for_another_machine(self):
+        machine_id = server.local_machine_id()
+        license_id = server.license_number_for(machine_id)
+        signature = self.sign_license(machine_id, license_id)
+        self.assertFalse(server.verify_license('OTHER-MACHINE', license_id, signature))
+
+    def test_ed25519_license_fails_closed_when_public_key_is_missing(self):
+        machine_id = server.local_machine_id()
+        license_id = server.license_number_for(machine_id)
+        signature = self.sign_license(machine_id, license_id)
+        with patch.object(license_crypto, 'PUBLIC_KEY_PATH', Path(self.temp.name) / 'missing-public.pem'):
+            self.assertFalse(server.verify_license(machine_id, license_id, signature))
+
+    def test_environment_cannot_redirect_public_trust_anchor(self):
+        machine_id = server.local_machine_id()
+        license_id = server.license_number_for(machine_id)
+        signature = self.sign_license(machine_id, license_id)
+        missing = Path(self.temp.name) / 'missing-public.pem'
+        with patch.dict(os.environ, {'CAESAR_LICENSE_PUBLIC_KEY_PATH': str(TEST_LICENSE_PUBLIC_PATH)}):
+            with patch.object(license_crypto, 'PUBLIC_KEY_PATH', missing):
+                self.assertFalse(server.verify_license(machine_id, license_id, signature))
+
+    def test_license_setup_status_and_reactivation_are_loopback_only(self):
+        remote = {'REMOTE_ADDR': '192.168.1.50'}
+        status = self.client.get('/api/setup/status', environ_overrides=remote)
+        self.assertEqual(status.status_code, 403)
+        self.assertNotIn('machine_id', status.get_json())
+        response = self.client.post('/api/license/reactivate', json={}, environ_overrides=remote)
+        self.assertEqual(response.status_code, 403)
+
+    def test_setup_fields_fit_license_id_and_ed25519_signature(self):
+        setup = (APP_DIR / 'setup.html').read_text(encoding='utf-8')
+        self.assertIn('id="licenseId" required maxlength="32"', setup)
+        self.assertIn('id="licenseKey" required maxlength="128"', setup)
 
     def test_operational_state_uses_wal_sqlite(self):
         server.load()

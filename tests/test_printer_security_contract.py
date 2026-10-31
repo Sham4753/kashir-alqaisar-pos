@@ -22,9 +22,9 @@ def test_roll_receipt_stays_portrait_and_grows_with_lines():
     assert int.from_bytes(long[6:8], 'little') * 8 == 384
 
 
-def test_license_generator_refuses_missing_vendor_secret():
+def test_license_generator_refuses_missing_vendor_private_key():
     env = dict(os.environ)
-    env.pop('CAESAR_LICENSE_SECRET', None)
+    env.pop('CAESAR_LICENSE_PRIVATE_KEY_PATH', None)
     result = subprocess.run([sys.executable, str(ROOT / 'generate_license.py')], input='ABC\n', text=True, capture_output=True, env=env)
     assert result.returncode != 0
-    assert 'secret' in (result.stderr + result.stdout).lower()
+    assert 'private key' in (result.stderr + result.stdout).lower()

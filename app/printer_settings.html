@@ -62,9 +62,9 @@
                 <h2 class="font-bold text-emerald-950">طول الإيصال</h2>
                 <div class="flex items-center gap-2 rounded-lg bg-white p-3 text-sm">
                     <input id="receipt_length_auto" type="checkbox" class="w-5 h-5 accent-emerald-600" checked disabled>
-                    <span><b>تلقائي حسب محتوى الطلب</b><small class="block text-xs text-gray-600 mt-1">كل صنف وسطر وملاحظة يزيد طول الورقة تلقائيًا. لا توجد ورقة ثابتة الطول.</small></span>
+                    <span><b>تلقائي حسب محتوى الطلب</b></span>
                 </div>
-                <p class="text-xs leading-5 text-emerald-900">«أسطر قبل القص» أدناه لا تحدد طول الفاتورة؛ هي مسافة فارغة فقط بين نهاية الإيصال والسكين لحماية آخر سطر.</p>
+
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -82,21 +82,21 @@
 
             <div class="rounded-xl border border-blue-100 bg-blue-50 p-4 space-y-3">
                 <div class="flex items-center justify-between gap-3"><h2 class="font-bold text-blue-950">تخصيص شكل الإيصال</h2><span id="previewSize" class="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700">معاينة 80mm</span></div>
-                <p class="text-xs leading-5 text-blue-800">ابدأ بالقالب المناسب ثم عدّل العناصر التالية. المعاينة للتصميم النصي؛ يظل اختبار الورق والمحاذاة العربية مطلوبًا على طابعتك الفعلية.</p>
+
                 <div class="grid grid-cols-2 gap-2"><button type="button" class="receipt-preset" onclick="applyReceiptPreset(58)">قالب مختصر 58mm</button><button type="button" class="receipt-preset" onclick="applyReceiptPreset(80)">قالب قياسي 80mm</button></div>
-                <div class="rounded-xl border border-blue-200 bg-white/70 p-3"><label class="block text-xs font-bold text-blue-900 mb-2">قوالب التصميم المحفوظة</label><div class="flex gap-2"><input id="templateName" maxlength="36" class="min-w-0 flex-1 border border-blue-200 rounded-lg px-3 py-2 text-sm" placeholder="مثال: 58mm سفري"><button type="button" onclick="saveReceiptTemplate()" class="bg-blue-700 text-white font-bold rounded-lg px-3 text-sm">حفظ كقالب</button></div><div class="mt-2 grid grid-cols-2 gap-2"><button type="button" onclick="exportReceiptTemplates()" class="border border-blue-200 rounded-lg bg-white text-blue-800 px-3 py-2 text-xs font-bold">تصدير القوالب</button><label class="file-import-label border border-blue-200 rounded-lg bg-white text-blue-800 px-3 py-2 text-xs font-bold">استيراد ملف<input id="templateImportFile" class="hidden" type="file" accept="application/json,.json" onchange="importReceiptTemplates(event)"></label></div><div id="receiptTemplateList" class="mt-3 space-y-2 text-sm"><p class="text-slate-500">جار تحميل القوالب…</p></div><p class="mt-2 text-[11px] leading-4 text-slate-500">يحفظ القالب شكل الإيصال والتذييل وروابط التواصل وترتيب العناصر، وليس اسم الطابعة أو صورة الشعار أو إعدادات درج النقد. يُحتفظ بآخر 8 قوالب.</p></div>
-                <div class="rounded-xl border border-blue-200 bg-white/70 p-3"><div class="flex items-center justify-between gap-3"><label class="text-xs font-bold text-blue-900">ترتيب عناصر الإيصال</label><button type="button" onclick="resetReceiptLayout()" class="text-xs font-bold text-blue-700">إعادة الافتراضي</button></div><p class="mt-1 text-[11px] leading-4 text-slate-500">اسحب العنصر وأفلته إلى موضعه، أو استخدم السهمين. يحفظ هذا الترتيب مع التصميم والقالب.</p><div id="receiptLayoutEditor" class="mt-3 space-y-2" aria-label="محرر ترتيب عناصر الإيصال"></div></div>
+                <div class="rounded-xl border border-blue-200 bg-white/70 p-3"><label class="block text-xs font-bold text-blue-900 mb-2">قوالب التصميم المحفوظة</label><div class="flex gap-2"><input id="templateName" maxlength="36" class="min-w-0 flex-1 border border-blue-200 rounded-lg px-3 py-2 text-sm" placeholder="اسم القالب"><button type="button" onclick="saveReceiptTemplate()" class="bg-blue-700 text-white font-bold rounded-lg px-3 text-sm">حفظ كقالب</button></div><div class="mt-2 grid grid-cols-2 gap-2"><button type="button" onclick="exportReceiptTemplates()" class="border border-blue-200 rounded-lg bg-white text-blue-800 px-3 py-2 text-xs font-bold">تصدير القوالب</button><label class="file-import-label border border-blue-200 rounded-lg bg-white text-blue-800 px-3 py-2 text-xs font-bold">استيراد ملف<input id="templateImportFile" class="hidden" type="file" accept="application/json,.json" onchange="importReceiptTemplates(event)"></label></div><div id="receiptTemplateList" class="mt-3 space-y-2 text-sm"><p class="text-slate-500">جار تحميل القوالب…</p></div></div>
+                <div class="rounded-xl border border-blue-200 bg-white/70 p-3"><div class="flex items-center justify-between gap-3"><label class="text-xs font-bold text-blue-900">ترتيب عناصر الإيصال</label><button type="button" onclick="resetReceiptLayout()" class="text-xs font-bold text-blue-700">إعادة الافتراضي</button></div><div id="receiptLayoutEditor" class="mt-3 space-y-2" aria-label="محرر ترتيب عناصر الإيصال"></div></div>
                 <div><label class="block text-sm font-medium text-gray-700 mb-1">عنوان الإيصال</label><input id="receipt_header" maxlength="36" type="text" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" value="إيصال مبيعات"></div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div><label class="block text-xs font-medium text-gray-600 mb-1">محاذاة الرأس</label><select id="receipt_alignment" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="center">توسيط</option><option value="right">يمين</option></select></div>
                     <div><label class="block text-xs font-medium text-gray-600 mb-1">شكل الفاصل</label><select id="receipt_divider" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="line">خط</option><option value="double">مزدوج</option><option value="dots">نقاط</option></select></div>
                     <div><label class="block text-xs font-medium text-gray-600 mb-1">كثافة الأسطر</label><select id="receipt_density" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="compact">مختصر</option><option value="standard">قياسي</option><option value="spacious">مريح</option></select></div>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="block text-xs font-medium text-gray-600 mb-1">نوع خط المعاينة والطباعة عبر المتصفح</label><select id="receipt_font_family" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="system">قياسي واضح</option><option value="cairo">Cairo عربي</option><option value="serif">تقليدي</option><option value="mono">ثابت العرض</option></select></div><div><label class="block text-xs font-medium text-gray-600 mb-1">حجم خط الإيصال</label><select id="receipt_font_scale" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="small">صغير</option><option value="medium">متوسط</option><option value="large">كبير</option></select></div></div><p class="-mt-1 text-[11px] leading-4 text-gray-500">يستخدم خيار Cairo خطًا متاحًا في الجهاز أو بديله القياسي؛ لا يحتاج اتصال إنترنت. جرّب الحجم الكبير على 80mm أولًا لتفادي ازدحام 58mm.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="block text-xs font-medium text-gray-600 mb-1">نوع خط المعاينة والطباعة عبر المتصفح</label><select id="receipt_font_family" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="system">قياسي واضح</option><option value="cairo">Cairo عربي</option><option value="serif">تقليدي</option><option value="mono">ثابت العرض</option></select></div><div><label class="block text-xs font-medium text-gray-600 mb-1">حجم خط الإيصال</label><select id="receipt_font_scale" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="small">صغير</option><option value="medium">متوسط</option><option value="large">كبير</option></select></div></div>
                 <div id="escposFontWarning" class="hidden rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950" role="alert"><b>تنبيه توافق الطباعة الحرارية:</b> الخط المخصص يظهر في المعاينة والطباعة من المتصفح، لكن طابعات ESC/POS النصية تستخدم خطها المدمج وقد تختلف النتيجة. نفّذ طباعة تجريبية فعلية قبل اعتماد القالب.</div>
-                <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3"><div><b class="text-sm text-slate-800">محاكاة طباعة حرارية</b><p class="mt-1 text-[11px] leading-4 text-slate-500">عرض أبيض وأسود عالي التباين بخط ثابت؛ لا يغيّر إعدادات الطباعة.</p></div><button id="thermalPreviewToggle" type="button" class="thermal-mode-toggle" aria-pressed="false" onclick="toggleThermalPreview()">أبيض وأسود</button></div>
-                <div class="rounded-lg border border-slate-200 bg-white p-3"><div class="flex items-center justify-between gap-3"><label for="thermalInkDensity" class="text-sm font-bold text-slate-800">كثافة الحبر في المحاكاة</label><output id="thermalInkDensityValue" class="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">90%</output></div><input id="thermalInkDensity" class="range-control mt-3" type="range" min="30" max="100" step="5" value="90" oninput="setThermalInkDensity(this.value)"><p class="mt-1 text-[11px] leading-4 text-slate-500">تؤثر في معاينة الأبيض والأسود فقط: قيمة أقل تحاكي طباعة باهتة.</p></div>
-                <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3"><div><b class="text-sm text-slate-800">خط المعاينة الفعلي</b><p class="mt-1 text-[11px] leading-4 text-slate-500">بدّل إلى خط ESC/POS الثابت لتقدير النتيجة عند عدم دعم خطك المخصص.</p></div><button id="escposFontToggle" type="button" class="thermal-mode-toggle" aria-pressed="false" onclick="toggleEscposFontPreview()">معاينة خط ESC/POS</button></div>
+                <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3"><div><b class="text-sm text-slate-800">محاكاة طباعة حرارية</b></div><button id="thermalPreviewToggle" type="button" class="thermal-mode-toggle" aria-pressed="false" onclick="toggleThermalPreview()">أبيض وأسود</button></div>
+                <div class="rounded-lg border border-slate-200 bg-white p-3"><div class="flex items-center justify-between gap-3"><label for="thermalInkDensity" class="text-sm font-bold text-slate-800">كثافة الحبر في المحاكاة</label><output id="thermalInkDensityValue" class="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">90%</output></div><input id="thermalInkDensity" class="range-control mt-3" type="range" min="30" max="100" step="5" value="90" oninput="setThermalInkDensity(this.value)"></div>
+                <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3"><div><b class="text-sm text-slate-800">خط المعاينة الفعلي</b></div><button id="escposFontToggle" type="button" class="thermal-mode-toggle" aria-pressed="false" onclick="toggleEscposFontPreview()">معاينة خط ESC/POS</button></div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><label class="flex items-center gap-2 rounded-lg bg-white p-3 text-sm cursor-pointer"><input id="receipt_show_cashier" type="checkbox" class="w-4 h-4 accent-blue-600" checked><span>إظهار اسم الكاشير قيصر</span></label><label class="flex items-center gap-2 rounded-lg bg-white p-3 text-sm cursor-pointer"><input id="receipt_show_order_type" type="checkbox" class="w-4 h-4 accent-blue-600" checked><span>إظهار نوع الطلب</span></label></div>
                 <div class="receipt-preview-shell"><div id="receiptPaper" class="receipt-paper"><div id="receiptPreviewBlocks" aria-live="polite"></div><img id="receiptRasterPreview" class="receipt-raster-preview hidden" alt="المعاينة المطابقة لخرج الطابعة الحرارية"><p id="receiptRasterPreviewStatus" class="hidden mt-3 text-center text-xs text-slate-500">جارٍ تجهيز صورة الطباعة…</p><p id="receiptRasterPreviewError" class="hidden mt-3 rounded-lg bg-red-50 p-3 text-center text-xs text-red-700" role="alert"></p></div></div><div id="receipt58LongTextWarning" class="hidden mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950" role="alert"></div>
             </div>
@@ -121,26 +121,26 @@
 
             <div class="border-y border-slate-100 py-4 space-y-3">
                 <h2 class="font-bold text-gray-700">الطباعة التلقائية</h2>
-                <label class="flex items-center justify-between gap-4 p-3 rounded-lg bg-slate-50 cursor-pointer"><span><b>إيصال العميل</b><small class="block text-xs text-gray-500 mt-1">يرسل الإيصال للطابعة المحددة بعد دفع الفاتورة.</small></span><input id="auto_print_receipt" type="checkbox" class="w-5 h-5 accent-emerald-600"></label>
-                <label class="flex items-center justify-between gap-4 p-3 rounded-lg bg-slate-50 cursor-pointer"><span><b>تذكرة المطبخ</b><small class="block text-xs text-gray-500 mt-1">يرسل قائمة الأصناف للمطبخ بعد حفظ الطلب.</small></span><input id="auto_print_kitchen" type="checkbox" class="w-5 h-5 accent-emerald-600"></label>
+                <label class="flex items-center justify-between gap-4 p-3 rounded-lg bg-slate-50 cursor-pointer"><span><b>إيصال العميل</b></span><input id="auto_print_receipt" type="checkbox" class="w-5 h-5 accent-emerald-600"></label>
+                <label class="flex items-center justify-between gap-4 p-3 rounded-lg bg-slate-50 cursor-pointer"><span><b>تذكرة المطبخ</b></span><input id="auto_print_kitchen" type="checkbox" class="w-5 h-5 accent-emerald-600"></label>
             </div>
 
             <div class="border-b border-slate-100 pb-4 space-y-3">
                 <h2 class="font-bold text-gray-700">درج النقد</h2>
                 <label class="flex items-center justify-between gap-4 p-3 rounded-lg bg-amber-50 cursor-pointer"><span><b>تفعيل الفتح اليدوي للدرج</b><small class="block text-xs text-gray-600 mt-1">يتطلب درجًا موصولًا بمنفذ RJ11 في طابعة حرارية تدعم ESC/POS على Windows.</small></span><input id="cash_drawer_enabled" type="checkbox" class="w-5 h-5 accent-amber-600"></label>
-                <label class="flex items-center justify-between gap-4 p-3 rounded-lg bg-emerald-50 cursor-pointer"><span><b>فتح الدرج تلقائيًا بعد دفع نقدي</b><small class="block text-xs text-gray-600 mt-1">يفتح فقط عندما تتضمن الفاتورة مبلغًا نقديًا، وليس لعمليات البطاقة فقط.</small></span><input id="auto_open_cash_drawer" type="checkbox" class="w-5 h-5 accent-emerald-600"></label>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">اسم طابعة الدرج</label><input id="cash_drawer_printer" type="text" maxlength="160" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="اتركه فارغًا لاستخدام طابعة الإيصال المحددة"><p class="mt-1 text-xs text-gray-500">لا توصل درج النقد مباشرة بمنفذ USB؛ استخدم منفذ الدرج المخصص في الطابعة المتوافقة.</p></div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">نمط نبضة فتح الدرج</label><select id="cash_drawer_pulse_profile" class="w-full border border-gray-300 rounded-lg px-4 py-2.5"><option value="pin2_standard">المخرج 1 — قياسي (موصى به)</option><option value="pin2_short">المخرج 1 — نبضة قصيرة</option><option value="pin5_standard">المخرج 2 — قياسي</option><option value="pin5_short">المخرج 2 — نبضة قصيرة</option></select><p class="mt-1 text-xs text-gray-500">ابدأ بالمخرج 1 القياسي. غيّر النمط فقط وفق دليل الطابعة أو بعد اختبار فتح الدرج على جهاز Windows.</p></div>
+                <label class="flex items-center justify-between gap-4 p-3 rounded-lg bg-emerald-50 cursor-pointer"><span><b>فتح الدرج تلقائيًا بعد دفع نقدي</b></span><input id="auto_open_cash_drawer" type="checkbox" class="w-5 h-5 accent-emerald-600"></label>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">اسم طابعة الدرج</label><input id="cash_drawer_printer" type="text" maxlength="160" class="w-full border border-gray-300 rounded-lg px-4 py-2.5"><p class="mt-1 text-xs text-gray-500">لا توصل درج النقد مباشرة بمنفذ USB؛ استخدم منفذ الدرج المخصص في الطابعة المتوافقة.</p></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">نمط نبضة فتح الدرج</label><select id="cash_drawer_pulse_profile" class="w-full border border-gray-300 rounded-lg px-4 py-2.5"><option value="pin2_standard">المخرج 1 — قياسي (موصى به)</option><option value="pin2_short">المخرج 1 — نبضة قصيرة</option><option value="pin5_standard">المخرج 2 — قياسي</option><option value="pin5_short">المخرج 2 — نبضة قصيرة</option></select></div>
             </div>
 
             <div class="border-b border-slate-100 pb-4 space-y-3">
                 <h2 class="font-bold text-gray-700">شعار الإيصال</h2>
-                <p class="text-xs text-gray-500">اختر صورة PNG أو JPG أو WebP بحجم لا يتجاوز 180 كيلوبايت بعد التجهيز. لا تُعامل الصورة المربعة كرمز QR إلا عند تفعيل الخيار صراحةً.</p>
+
                 <label for="logo_file" class="block text-sm font-medium text-gray-700">ملف شعار الإيصال</label>
                 <input id="logo_file" type="file" accept="image/png,image/jpeg,image/webp" onchange="loadLogoFile(event)" class="block w-full text-sm">
-                <label class="flex items-center gap-2 text-sm"><input id="logo_is_qr" type="checkbox" class="w-4 h-4 accent-indigo-600"> الصورة رمز QR (يحافظ على الوحدات ويضيف هامش القراءة)</label>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="block text-xs font-medium text-gray-600 mb-1">حجم الشعار في المعاينة</label><select id="logo_size" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="small">صغير</option><option value="medium">متوسط</option><option value="large">كبير</option></select></div><div><label class="block text-xs font-medium text-gray-600 mb-1">محاذاة الشعار</label><select id="logo_alignment" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="right">يمين</option><option value="center">وسط</option><option value="left">يسار</option></select></div></div>
-                <div><label for="logo_caption" class="block text-xs font-medium text-gray-600 mb-1">عنوان حراري مختصر</label><input id="logo_caption" type="text" maxlength="36" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="اختياري للطابعات النصية الحرارية"></div>
+                <label class="flex items-center gap-2 text-sm"><input id="logo_is_qr" type="checkbox" class="w-4 h-4 accent-indigo-600"> الصورة رمز QR</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label class="block text-xs font-medium text-gray-600 mb-1">حجم الشعار على الإيصال</label><select id="logo_size" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="small">صغير</option><option value="medium">متوسط</option><option value="large">كبير</option></select></div><div><label class="block text-xs font-medium text-gray-600 mb-1">محاذاة الشعار</label><select id="logo_alignment" class="w-full border border-gray-300 rounded-lg px-3 py-2.5"><option value="right">يمين</option><option value="center">وسط</option><option value="left">يسار</option></select></div></div>
+                <div><label for="logo_caption" class="block text-xs font-medium text-gray-600 mb-1">عنوان حراري مختصر</label><input id="logo_caption" type="text" maxlength="36" class="w-full border border-gray-300 rounded-lg px-4 py-2.5"></div>
                 <div class="flex items-center gap-3"><img id="logoPreview" class="hidden max-h-20 max-w-40 object-contain border rounded-lg p-1" alt="معاينة الشعار"><button type="button" onclick="clearLogo()" class="text-sm text-red-600 border border-red-200 px-3 py-2 rounded-lg">حذف الشعار</button></div>
             </div>
 
@@ -166,8 +166,7 @@
                         <label class="text-sm font-medium">مهلة الاتصال (ثانية)<input id="printer_timeout" type="number" min="3" max="30" value="5" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"></label>
                         <label class="text-sm font-medium">إعادة المحاولة تلقائيًا<select id="printer_retry_count" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"><option value="0">بدون إعادة</option><option value="1" selected>مرة واحدة</option><option value="2">مرتان</option><option value="3">ثلاث مرات</option></select></label>
                     </div>
-                    <p class="text-xs leading-5 text-indigo-800">الكثافة تعدّل صورة الإيصال قبل الإرسال، لذلك تعمل مع الطابعات القديمة والحديثة. إعادة المحاولة تفيد انقطاع Wi‑Fi أو تأخر الطابعة.</p>
-                    <p class="text-[11px] leading-5 text-amber-800"><b>تنبيه السرعة:</b> «بطيئة/قياسية/سريعة» تفضيل توافق فقط؛ سرعة رأس الطباعة الفعلية يحددها Firmware أو DIP Switch، ولا يمكن ضمان تغييرها برمجيًا لكل موديلات ESC/POS.</p>
+                    <p class="text-xs text-amber-800">سرعة الطباعة الفعلية تعتمد على إعدادات الطابعة.</p>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <button type="button" onclick="runPrinterDiagnostics()" class="border border-indigo-300 bg-white text-indigo-800 font-bold rounded-lg px-3 py-2 text-sm">فحص الاتصال</button>
                         <button type="button" onclick="testPrinterPattern('density')" class="border border-indigo-300 bg-white text-indigo-800 font-bold rounded-lg px-3 py-2 text-sm">اختبار الكثافة</button>
@@ -184,14 +183,14 @@
                     <label class="text-sm font-medium">نوع القص<select id="cut_mode" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"><option value="full">قص كامل</option><option value="partial">قص جزئي</option></select></label>
                     <label class="text-sm font-medium">أسطر قبل القص<input id="feed_before_cut" type="number" min="0" max="10" value="3" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"></label>
                 </div>
-                <p class="text-xs leading-5 text-indigo-800">اختر الوضع التلقائي للطابعات التي تظهر في إعدادات Windows، سواء كانت USB أو Wi‑Fi. استخدم الوضع المباشر فقط لطابعة حرارية تدعم RAW/ESC-POS على الشبكة.</p>
+
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1"> نص نهاية الإيصال</label>
                 <textarea id="footer_text" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="شكراً لزيارتكم"></textarea>
             </div>
-            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3"><h2 class="font-bold text-slate-800">روابط التواصل في التذييل</h2><p class="text-xs leading-5 text-slate-500">تظهر كرابط نصي في المعاينة والطباعة الحرارية. اترك الحقل فارغًا إن لم ترغب بإظهاره.</p><div><label for="social_facebook" class="block text-xs font-medium text-gray-600 mb-1">Facebook</label><input id="social_facebook" type="url" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-left direction-ltr text-sm" placeholder="https://facebook.com/store"></div><div><label for="social_instagram" class="block text-xs font-medium text-gray-600 mb-1">Instagram</label><input id="social_instagram" type="url" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-left direction-ltr text-sm" placeholder="https://instagram.com/store"></div><div><label for="social_whatsapp" class="block text-xs font-medium text-gray-600 mb-1">WhatsApp</label><input id="social_whatsapp" type="url" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-left direction-ltr text-sm" placeholder="https://wa.me/963xxxxxxxxx"></div></div>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3"><h2 class="font-bold text-slate-800">روابط التواصل في التذييل</h2><div><label for="social_facebook" class="block text-xs font-medium text-gray-600 mb-1">Facebook</label><input id="social_facebook" type="url" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-left direction-ltr text-sm" placeholder="https://facebook.com/store"></div><div><label for="social_instagram" class="block text-xs font-medium text-gray-600 mb-1">Instagram</label><input id="social_instagram" type="url" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-left direction-ltr text-sm" placeholder="https://instagram.com/store"></div><div><label for="social_whatsapp" class="block text-xs font-medium text-gray-600 mb-1">WhatsApp</label><input id="social_whatsapp" type="url" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-left direction-ltr text-sm" placeholder="https://wa.me/963xxxxxxxxx"></div></div>
 
             <button onclick="saveSettings()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition text-lg">
                  حفظ الإعدادات
@@ -199,7 +198,7 @@
             <button id="saveAndTestPrintButton" onclick="saveAndTestPrint()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition text-lg disabled:opacity-60 disabled:cursor-not-allowed">
                  حفظ الإعدادات وطباعة اختبار
             </button>
-            <p class="text-center text-xs leading-5 text-slate-500">يحفظ الزر الإعدادات أولًا ثم يرسل اختبارًا للطابعة المحددة. تظهر النتيجة الفعلية من Windows بعد الإرسال.</p>
+
 
             <div id="toast" class="hidden fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg text-center z-50"></div>
         </div>
@@ -226,9 +225,7 @@
             <button id="testPrintButton" onclick="testPrint()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition text-lg disabled:opacity-60 disabled:cursor-not-allowed">
                  طباعة تجريبية
             </button>
-            <p class="text-xs text-gray-400 text-center">
-                ملاحظة: البحث عن الطابعات والتعيين والاختبار الفعلي متاحين فقط عند تشغيل النظام على جهاز ويندوز فعلي، وليس أثناء التطوير.
-            </p>
+
         </div>
     </div>
     <div id="testPrintLoading" class="print-loading hidden" role="status" aria-live="assertive" aria-label="جار إرسال اختبار الطباعة"><div class="print-loading-card"><div class="print-spinner"></div><h2 class="font-bold text-slate-900">جارِ تجهيز الطباعة التجريبية</h2><p id="testPrintLoadingText" class="mt-2 text-sm leading-6 text-slate-600">لا تغلق الصفحة حتى تظهر نتيجة الإرسال.</p></div></div>
@@ -274,7 +271,7 @@
                 document.getElementById('receipt_density').value = config.receipt_density || 'standard';
                 document.getElementById('receipt_show_cashier').checked = config.receipt_show_cashier !== false;
                 document.getElementById('receipt_show_order_type').checked = config.receipt_show_order_type !== false;
-                document.getElementById('logo_size').value = config.logo_size || 'medium';
+                document.getElementById('logo_size').value = config.logo_is_qr ? 'large' : (config.logo_size || 'medium');
                 document.getElementById('logo_alignment').value = config.logo_alignment || 'center';
                 document.getElementById('logo_is_qr').checked = !!config.logo_is_qr;
                 document.getElementById('receipt_font_family').value = config.receipt_font_family || 'system';
@@ -527,6 +524,11 @@
                 const response = await fetch('/api/printer/preview', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({printer, restaurant:{name:value('restaurant_name')}})});
                 if (!response.ok) { let detail = ''; try { detail = (await response.json()).error || ''; } catch (_) {} throw new Error('HTTP ' + response.status + (detail ? ' — ' + detail : '')); }
                 const blob = await response.blob();
+                const qrDetected = response.headers.get('X-Printer-QR-Detected') === 'true';
+                if (qrDetected) {
+                    document.getElementById('logo_is_qr').checked = true;
+                    document.getElementById('logo_size').value = 'large';
+                }
                 if (exactPreviewUrl) URL.revokeObjectURL(exactPreviewUrl);
                 exactPreviewUrl = URL.createObjectURL(blob); image.src = exactPreviewUrl; image.classList.remove('hidden'); blocks.classList.add('hidden');
             } catch (error) {
@@ -570,9 +572,11 @@
             receiptLogo.className = 'receipt-preview-logo'; receiptLogo.alt = 'شعار المتجر في معاينة الإيصال';
             const logoSize = document.getElementById('logo_size').value;
             const logoAlignment = document.getElementById('logo_alignment').value;
-            const logoStyle = {small:['42%','38px'], medium:['62%','56px'], large:['82%','76px']}[logoSize] || ['62%','56px'];
+            const logoIsQr = document.getElementById('logo_is_qr').checked;
+            const logoStyle = logoIsQr ? ['100%', width >= 80 ? '300px' : '240px'] : ({small:['42%','38px'], medium:['62%','56px'], large:['82%','76px']}[logoSize] || ['62%','56px']);
             receiptLogo.src = logoData || '';
             receiptLogo.classList.toggle('hidden', !logoData);
+            receiptLogo.classList.toggle('qr-logo', logoIsQr);
             receiptLogo.style.maxWidth = logoStyle[0]; receiptLogo.style.maxHeight = logoStyle[1];
             receiptLogo.style.marginRight = logoAlignment === 'right' ? '0' : (logoAlignment === 'center' ? 'auto' : 'auto');
             receiptLogo.style.marginLeft = logoAlignment === 'left' ? '0' : (logoAlignment === 'center' ? 'auto' : 'auto');
@@ -662,6 +666,10 @@
         }
 
         ['paper_width','paper_orientation','font_size','footer_text','restaurant_name','logo_caption','logo_size','logo_alignment','receipt_font_family','receipt_font_scale','receipt_header','receipt_alignment','receipt_divider','receipt_density','receipt_show_cashier','receipt_show_order_type','social_facebook','social_instagram','social_whatsapp'].forEach(id => document.getElementById(id).addEventListener('input', updateReceiptPreview));
+        document.getElementById('logo_is_qr').addEventListener('change', event => {
+            if (event.target.checked) document.getElementById('logo_size').value = 'large';
+            updateReceiptPreview();
+        });
         loadSettings();
     </script>
 </body>

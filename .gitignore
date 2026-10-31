@@ -1,19 +1,44 @@
-# Runtime data and secrets
+# Runtime data, local vaults, and secrets
 .license_secret
 app/.license_secret
 license.secret
 .license
+license.json
+.env
+.env.*
+!.env.example
+*private*.pem
+*private*.key
+*.p12
+*.pfx
+*.p7b
+*.p7c
+CAESAR_Vault/
+data_vault/
+backups/
+data.json
+data_backup.json
+app/data.json
+app/data_backup.json
 app/caesar.sqlite3
 *.sqlite3
 *.sqlite
+*.sqlite-wal
+*.sqlite-shm
 *.db
 *.log
+*.bak
+*.backup
 caesar_server_error.log
 
 # Python/build artifacts
 __pycache__/
 *.py[cod]
+!Lib/site-packages/_cffi_backend.cp312-win_amd64.pyd
+!Lib/site-packages/cryptography/hazmat/bindings/_rust.pyd
 .pytest_cache/
+.venv/
+venv/
 build/
 dist/
 

@@ -64,13 +64,13 @@
                 <input type="text" id="prodName" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="اسم المنتج">
                 <input type="number" id="prodPrice" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="السعر بالليرة السورية (ل.س)">
                 <input type="text" id="prodBarcode" inputmode="numeric" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="الباركود (اختياري)">
-                <p class="text-xs text-gray-400 -mt-2"> السعر هون دايماً بالليرة السورية الأساسية، بغض النظر عن عملة العرض بالإعدادات</p>
+
                 <input type="text" id="prodModifiers" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="إضافات وسعرها: بدون بصل, زيادة جبنة:+500">
                 <input type="text" id="prodComboItems" class="w-full border border-gray-300 rounded-lg px-4 py-2.5" placeholder="مكونات الوجبة المركبة مفصولة بفاصلة (اختياري)">
                 <div class="flex gap-2"><select id="prodKitchenStation" class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5"><option value="main">المطبخ الرئيسي</option><option value="grill">الشواية</option><option value="drinks">المشروبات</option><option value="fryer">المقالي</option><option value="dessert">الحلويات</option></select><input type="number" id="prodOfferId" class="w-32 border border-gray-300 rounded-lg px-4 py-2.5" placeholder="رقم العرض"></div>
                 <div>
                     <label for="prodImageInput" class="text-sm font-bold text-gray-600 block mb-1">صورة المنتج</label>
-                    <p class="mb-2 text-xs text-slate-500">تظهر في شاشة الكاشير قيصر، ويضغطها النظام تلقائيًا مع الحفاظ على النسبة.</p>
+
                     <div class="flex items-center gap-3">
                         <img id="prodImagePreview" class="hidden w-16 h-16 rounded-lg object-cover border border-gray-200" alt="معاينة صورة المنتج" />
                         <input type="file" id="prodImageInput" accept="image/*" onchange="onProdImageSelected()" class="flex-1 text-sm">
@@ -105,7 +105,7 @@
                     <input type="text" id="newProdModifiers" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 mb-3" placeholder="إضافات وسعرها: صوص:+250, بدون بصل (اختياري)">
                     <input type="text" id="newProdComboItems" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 mb-3" placeholder="مكونات الوجبة المركبة مفصولة بفاصلة (اختياري)">
                     <div class="flex gap-2 mb-3"><select id="newProdKitchenStation" class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5"><option value="main">المطبخ الرئيسي</option><option value="grill">الشواية</option><option value="drinks">المشروبات</option><option value="fryer">المقالي</option><option value="dessert">الحلويات</option></select><input type="number" id="newProdOfferId" class="w-32 border border-gray-300 rounded-lg px-4 py-2.5" placeholder="رقم العرض"></div>
-                    <div class="mb-3"><label for="newProdImageInput" class="text-sm font-bold text-gray-600 block mb-1">صورة المنتج</label><p class="mb-2 text-xs text-slate-500">يضغطها النظام تلقائيًا لتناسب التخزين المحلي.</p><div class="flex items-center gap-3">
+                    <div class="mb-3"><label for="newProdImageInput" class="text-sm font-bold text-gray-600 block mb-1">صورة المنتج</label><div class="flex items-center gap-3">
                         <img id="newProdImagePreview" class="hidden w-16 h-16 rounded-lg object-cover border border-gray-200" alt="معاينة صورة المنتج الجديد" />
                         <input type="file" id="newProdImageInput" accept="image/*" onchange="onNewProdImageSelected()" class="flex-1 text-sm">
                     </div></div>
