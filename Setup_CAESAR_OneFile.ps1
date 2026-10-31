@@ -146,7 +146,7 @@ function Test-CustomerArtifact([string]$Path, [string]$Root) {
     }
     $name = [IO.Path]::GetFileName($relative).ToLowerInvariant()
     $extension = [IO.Path]::GetExtension($relative).ToLowerInvariant()
-    if ($name -eq 'generate_license.py' -or $name -in @('.license', '.license_secret', 'license.secret', 'license.json', 'license.txt')) { return $true }
+    if ($name -eq 'generate_license.py' -or $name -in @('issue_caesar_license.cmd', '.license', '.license_secret', 'license.secret', 'license.json', 'license.txt')) { return $true }
     if ($name -match '(?i)(private|secret).*\.(pem|key|p12|pfx)$') { return $true }
     if ($extension -in @('.json', '.json5', '.jsonc', '.jsonl', '.ndjson', '.csv', '.tsv', '.db', '.sqlite', '.sqlite3', '.log', '.bak', '.key', '.pem', '.p12', '.pfx', '.p7b', '.p7c', '.lic', '.license', '.licence', '.env')) { return $true }
     if ($name -match '(?i)\.(sqlite|sqlite3|db)([-.](wal|shm|journal))?(\.|$)' -or $name -match '(?i)\.log(\.|$)') { return $true }
@@ -324,7 +324,7 @@ Assert-NoCustomerArtifacts $ProductDir
 $ForbiddenBundledFiles = @(Get-ChildItem -LiteralPath $ProductDir -File -Recurse -Force | Where-Object {
     $relativePath = $_.FullName.Substring($ProductDir.Length).TrimStart('\')
     (-not (Test-ThirdPartyLicenseMetadata -RelativePath $relativePath)) -and
-        ($_.Name -in @(".license_secret", "license.secret", ".license", "license.txt", "license.json", "generate_license.py") -or
+        ($_.Name -in @(".license_secret", "license.secret", ".license", "license.txt", "license.json", "generate_license.py", "Issue_CAESAR_License.cmd") -or
         $_.Name -match "(?i)(private|secret).*\.pem$")
 })
 if ($ForbiddenBundledFiles.Count -gt 0) {

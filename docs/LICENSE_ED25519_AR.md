@@ -14,15 +14,29 @@
 
 تطلب الأداة عبارة مرور (12 محرفًا على الأقل) وتكتب المفتاح الخاص مشفّرًا إلى المسار الخارجي، والمفتاح العام فقط إلى `app\license_public_key.pem`. احفظ ملف الخاص وعبارة المرور خارج المستودع وفي نسخ احتياطية آمنة منفصلة. لا تغيّر هذا الزوج عند كل إصدار ولا ترفعه إلى GitHub. المفتاح العام آمن للنشر.
 
-## إصدار ترخيص جهاز
+## تدوير المفتاح عند الاشتباه في انكشافه
 
-بعد استلام Machine ID من العميل، شغّل على جهاز المورّد:
+نفّذ ذلك على جهاز المورّد فقط. أنشئ زوجًا جديدًا بمسارات جديدة، واترك المفتاح القديم معزولًا ولا تستخدمه:
 
 ```powershell
-.\python.exe .\generate_license.py --private-key "D:\CAESAR-Keys\caesar-vendor-private.pem" --machine-id "MACHINE-ID"
+.\python.exe .\tools\create_vendor_keys.py `
+  --private-key-path "C:\CAESAR-Keys\caesar-vendor-private-v2.pem" `
+  --public-key-path "$env:USERPROFILE\Desktop\caesar-vendor-public-v2.pem"
 ```
 
-أدخل عبارة مرور المفتاح عند الطلب. أرسل إلى العميل **License ID** و**License Key** فقط. لا ترسل المفتاح الخاص أو عبارة المرور. يمكن إصدار ترخيص جديد لنفس الجهاز متى لزم؛ إصدار رخصة لجهاز آخر يتطلب Machine ID لذلك الجهاز.
+اختر عبارة مرور قوية من 12 محرفًا على الأقل واحفظها في مدير كلمات مرور. لا ترفع ملف `caesar-vendor-private-v2.pem` أو عبارة المرور إلى GitHub أو المحادثة. ملف `caesar-vendor-public-v2.pem` وحده آمن للمشاركة؛ يجب تحديث `app\license_public_key.pem` به ثم إعادة بناء نسخة العميل قبل إصدار تراخيص للزبائن.
+
+## إصدار ترخيص جهاز
+
+بعد استلام Machine ID من العميل، افتح `tools\Issue_CAESAR_License.cmd` بالنقر المزدوج. أدخل Machine ID عند الطلب، ثم عبارة مرور المفتاح الخاص المحلي عند المطالبة؛ ستعرض النافذة **License ID** و**License Key**. أرسل القيمتين للعميل فقط. لا ترسل المفتاح الخاص أو عبارة المرور. يستخدم المشغّل `C:\CAESAR-Keys\caesar-vendor-private-v2.pem`، ولا يدخل ملف CMD أو مولّد التراخيص في حزمة العميل.
+
+بديل يدوي من PowerShell:
+
+```powershell
+.\python.exe .\generate_license.py --private-key "C:\CAESAR-Keys\caesar-vendor-private-v2.pem" --machine-id "MACHINE-ID"
+```
+
+يمكن إصدار ترخيص جديد لنفس الجهاز متى لزم؛ إصدار رخصة لجهاز آخر يتطلب Machine ID لذلك الجهاز.
 
 ## الانتقال من إصدار HMAC القديم
 
