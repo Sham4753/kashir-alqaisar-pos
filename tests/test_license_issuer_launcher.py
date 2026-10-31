@@ -10,7 +10,7 @@ class LicenseIssuerLauncherTests(unittest.TestCase):
         launcher = (ROOT / "tools" / "Issue_CAESAR_License.cmd").read_text(encoding="utf-8")
         generator = (ROOT / "generate_license.py").read_text(encoding="utf-8")
         self.assertIn("Enter the customer's Machine ID:", launcher)
-        self.assertIn("caesar-vendor-private-v2.pem", launcher)
+        self.assertIn("caesar-vendor-private-v3.pem", launcher)
         self.assertIn('--machine-id "%MACHINE_ID%"', launcher)
         self.assertIn("--no-pause", launcher)
         self.assertIn("generate_license.py", launcher)

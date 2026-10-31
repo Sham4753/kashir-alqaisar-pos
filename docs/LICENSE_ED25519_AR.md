@@ -20,20 +20,22 @@
 
 ```powershell
 .\python.exe .\tools\create_vendor_keys.py `
-  --private-key-path "C:\CAESAR-Keys\caesar-vendor-private-v2.pem" `
-  --public-key-path "$env:USERPROFILE\Desktop\caesar-vendor-public-v2.pem"
+  --private-key-path "C:\CAESAR-Keys\caesar-vendor-private-v3.pem" `
+  --public-key-path "$env:USERPROFILE\Desktop\caesar-vendor-public-v3.pem"
 ```
 
-اختر عبارة مرور قوية من 12 محرفًا على الأقل واحفظها في مدير كلمات مرور. لا ترفع ملف `caesar-vendor-private-v2.pem` أو عبارة المرور إلى GitHub أو المحادثة. ملف `caesar-vendor-public-v2.pem` وحده آمن للمشاركة؛ يجب تحديث `app\license_public_key.pem` به ثم إعادة بناء نسخة العميل قبل إصدار تراخيص للزبائن.
+اختر عبارة مرور قوية من 12 محرفًا على الأقل واحفظها فورًا في مدير كلمات مرور، منفصلةً عن ملف المفتاح. لا ترفع ملف `caesar-vendor-private-v3.pem` أو عبارة المرور إلى GitHub أو المحادثة. ملف `caesar-vendor-public-v3.pem` وحده آمن للمشاركة؛ حدّث `app\license_public_key.pem` به ثم أعد بناء نسخة العميل قبل إصدار تراخيص للزبائن. لا يمكن استعادة عبارة مرور مفقودة لمفتاح مشفّر.
+
+عند تدوير المفتاح، لا تقبل النسخة الجديدة تراخيص موقعة بالمفتاح السابق. أعد إصدار التراخيص اللازمة باستخدام المفتاح الجديد بعد التحقق من تفعيل النسخة الجديدة.
 
 ## إصدار ترخيص جهاز
 
-بعد استلام Machine ID من العميل، افتح `tools\Issue_CAESAR_License.cmd` بالنقر المزدوج. أدخل Machine ID عند الطلب، ثم عبارة مرور المفتاح الخاص المحلي عند المطالبة؛ ستعرض النافذة **License ID** و**License Key**. أرسل القيمتين للعميل فقط. لا ترسل المفتاح الخاص أو عبارة المرور. يستخدم المشغّل `C:\CAESAR-Keys\caesar-vendor-private-v2.pem`، ولا يدخل ملف CMD أو مولّد التراخيص في حزمة العميل.
+بعد استلام Machine ID من العميل، افتح `tools\Issue_CAESAR_License.cmd` بالنقر المزدوج. أدخل Machine ID عند الطلب، ثم عبارة مرور المفتاح الخاص المحلي عند المطالبة؛ ستعرض النافذة **License ID** و**License Key**. أرسل القيمتين للعميل فقط. لا ترسل المفتاح الخاص أو عبارة المرور. يستخدم المشغّل `C:\CAESAR-Keys\caesar-vendor-private-v3.pem`، ولا يدخل ملف CMD أو مولّد التراخيص في حزمة العميل.
 
 بديل يدوي من PowerShell:
 
 ```powershell
-.\python.exe .\generate_license.py --private-key "C:\CAESAR-Keys\caesar-vendor-private-v2.pem" --machine-id "MACHINE-ID"
+.\python.exe .\generate_license.py --private-key "C:\CAESAR-Keys\caesar-vendor-private-v3.pem" --machine-id "MACHINE-ID"
 ```
 
 يمكن إصدار ترخيص جديد لنفس الجهاز متى لزم؛ إصدار رخصة لجهاز آخر يتطلب Machine ID لذلك الجهاز.
