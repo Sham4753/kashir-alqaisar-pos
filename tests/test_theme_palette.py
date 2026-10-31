@@ -49,9 +49,13 @@ class ThemePaletteTests(unittest.TestCase):
                 )
 
     def test_one_restaurant_palette_and_semantic_button_hierarchy_are_defined(self):
-        self.assertEqual(self.light['--q-brand'], '#176b5b')
-        self.assertEqual(self.light['--q-bg'], '#f5f7f4')
-        self.assertEqual(self.dark['--q-bg'], '#111c18')
+        self.assertEqual(self.light['--q-brand'], '#c2410c')
+        self.assertEqual(self.light['--q-bg'], '#f7f7f7')
+        self.assertEqual(self.dark['--q-bg'], '#111111')
+        self.assertEqual(self.light['--q-ink'], '#111111')
+        self.assertEqual(self.dark['--q-ink'], '#ffffff')
+        self.assertEqual(self.light['--q-on-brand'], '#ffffff')
+        self.assertEqual(self.dark['--q-on-brand'], '#111111')
         for filename in ('design-system.css', 'theme.css'):
             source = (APP / filename).read_text(encoding='utf-8')
             self.assertNotRegex(source, r'--q-(?:bg|surface|ink|brand|success|warning|danger)\s*:')
@@ -63,6 +67,16 @@ class ThemePaletteTests(unittest.TestCase):
         self.assertIn('background: var(--q-warning) !important;', self.theme)
         self.assertIn('body.caesar-page-index .nav a:is(.active, :hover)', self.theme)
 
+    def test_pos_basket_is_narrower_and_product_icon_spaces_are_larger(self):
+        pos = (APP / 'pos-modern.css').read_text(encoding='utf-8')
+        self.assertIn('minmax(350px, 390px)', pos)
+        self.assertIn('min-height: 86px;', pos)
+        self.assertIn('height: 116px;', pos)
+        self.assertIn('width: 48px; height: 48px;', pos)
+        self.assertIn('width: 28px; height: 28px;', pos)
+        self.assertIn('color: var(--q-ink) !important;', self.theme)
+        self.assertIn('color: var(--q-on-brand) !important;', self.theme)
+
     def test_entry_and_setup_screens_join_the_shared_light_workspace(self):
         for selector in (
             'html body.caesar-page-welcome {',
@@ -72,7 +86,7 @@ class ThemePaletteTests(unittest.TestCase):
             self.assertIn(selector, self.theme)
         welcome = (APP / 'welcome.html').read_text(encoding='utf-8')
         self.assertIn('class="min-h-screen flex flex-col text-white"', welcome)
-        self.assertIn('20261031-theme-v1', welcome)
+        self.assertIn('20261031-orange-v2', welcome)
 
     def test_every_page_uses_cache_busted_shared_palette_and_theme(self):
         pages = list(APP.glob('*.html'))
@@ -82,7 +96,7 @@ class ThemePaletteTests(unittest.TestCase):
             for asset in ('design-system.css', 'palette-v3.css', 'theme.css'):
                 self.assertRegex(
                     html,
-                    rf'href=["\'][^"\']*{re.escape(asset)}\?v=20261031-theme-v1["\']',
+                    rf'href=["\'][^"\']*{re.escape(asset)}\?v=20261031-orange-v2["\']',
                     f'{page.name} لا يحمل {asset} بإصدار حديث',
                 )
 

@@ -885,4 +885,31 @@ html body.caesar-page-welcome .bg-black.bg-opacity-30 {
   color: var(--q-muted) !important;
 }
 html body.caesar-page-setup { background: var(--q-bg) !important; }
-html body.caesar-page-mobile { --ink: var(--q-ink); --line: var(--q-line); --orange: var(--q-warning); }
+html body.caesar-page-mobile { --ink: var(--q-ink); --line: var(--q-line); --orange: var(--q-brand); }
+
+/* Orange is the shared accent; readable text stays black in light mode and white in dark mode. */
+html body.caesar-ui :is(p, small, label, h1, h2, h3, h4, span, strong, em, b, i, li, td, th, dt, dd, summary, a:not([role="button"])) {
+  color: var(--q-ink) !important;
+}
+html body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]) :is(span, strong, small, svg) {
+  color: inherit !important;
+}
+html body.caesar-ui :is(.nav-icon, .button-icon, .counter-icon, .product-image-placeholder, .q-line-icon, .welcome-identity svg, .profile-icon svg) {
+  color: var(--q-brand) !important;
+  stroke: currentColor !important;
+}
+html body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.primary, .primary-action, .btn-primary, .action-main, .primary-checkout, .add, .numpad-confirm, .dine-primary) {
+  background: var(--q-brand) !important;
+  border-color: var(--q-brand) !important;
+  color: var(--q-on-brand) !important;
+}
+html body.caesar-ui :is(button, input[type="button"], input[type="submit"], a[role="button"]):is(.success, .danger, .warning, .remove-cart-item, .discard, .lateMuteButton) {
+  color: #ffffff !important;
+}
+html body.caesar-page-index > header {
+  background: var(--q-brand) !important;
+  color: var(--q-on-brand) !important;
+}
+html body.caesar-page-index > header :is(p, small, label, h1, h2, h3, h4, span, strong, em, b, i, a:not([role="button"])) {
+  color: var(--q-on-brand) !important;
+}

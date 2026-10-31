@@ -193,26 +193,26 @@ body.caesar-ui :is(button,a)[class*="bg-amber-"] {
 }
 
 /* ── CAESAR Restaurant POS palette ──────────────────────────────────────────
-   Calm green brand, neutral surfaces, and restrained semantic status colors. */
+   Orange brand, neutral surfaces, and black/white text only. */
 :root,
 body.caesar-ui.light,
 body.caesar-ui:not(.dark) {
   color-scheme: light;
-  --q-bg: #f5f7f4;
+  --q-bg: #f7f7f7;
   --q-surface: #ffffff;
-  --q-surface-soft: #fafcfa;
-  --q-surface-muted: #eef2ee;
-  --q-ink: #1b2b25;
-  --q-ink-soft: #40574c;
-  --q-muted: #687a72;
-  --q-line: #d8e1db;
-  --q-line-strong: #b9c8bf;
-  --q-brand: #176b5b;
-  --q-brand-strong: #125648;
-  --q-brand-soft: #e3f1ed;
+  --q-surface-soft: #ffffff;
+  --q-surface-muted: #eeeeee;
+  --q-ink: #111111;
+  --q-ink-soft: #111111;
+  --q-muted: #111111;
+  --q-line: #dddddd;
+  --q-line-strong: #bdbdbd;
+  --q-brand: #c2410c;
+  --q-brand-strong: #9a3412;
+  --q-brand-soft: #fff1e8;
   --q-on-brand: #ffffff;
-  --q-blue: #3569a8;
-  --q-blue-soft: #eaf1fa;
+  --q-blue: #c2410c;
+  --q-blue-soft: #fff1e8;
   --q-success: #237a55;
   --q-success-soft: #e6f3eb;
   --q-on-success: #ffffff;
@@ -227,30 +227,30 @@ body.caesar-ui:not(.dark) {
 }
 body.caesar-ui.dark {
   color-scheme: dark;
-  --q-bg: #111c18;
-  --q-surface: #192923;
-  --q-surface-soft: #15231d;
-  --q-surface-muted: #22372d;
-  --q-ink: #eff7f2;
-  --q-ink-soft: #c6d8cd;
-  --q-muted: #9bafa3;
-  --q-line: #314b3b;
-  --q-line-strong: #456351;
-  --q-brand: #63c49a;
-  --q-brand-strong: #8adbb5;
-  --q-brand-soft: #234536;
-  --q-on-brand: #10251b;
-  --q-blue: #8bb9e8;
-  --q-blue-soft: #243a54;
-  --q-success: #6bc79a;
-  --q-success-soft: #234536;
-  --q-on-success: #10251b;
-  --q-warning: #e5b95d;
-  --q-warning-soft: #4b3a1c;
-  --q-on-warning: #1b241b;
-  --q-danger: #f08a93;
-  --q-danger-soft: #4a252a;
-  --q-on-danger: #2d1116;
+  --q-bg: #111111;
+  --q-surface: #1b1b1b;
+  --q-surface-soft: #171717;
+  --q-surface-muted: #252525;
+  --q-ink: #ffffff;
+  --q-ink-soft: #ffffff;
+  --q-muted: #ffffff;
+  --q-line: #3a3a3a;
+  --q-line-strong: #555555;
+  --q-brand: #f97316;
+  --q-brand-strong: #fb923c;
+  --q-brand-soft: #3b2418;
+  --q-on-brand: #111111;
+  --q-blue: #f97316;
+  --q-blue-soft: #3b2418;
+  --q-success: #237a55;
+  --q-success-soft: #17351f;
+  --q-on-success: #ffffff;
+  --q-warning: #8a5a00;
+  --q-warning-soft: #3d2b13;
+  --q-on-warning: #ffffff;
+  --q-danger: #b93846;
+  --q-danger-soft: #3e1e22;
+  --q-on-danger: #ffffff;
   --q-shadow: 0 18px 42px rgba(0, 0, 0, .28);
   --q-shadow-soft: 0 7px 20px rgba(0, 0, 0, .20);
 }
