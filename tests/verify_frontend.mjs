@@ -28,12 +28,26 @@ for (const guidance of [
   'اختر قبل التأكيد',
   'ابحث باسم الصنف أو القسم',
   'السلة فارغة. اختر المنتجات لبدء طلب جديد.',
-  'سيُرسل الإيصال إلى الطابعة المحلية دون فتح مربع طباعة.'
+  'سيُرسل الإيصال إلى الطابعة المحلية دون فتح مربع طباعة.',
+  'اختر صنفًا لإضافته للطلب',
+  'أضف صنفًا واحدًا على الأقل لتعليق الطلب.'
 ]) {
   if (html.includes(guidance)) throw new Error(`نص إرشادي قديم ما زال ظاهرًا في شاشة الكاشير: ${guidance}`);
 }
 if (!html.includes('placeholder="بحث"') || !html.includes('id="printState" aria-live="polite"></div>')) {
   throw new Error('اختصار حقل البحث أو عرض حالة الطباعة عند الحاجة غير مكتمل');
+}
+if (!html.includes('pos-modern.css?v=20261031-cash-only')) {
+  throw new Error('معرّف تحديث CSS مفقود؛ قد يحتفظ المتصفح بالتنسيق القديم');
+}
+for (const removedControl of ['data-payment="بطاقة"', 'data-payment="مختلط"', 'id="paymentType"', 'id="paymentButton"', 'id="tableButton"']) {
+  if (html.includes(removedControl)) throw new Error(`خيار دفع أو زر مكرر ما زال ظاهرًا في شاشة الكاشير: ${removedControl}`);
+}
+if (!html.includes('<strong class="cash-only-method">نقدي</strong>') || !html.includes("payment:'نقدي'")) {
+  throw new Error('طريقة الدفع الثابتة أو تسجيل الطلب النقدي غير مضمون');
+}
+if ((html.match(/class="action-main"/g) || []).length !== 1 || html.includes('class="action-secondary"')) {
+  throw new Error('يجب أن تحتوي شاشة الكاشير على زر إجراء أساسي واحد دون أزرار دفع مكررة');
 }
 for (const counterId of ['counterOrders', 'counterReady', 'counterSales']) {
   if (!html.includes(`id="${counterId}"`)) throw new Error(`عداد نقطة البيع ${counterId} غير موجود في القالب`);
