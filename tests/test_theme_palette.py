@@ -70,12 +70,19 @@ class ThemePaletteTests(unittest.TestCase):
     def test_pos_basket_is_narrower_and_product_icon_spaces_are_larger(self):
         pos = (APP / 'pos-modern.css').read_text(encoding='utf-8')
         self.assertIn('minmax(350px, 390px)', pos)
-        self.assertIn('min-height: 86px;', pos)
+        self.assertIn('min-height: 280px;', pos)
+        self.assertIn('min-height: 64px;', pos)
         self.assertIn('height: 116px;', pos)
         self.assertIn('width: 48px; height: 48px;', pos)
         self.assertIn('width: 28px; height: 28px;', pos)
+        self.assertIn('.nav-group-title,', pos)
+        self.assertIn('.payment-label', pos)
         self.assertIn('color: var(--q-ink) !important;', self.theme)
         self.assertIn('color: var(--q-on-brand) !important;', self.theme)
+
+    def test_cashier_stylesheet_cache_version_is_bumped(self):
+        index = (APP / 'index.html').read_text(encoding='utf-8')
+        self.assertIn('/pos-modern.css?v=20261031-orange-v3', index)
 
     def test_entry_and_setup_screens_join_the_shared_light_workspace(self):
         for selector in (

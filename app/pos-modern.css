@@ -828,3 +828,61 @@ body.caesar-page-index .order-context .segment {
   padding-inline: 4px;
   font-size: 10px;
 }
+
+/* Low-clutter cashier: remove duplicate captions and prioritize visible basket rows. */
+body.caesar-page-index :is(
+  .brand-copy small,
+  .nav-label,
+  .nav-group-title,
+  .sidebar-footnote,
+  .page-heading .eyebrow,
+  .counter-card > small,
+  .catalog-title .section-kicker,
+  .catalog-head,
+  .order-head .section-kicker,
+  .cart-heading .section-kicker,
+  .payment-label
+) {
+  display: none !important;
+}
+body.caesar-page-index .order-panel {
+  padding-top: 14px;
+  padding-bottom: 12px;
+}
+body.caesar-page-index .order-head { padding-bottom: 7px; }
+body.caesar-page-index .order-context { margin-top: 7px; padding: 7px; }
+body.caesar-page-index .field-label { margin-bottom: 4px; }
+body.caesar-page-index .cart-heading { margin: 6px 0 4px; }
+body.caesar-page-index .cart {
+  flex: 1 1 0;
+  min-height: 280px;
+}
+body.caesar-page-index .cart-item {
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 6px;
+  min-height: 64px;
+  padding-block: 6px;
+}
+body.caesar-page-index .cart-symbol { width: 36px; height: 36px; font-size: 12px; }
+body.caesar-page-index .cart-item-name { font-size: 10px; line-height: 1.2; }
+body.caesar-page-index .cart-unit { font-size: 8px; }
+body.caesar-page-index .cart-item-total { font-size: 10px; }
+body.caesar-page-index .qty { gap: 3px; margin-top: 3px; }
+body.caesar-page-index .qty button { width: 22px; height: 22px; font-size: 14px; }
+body.caesar-page-index .summary { margin-top: 4px; padding-top: 7px; }
+body.caesar-page-index .summary-row { margin: 3px 0; font-size: 10px; }
+body.caesar-page-index .total-row { margin: 7px 0 8px; padding: 8px 10px; }
+body.caesar-page-index .total-row strong { font-size: 19px; }
+body.caesar-page-index .compact-action-bar { margin-top: 5px; }
+body.caesar-page-index .cart.cart-density-compact .cart-item {
+  min-height: 60px;
+  padding-block: 5px;
+  gap: 5px;
+}
+body.caesar-page-index .cart.cart-density-compact .cart-symbol { width: 34px; height: 34px; font-size: 11px; }
+body.caesar-page-index .cart.cart-density-dense .cart-item {
+  min-height: 54px;
+  padding-block: 4px;
+  gap: 4px;
+}
+body.caesar-page-index .cart.cart-density-dense .cart-symbol { width: 30px; height: 30px; font-size: 10px; }
