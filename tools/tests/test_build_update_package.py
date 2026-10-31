@@ -28,6 +28,9 @@ class BuildUpdatePackageTests(unittest.TestCase):
         vendor_license = self.source / "app" / "vendor" / "qrcode-8.2.dist-info" / "LICENSE"
         vendor_license.parent.mkdir(parents=True)
         vendor_license.write_text("Third-party package license notice", encoding="utf-8")
+        click_license = self.source / "_internal" / "click-8.4.2.dist-info" / "licenses" / "LICENSE.txt"
+        click_license.parent.mkdir(parents=True)
+        click_license.write_text("Click third-party license notice", encoding="utf-8")
         public_key = Ed25519PrivateKey.generate().public_key().public_bytes(
             serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
         (self.source / "app" / "license_public_key.pem").write_bytes(public_key)
@@ -72,6 +75,7 @@ class BuildUpdatePackageTests(unittest.TestCase):
             self.assertIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/app/factory_data.json", names)
             self.assertIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/app/license_public_key.pem", names)
             self.assertIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/app/vendor/qrcode-8.2.dist-info/LICENSE", names)
+            self.assertIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/_internal/click-8.4.2.dist-info/licenses/LICENSE.txt", names)
             self.assertNotIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/app/license/customer-license.txt", names)
             self.assertNotIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/app/customer-license.txt", names)
             self.assertNotIn("CAESAR_POS_Update_test-1/payload/CAESAR_POS/misc/app/factory_data.json", names)

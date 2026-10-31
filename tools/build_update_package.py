@@ -90,16 +90,24 @@ def validate_onefolder(folder: Path) -> Path:
 
 
 def _is_vendor_license_metadata(parts: tuple[str, ...]) -> bool:
-    """Allow third-party notices only beneath PyInstaller's vendored dist-info folders."""
-    if len(parts) < 4 or not parts[-2].endswith(".dist-info"):
-        return False
-    if parts[-1] not in {"license", "license.txt", "notice", "notice.txt", "copying", "copying.txt"}:
-        return False
-    return parts[:-2] in {
+    """Allow canonical notices under dist-info in known PyInstaller package roots."""
+    allowed_prefixes = {
         ("app", "vendor"),
+        ("_internal",),
         ("_internal", "app", "vendor"),
+        ("runtime", "_internal"),
         ("runtime", "_internal", "app", "vendor"),
     }
+    allowed_names = {"license", "license.txt", "notice", "notice.txt", "copying", "copying.txt"}
+    for index in range(1, len(parts) - 1):
+        if not parts[index].endswith(".dist-info") or parts[:index] not in allowed_prefixes:
+            continue
+        tail = parts[index + 1:]
+        if tail == (parts[-1],) and parts[-1] in allowed_names:
+            return True
+        if len(tail) == 2 and tail[0] in {"license", "licenses"} and tail[1] in allowed_names:
+            return True
+    return False
 
 
 def is_sensitive_or_nonpayload(relative: PurePosixPath) -> bool:

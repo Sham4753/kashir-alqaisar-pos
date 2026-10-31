@@ -107,6 +107,24 @@ function Assert-Ed25519PublicKey([string]$KeyPath) {
     if ($code -ne 0) { throw ("LICENSE_PUBLIC_KEY_INVALID: expected a parseable Ed25519 public key: " + $KeyPath) }
 }
 
+function Test-ThirdPartyLicenseMetadata([string]$RelativePath) {
+    $parts = $RelativePath.Replace('/', '\') -split '\\'
+    if ($parts.Length -lt 3) { return $false }
+    $allowedPrefixes = @('app\vendor', '_internal', '_internal\app\vendor', 'runtime\_internal', 'runtime\_internal\app\vendor')
+    $allowedNames = @('license', 'license.txt', 'notice', 'notice.txt', 'copying', 'copying.txt')
+    for ($index = 1; $index -lt $parts.Length; $index++) {
+        if (-not $parts[$index].ToLowerInvariant().EndsWith('.dist-info')) { continue }
+        $prefix = ($parts[0..($index - 1)] -join '\').ToLowerInvariant()
+        if ($prefix -notin $allowedPrefixes) { continue }
+        $remaining = $parts.Length - $index - 1
+        $leaf = $parts[-1].ToLowerInvariant()
+        if ($leaf -notin $allowedNames) { continue }
+        if ($remaining -eq 1) { return $true }
+        if ($remaining -eq 2 -and ($parts[$index + 1].ToLowerInvariant() -in @('license', 'licenses'))) { return $true }
+    }
+    return $false
+}
+
 function Test-CustomerArtifact([string]$Path, [string]$Root) {
     $rootFull = [IO.Path]::GetFullPath($Root)
     if (-not $rootFull.EndsWith([string][IO.Path]::DirectorySeparatorChar)) { $rootFull += [IO.Path]::DirectorySeparatorChar }
@@ -120,6 +138,7 @@ function Test-CustomerArtifact([string]$Path, [string]$Root) {
         'pythonnet\runtime\Python.Runtime.deps.json', '_internal\pythonnet\runtime\Python.Runtime.deps.json', 'runtime\_internal\pythonnet\runtime\Python.Runtime.deps.json'
     )
     if ($relative -in $safeStatic) { return $false }
+    if (Test-ThirdPartyLicenseMetadata -RelativePath $relative) { return $false }
     $parts = $relative -split '\\'
     foreach ($part in $parts) {
         if ($part -match '(?i)secret|vault|backup|database|(^|[._-])data([._-]|$)|^(__pycache__|\.git)$') { return $true }

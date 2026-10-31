@@ -6,11 +6,30 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+function Test-ThirdPartyLicenseMetadata([string]$RelativePath) {
+    $parts = $RelativePath.Replace('/', '\') -split '\\'
+    if ($parts.Length -lt 3) { return $false }
+    $allowedPrefixes = @('app\vendor', '_internal', '_internal\app\vendor', 'runtime\_internal', 'runtime\_internal\app\vendor')
+    $allowedNames = @('license', 'license.txt', 'notice', 'notice.txt', 'copying', 'copying.txt')
+    for ($index = 1; $index -lt $parts.Length; $index++) {
+        if (-not $parts[$index].ToLowerInvariant().EndsWith('.dist-info')) { continue }
+        $prefix = ($parts[0..($index - 1)] -join '\').ToLowerInvariant()
+        if ($prefix -notin $allowedPrefixes) { continue }
+        $remaining = $parts.Length - $index - 1
+        $leaf = $parts[-1].ToLowerInvariant()
+        if ($leaf -notin $allowedNames) { continue }
+        if ($remaining -eq 1) { return $true }
+        if ($remaining -eq 2 -and ($parts[$index + 1].ToLowerInvariant() -in @('license', 'licenses'))) { return $true }
+    }
+    return $false
+}
+
 function Test-RelativePathAllowed([string] $RelativePath) {
     if ([string]::IsNullOrWhiteSpace($RelativePath)) { return $false }
     $normalized = $RelativePath.Replace('/', '\')
     if ([IO.Path]::IsPathRooted($normalized) -or $normalized -match '(^|\\)\.\.(\\|$)') { return $false }
     $parts = $normalized -split '\\'
+    if (Test-ThirdPartyLicenseMetadata -RelativePath $normalized) { return $true }
     $knownStaticAsset = $normalized -in @(
         'app\factory_data.json', '_internal\app\factory_data.json', 'runtime\_internal\app\factory_data.json',
         'app\license_public_key.pem', '_internal\app\license_public_key.pem', 'runtime\_internal\app\license_public_key.pem',
