@@ -752,3 +752,44 @@ body.caesar-page-index .cart-item-note::placeholder { color: var(--pos-muted); o
 body.caesar-page-index .cart-item-note:focus { outline: 2px solid rgba(22, 132, 95, .22); border-color: var(--pos-emerald); }
 body.caesar-page-index .cart.cart-density-compact .cart-item-note,
 body.caesar-page-index .cart.cart-density-dense .cart-item-note { min-height: 31px; margin-top: 4px; padding-block: 5px; font-size: 10px; }
+
+
+/* Keep the cashier's order list roomy while its item details stay compact. */
+@media (min-width: 1280px) {
+  body.caesar-page-index .app {
+    grid-template-columns: minmax(0, 1fr) minmax(560px, 600px) !important;
+  }
+}
+body.caesar-page-index .order-head { padding-bottom: 10px; }
+body.caesar-page-index .order-context { margin-top: 10px; padding: 9px; }
+body.caesar-page-index .cart-heading { margin: 10px 0 6px; }
+body.caesar-page-index .cart { min-height: 220px; }
+body.caesar-page-index .cart-item {
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 6px;
+  min-height: 62px;
+  padding-block: 5px;
+}
+body.caesar-page-index .cart-symbol { width: 30px; height: 30px; font-size: 10px; }
+body.caesar-page-index .cart-item-name { font-size: 10px; line-height: 1.25; }
+body.caesar-page-index .cart-unit { font-size: 8px; }
+body.caesar-page-index .cart-item-total { font-size: 10px; }
+body.caesar-page-index .cart-item-note {
+  min-height: 27px;
+  max-height: 54px;
+  margin-top: 3px;
+  padding: 4px 7px;
+  font-size: 9px;
+  line-height: 1.25;
+}
+body.caesar-page-index .cart.cart-density-compact .cart-item-note,
+body.caesar-page-index .cart.cart-density-dense .cart-item-note {
+  min-height: 24px;
+  margin-top: 3px;
+  padding-block: 3px;
+  font-size: 9px;
+}
+body.caesar-page-index .print-state:empty { display: none; min-height: 0; margin: 0; }
+@media (max-width: 760px) {
+  body.caesar-page-index .cart { min-height: 200px; max-height: 440px; }
+}

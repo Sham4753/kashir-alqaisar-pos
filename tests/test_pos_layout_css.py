@@ -18,8 +18,10 @@ class PosDesktopGridTests(unittest.TestCase):
         self.assertEqual(len(tracks), 2, columns)
 
     def test_cart_panel_is_wider_and_item_notes_have_a_visible_field(self):
-        self.assertIn('minmax(480px, 520px)', CSS)
+        self.assertIn('minmax(560px, 600px)', CSS)
         self.assertIn('.cart-item-note', CSS)
+        self.assertIn('font-size: 9px;', CSS)
+        self.assertIn('min-height: 220px;', CSS)
 
 
 if __name__ == '__main__':

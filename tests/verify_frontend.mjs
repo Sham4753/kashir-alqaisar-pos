@@ -22,6 +22,19 @@ if (!html.includes('id="lockButton"') || !html.includes('/api/auth/unlock')) {
 if (!html.includes('/api/orders') || !html.includes('printState')) {
   throw new Error('تدفق الدفع أو حالة الإرسال إلى الطابعة غير مكتمل في الواجهة');
 }
+for (const guidance of [
+  'اضغط على البطاقة للإضافة السريعة',
+  'يتحكم بمسار التشغيل',
+  'اختر قبل التأكيد',
+  'ابحث باسم الصنف أو القسم',
+  'السلة فارغة. اختر المنتجات لبدء طلب جديد.',
+  'سيُرسل الإيصال إلى الطابعة المحلية دون فتح مربع طباعة.'
+]) {
+  if (html.includes(guidance)) throw new Error(`نص إرشادي قديم ما زال ظاهرًا في شاشة الكاشير: ${guidance}`);
+}
+if (!html.includes('placeholder="بحث"') || !html.includes('id="printState" aria-live="polite"></div>')) {
+  throw new Error('اختصار حقل البحث أو عرض حالة الطباعة عند الحاجة غير مكتمل');
+}
 for (const counterId of ['counterOrders', 'counterReady', 'counterSales']) {
   if (!html.includes(`id="${counterId}"`)) throw new Error(`عداد نقطة البيع ${counterId} غير موجود في القالب`);
 }
