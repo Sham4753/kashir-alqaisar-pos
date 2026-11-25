@@ -45,6 +45,13 @@ for (const required of [
   'id="closeCartButton"',
   'id="mobileCartTotal"',
   'id="mobileCartCount"',
+  'id="paymentOverlay"',
+  'id="paymentAdjustment"',
+  'id="paymentTotal"',
+  'id="cashReceived"',
+  'id="changeDue"',
+  'id="managerApprovalFields"',
+  'id="confirmPaymentButton"',
   'id="printState" aria-live="polite"',
   "noteToggle.innerHTML=svgIcon('note')",
   'function syncCartAccessibility()',
@@ -86,6 +93,17 @@ for (const route of [
 for (const source of [
   "payment:'نقدي'",
   "kitchen_release:'now'",
+  'rounding_adjustment:adjustment',
+  'cash_received:cashReceived',
+  'function updatePaymentPreview(clearError=true)',
+  'function openPayment()',
+  'money(total,true)',
+  'updatePaymentPreview(false)',
+  "paymentEl.approval.hidden=!needsManager",
+  "event.stopImmediatePropagation()",
+  'paymentEl.overlay.addEventListener(\'keydown\'',
+  'event.stopImmediatePropagation(); closePayment();',
+  'payload.manager_approval={username:',
   'product_id:item.id',
   'note:item.note||',
   "api('/api/auth/lock'",
@@ -98,6 +116,9 @@ for (const source of [
   "تعذر التحقق من حالة الطباعة",
   "راجع حالة الطابعة"
 ]) requireText(html, source, `سلوك تجاري أو عملة أو طباعة مفقود: ${source}`);
+for (const css of ['.payment-overlay.show', '.payment-adjustment-field', '.payment-change-row', '.manager-approval-fields', '.payment-confirm:disabled']) {
+  requireText(posCss, css, `تنسيق نافذة التحصيل مفقود: ${css}`);
+}
 if (!html.includes("data-type=\"ديليفري\"") || !html.includes("order.type==='ديليفري'?'توصيل'")) {
   throw new Error('يجب أن تظل قيمة النوع الداخلية المتوافقة مع الخادم محفوظة مع تسمية محلية موحدة');
 }

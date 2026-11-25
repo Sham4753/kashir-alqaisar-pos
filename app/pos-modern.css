@@ -358,6 +358,34 @@ body.caesar-page-index .held-row-meta { margin-top: 3px; color: var(--q-muted); 
 body.caesar-page-index .held-row-actions { display: flex; gap: 4px; flex: 0 0 auto; }
 body.caesar-page-index .held-row-actions button { min-height: 40px; padding: 0 9px; border: 1px solid var(--q-line); border-radius: 8px; color: var(--q-ink); background: var(--q-surface); font-size: 10px; font-weight: 900; }
 body.caesar-page-index .held-row-actions button.discard { color: var(--q-danger); }
+body.caesar-page-index .payment-overlay { position: fixed; z-index: 110; inset: 0; display: none; place-items: center; padding: 14px; overflow-y: auto; background: color-mix(in srgb, var(--q-ink) 38%, transparent); }
+body.caesar-page-index .payment-overlay[hidden] { display: none !important; }
+body.caesar-page-index .payment-overlay.show { display: grid; }
+body.caesar-page-index .payment-card { display: grid; gap: 10px; width: min(430px, calc(100vw - 28px)); max-height: min(720px, 92vh); padding: 18px; overflow-y: auto; border: 1px solid var(--q-line); border-radius: 16px; color: var(--q-ink); background: var(--q-surface); box-shadow: var(--q-shadow); }
+body.caesar-page-index .payment-card h3 { margin: 0; color: var(--q-ink); font-size: 17px; }
+body.caesar-page-index .payment-summary { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--q-line); border-radius: 12px; background: var(--q-surface-muted); }
+body.caesar-page-index .payment-summary > div:not(.payment-adjustment-field) { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--q-muted); font-size: 11px; }
+body.caesar-page-index .payment-adjustment-field,
+body.caesar-page-index .payment-received-field { display: flex; align-items: center; gap: 8px; min-height: 48px; padding-inline: 10px; border: 1px solid var(--q-line-strong); border-radius: 9px; color: var(--q-muted); background: var(--q-surface); }
+body.caesar-page-index .payment-adjustment-field input,
+body.caesar-page-index .payment-received-field input { width: 100%; min-width: 0; min-height: 44px; border: 0; outline: 0; color: var(--q-ink); background: transparent; font: inherit; font-size: 16px; font-weight: 800; }
+body.caesar-page-index .payment-summary label,
+body.caesar-page-index .payment-field { display: block; margin-bottom: 5px; color: var(--q-ink); font-size: 11px; font-weight: 900; }
+body.caesar-page-index .payment-summary small { color: var(--q-muted); font-size: 9px; line-height: 1.6; }
+body.caesar-page-index .payment-summary .payment-final { padding-top: 8px; border-top: 1px solid var(--q-line); color: var(--q-ink); font-weight: 900; }
+body.caesar-page-index .payment-final strong { color: var(--q-brand-strong); font-size: 18px; }
+body.caesar-page-index .payment-change-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 9px; color: var(--q-success); background: var(--q-success-soft); font-size: 12px; font-weight: 900; }
+body.caesar-page-index .payment-change-row strong.is-short { color: var(--q-danger); }
+body.caesar-page-index .manager-approval-fields { display: grid; gap: 6px; margin: 0; padding: 10px; border: 1px solid var(--q-warning); border-radius: 10px; }
+body.caesar-page-index .manager-approval-fields legend { padding: 0 5px; color: var(--q-warning); font-size: 10px; font-weight: 900; }
+body.caesar-page-index .manager-approval-fields label { color: var(--q-ink); font-size: 10px; font-weight: 800; }
+body.caesar-page-index .manager-approval-fields input { min-height: 44px; padding-inline: 9px; border: 1px solid var(--q-line-strong); border-radius: 8px; color: var(--q-ink); background: var(--q-surface); font: inherit; }
+body.caesar-page-index .payment-error { min-height: 16px; color: var(--q-danger); font-size: 10px; }
+body.caesar-page-index .payment-actions { display: flex; gap: 8px; }
+body.caesar-page-index .payment-actions button { min-height: 48px; flex: 1; border: 0; border-radius: 9px; font: inherit; font-size: 11px; font-weight: 900; }
+body.caesar-page-index .payment-cancel { color: var(--q-ink); background: var(--q-surface-muted); }
+body.caesar-page-index .payment-confirm { color: var(--q-on-brand); background: var(--q-brand); }
+body.caesar-page-index .payment-confirm:disabled { opacity: .55; }
 
 /* Fixed mobile/ tablet cart trigger and bottom-sheet cart. */
 body.caesar-page-index .cart-scrim { display: none; }
