@@ -45,7 +45,10 @@ def test_counter_cards_and_build_gate_keep_windows_interface_current():
         assert f'id="{counter_id}"' in html
         assert counter_id in build
     assert "/api/dashboard/counters" in html
-    assert ".counter-strip { display: grid !important;" in css
+    assert ".counter-strip { display: flex;" in css
+    assert "grid-template-columns: minmax(0, 1fr) minmax(340px, 390px);" in css
+    assert ".counter-strip { display: flex;" in build
+    assert "grid-template-columns: minmax(0, 1fr) minmax(340px, 390px);" in build
     assert "refusing to build an incomplete interface" in build
     assert 'Get-ChildItem -LiteralPath $ProductDir -Filter "index.html"' in build
     assert "Built package contains all three visible POS counter cards." in build

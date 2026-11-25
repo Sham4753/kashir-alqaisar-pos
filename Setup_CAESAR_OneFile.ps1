@@ -59,7 +59,7 @@ foreach ($CounterId in @('counterOrders', 'counterReady', 'counterSales')) {
         throw "POS counter '$CounterId' is missing from app\index.html; refusing to build an incomplete interface."
     }
 }
-if (-not $PosHtml.Contains('/api/dashboard/counters') -or -not $PosCss.Contains('.counter-strip { display: grid !important;')) {
+if (-not $PosHtml.Contains('/api/dashboard/counters') -or -not $PosCss.Contains('.counter-strip { display: flex;')) {
     throw "POS counter loading/visibility checks are missing; refusing to build an incomplete interface."
 }
 Write-Host "POS counter markup, API binding, and visibility fallback verified."
@@ -344,10 +344,10 @@ foreach ($CounterId in @('counterOrders', 'counterReady', 'counterSales')) {
         throw "Bundled POS counter '$CounterId' is missing from the built package."
     }
 }
-if (-not $BundledHtml.Contains('/api/dashboard/counters') -or -not $BundledCss.Contains('.counter-strip { display: grid !important;')) {
+if (-not $BundledHtml.Contains('/api/dashboard/counters') -or -not $BundledCss.Contains('.counter-strip { display: flex;')) {
     throw "Bundled POS counter API binding or visibility fallback is missing from the built package."
 }
-if (-not $BundledCss.Contains('grid-template-columns: minmax(0, 1fr) minmax(350px, 390px) !important;')) {
+if (-not $BundledCss.Contains('grid-template-columns: minmax(0, 1fr) minmax(340px, 390px);')) {
     throw "Bundled POS desktop grid is stale; expected the two-track catalogue/order layout."
 }
 Write-Host "Built package contains the account-selection page and verified two-track POS layout."
