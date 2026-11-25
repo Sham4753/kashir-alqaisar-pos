@@ -12,7 +12,7 @@
 ## حالة إعادة تصميم شاشة نقاط البيع
 
 - المرحلة 0 مكتملة وموثقة في `docs/POS_PHASE0_BASELINE_AR.md` على الفرع `phase-0-pos-baseline`، commit `24b2a8c`، ودُفعت إلى GitHub.
-- المرحلة 1 مكتملة على الفرع `phase-1-pos-redesign`، مبني على `main` عند `c9f1a6b`؛ commit التنفيذ `ca04205` ودُفع إلى GitHub. لم يُفتح PR.
+- المرحلة 1 على الفرع `phase-1-pos-redesign`، مبني على `main` عند `c9f1a6b`؛ commit التنفيذ `ca04205` وإصلاح الاختبارات `b9c08c9` دُفعا إلى GitHub. PR رقم 21 مفتوح كمسودة إلى `main`: https://github.com/Sham4753/kashir-alqaisar-pos/pull/21 ؛ لا يُدمج قبل توفير عمل الرقم اليومي وتقرير 80mm المطلوبين.
 - شملت التغييرات شريط تنقل الكاشير وأعداد الطلبات، صف الأقسام وبلاطات الأصناف، السلة المتجاوبة كدرج على التابلت والجوال مع شريط سفلي ثابت، تسميات «توصيل» في الواجهة مع إبقاء قيمة API «ديليفري»، وطبقة CSS مستندة إلى tokens مع إزالة تحميل `theme.css` القديم من شاشة POS. حُدّثت اختبارات `test_pos_layout_css.py` و`test_theme_palette.py` و`verify_frontend.mjs`.
 - نجحت الاختبارات المركزة (15 اختبارًا)، و`node tests/verify_frontend.mjs`، وفحص JavaScript و`git diff --check`. نجح اختبار Chromium عند 1366×768 و1024×768 و390×844، بما فيه فتح درج السلة واختبار تبديل دور الكاشير والمدير حول القفل. كانت بيانات المتصفح اصطناعية واعتراضات `/api` تجريبية فقط.
 - قبل تحديث توقعات CSS، أظهر تشغيل Linux للمجموعة الكاملة 166 اختبارًا وإخفاقين في اختبار التخطيط نفسه، أحدهما ناتج عن وراثة الاختبار في `test_void_order_persistence.py`. كان السبب توقع قيم CSS قديمة، لا اعتماديات Windows. بعد تحديث المصدر المشترك في `test_security_and_print.py` إلى القيم الفعلية (`390px` و`165px`)، نجحت الاختبارات الـ166؛ ونجح `node tests/verify_frontend.mjs` و`git diff --check`. السجل الكامل: `/home/ubuntu/phase1_full_test_output.txt`.
