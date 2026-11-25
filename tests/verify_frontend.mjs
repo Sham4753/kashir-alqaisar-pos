@@ -10,56 +10,108 @@ const retryPath = resolve(process.cwd(), 'app', 'pos-retry.js');
 const retryScript = readFileSync(retryPath, 'utf8');
 const currencyPath = resolve(process.cwd(), 'app', 'currency-manager.js');
 const currencyScript = readFileSync(currencyPath, 'utf8');
-const match = html.match(/<script>([\s\S]*?)<\/script>/i);
+const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)];
 
-if (!match) throw new Error('لم يتم العثور على JavaScript لواجهة نقطة البيع');
+function requireText(value, text, message) {
+  if (!value.includes(text)) throw new Error(message || `النص أو المسار المطلوب غير موجود: ${text}`);
+}
+
+if (!scripts.length) throw new Error('لم يتم العثور على JavaScript لواجهة نقطة البيع');
 if (html.includes('window.print') || html.includes('window.open')) {
   throw new Error('لا يجب أن تستدعي واجهة الإيصال نافذة أو مربع طباعة المتصفح');
 }
-if (!html.includes('id="lockButton"') || !html.includes('/api/auth/unlock')) {
-  throw new Error('قفل الشاشة أو فك القفل المقيّد بالمدير غير موجود في الواجهة');
+
+// Cache-busted visual layers: POS reads colors only from the shared palette.
+for (const stylesheet of ['design-system.css', 'palette-v3.css', 'pos-modern.css']) {
+  requireText(html, `/${stylesheet}?v=20261125-pos-v1`, `ملف التنسيق ${stylesheet} أو إصداره غير موجود`);
 }
-if (!html.includes('/api/orders') || !html.includes('printState')) {
-  throw new Error('تدفق الدفع أو حالة الإرسال إلى الطابعة غير مكتمل في الواجهة');
+if (/href=["'][^"']*theme\.css/.test(html)) {
+  throw new Error('طبقة theme.css القديمة ما زالت محمّلة فوق شاشة POS');
 }
-for (const guidance of [
-  'اضغط على البطاقة للإضافة السريعة',
-  'يتحكم بمسار التشغيل',
-  'اختر قبل التأكيد',
-  'ابحث باسم الصنف أو القسم',
-  'السلة فارغة. اختر المنتجات لبدء طلب جديد.',
-  'سيُرسل الإيصال إلى الطابعة المحلية دون فتح مربع طباعة.',
-  'اختر صنفًا لإضافته للطلب',
-  'أضف صنفًا واحدًا على الأقل لتعليق الطلب.'
-]) {
-  if (html.includes(guidance)) throw new Error(`نص إرشادي قديم ما زال ظاهرًا في شاشة الكاشير: ${guidance}`);
+if (/--q-(?:bg|surface|ink|brand|success|warning|danger)\s*:/.test(posCss)) {
+  throw new Error('يجب أن تأتي tokens اللونية من palette-v3.css فقط');
 }
-if (!html.includes('placeholder="بحث"') || !html.includes('id="printState" aria-live="polite"></div>')) {
-  throw new Error('اختصار حقل البحث أو عرض حالة الطباعة عند الحاجة غير مكتمل');
+
+// Responsive cashier workspace, drawer, single total, note, and unified icons.
+for (const required of [
+  'class="cashier-rail"',
+  'data-role="cashier"',
+  'id="deliveryOpenCount"',
+  'id="categoryBar"',
+  'id="mobileCartBar"',
+  'id="openCartButton"',
+  'aria-controls="orderPanel"',
+  'id="cartScrim"',
+  'id="closeCartButton"',
+  'id="mobileCartTotal"',
+  'id="mobileCartCount"',
+  'id="printState" aria-live="polite"',
+  "noteToggle.innerHTML=svgIcon('note')",
+  'function syncCartAccessibility()',
+  'function svgIcon(name)',
+  'aria-hidden="true"'
+]) requireText(html, required);
+for (const label of ['بيع', 'طلبات', 'مطبخ', 'طاولات', 'توصيل', 'وردية', 'قفل']) {
+  requireText(html, label, `اختصار الكاشير ${label} غير موجود`);
 }
-if (!html.includes('pos-modern.css?v=20261031-orange-v3')) {
-  throw new Error('معرّف تحديث CSS مفقود؛ قد يحتفظ المتصفح بالتنسيق القديم');
+if (html.split('id="total"').length - 1 !== 1 || html.includes('id="subtotal"')) {
+  throw new Error('يجب عرض إجمالي واحد فقط في السلة');
 }
-for (const removedControl of ['data-payment="بطاقة"', 'data-payment="مختلط"', 'id="paymentType"', 'id="paymentButton"', 'id="tableButton"']) {
-  if (html.includes(removedControl)) throw new Error(`خيار دفع أو زر مكرر ما زال ظاهرًا في شاشة الكاشير: ${removedControl}`);
+if (!posCss.includes('@media (max-width: 1080px)') ||
+    !posCss.includes('body.caesar-page-index.cart-open .order-panel') ||
+    !posCss.includes('body.caesar-page-index .mobile-cart-bar')) {
+  throw new Error('الدرج السفلي أو الشريط الثابت للجوال والتابلت غير مكتمل');
 }
-if (!html.includes('<strong class="cash-only-method">نقدي</strong>') || !html.includes("payment:'نقدي'")) {
-  throw new Error('طريقة الدفع الثابتة أو تسجيل الطلب النقدي غير مضمون');
+if (!posCss.includes('width: 48px; height: 48px;') || !posCss.includes('min-height: 88px;')) {
+  throw new Error('أهداف اللمس لبلاطات الأصناف يجب أن تكون 48px على الأقل');
 }
-if ((html.match(/class="action-main"/g) || []).length !== 1 || html.includes('class="action-secondary"')) {
-  throw new Error('يجب أن تحتوي شاشة الكاشير على زر إجراء أساسي واحد دون أزرار دفع مكررة');
+if (/>(?:دليفري|ديليفري|التوصيل)</.test(html)) {
+  throw new Error('تسمية التوصيل الظاهرة غير موحدة');
+}
+
+// Preserve order creation, currency formatting, roles, lock, and printer outcomes.
+for (const route of [
+  '/api/auth/me',
+  '/api/auth/lock',
+  '/api/auth/unlock',
+  '/api/menu',
+  '/api/restaurant/identity',
+  '/api/settings/features',
+  '/api/dashboard/counters',
+  '/api/dashboard/daily',
+  '/api/delivery/orders',
+  '/api/orders',
+  '/api/held-orders'
+]) requireText(html, route, `مسار API أساسي مفقود: ${route}`);
+for (const source of [
+  "payment:'نقدي'",
+  "kitchen_release:'now'",
+  'product_id:item.id',
+  'note:item.note||',
+  "api('/api/auth/lock'",
+  "api('/api/auth/unlock'",
+  "node.hidden=!allowed",
+  "state.currency=identity.currency",
+  "currency:'SYP'",
+  "printed.status",
+  "displayPrintState('تمت الطباعة الصامتة: '+message",
+  "تعذر التحقق من حالة الطباعة",
+  "راجع حالة الطابعة"
+]) requireText(html, source, `سلوك تجاري أو عملة أو طباعة مفقود: ${source}`);
+if (!html.includes("data-type=\"ديليفري\"") || !html.includes("order.type==='ديليفري'?'توصيل'")) {
+  throw new Error('يجب أن تظل قيمة النوع الداخلية المتوافقة مع الخادم محفوظة مع تسمية محلية موحدة');
 }
 for (const counterId of ['counterOrders', 'counterReady', 'counterSales']) {
-  if (!html.includes(`id="${counterId}"`)) throw new Error(`عداد نقطة البيع ${counterId} غير موجود في القالب`);
-}
-if (!html.includes('/api/dashboard/counters') || !posCss.includes('.counter-strip { display: grid !important;')) {
-  throw new Error('تحميل عدادات نقطة البيع أو قاعدة إبقائها ظاهرة غير موجودة');
+  requireText(html, `id="${counterId}"`, `عداد نقطة البيع ${counterId} غير موجود`);
 }
 if (!html.includes('/pos-retry.js') || !retryScript.includes('/api/printer/orders/')) {
   throw new Error('تدفق إعادة محاولة الإيصال غير مرتبط بالواجهة');
 }
+if ((html.match(/class="action-main"/g) || []).length !== 1 || html.includes('class="action-secondary"')) {
+  throw new Error('يجب أن تحتوي شاشة الكاشير على زر إجراء أساسي واحد دون أزرار دفع مكررة');
+}
 
-new Function(match[1]);
+for (const [, script] of scripts) new Function(script);
 new Function(retryScript);
 
 const currencyContext = {
@@ -83,4 +135,4 @@ if (!converted.includes('$') || !converted.includes('١٠')) {
   throw new Error(`تحويل العملة في لوحة المدير غير صحيح: ${converted}`);
 }
 
-console.log('الواجهة سليمة؛ تحويل العملة والخصائص الأساسية تحققت.');
+console.log('الواجهة سليمة؛ التخطيط المتجاوب والقفل والطباعة ومسارات API وتحويل العملة تحققت.');
