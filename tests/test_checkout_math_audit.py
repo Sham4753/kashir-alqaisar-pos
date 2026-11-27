@@ -141,6 +141,29 @@ class CheckoutMathAudit(unittest.TestCase):
         self.assertEqual(order['manager_approval']['approved_by'], 'manager')
         self.assertEqual(order['manager_approval']['rounding_adjustment'], 0.51)
 
+    def test_cashier_rounding_limit_is_configurable_and_validated(self):
+        self.f.login('manager', 'manager-pass')
+        default = self.c.get('/api/settings/cashier-rounding-limit')
+        self.assertEqual(default.status_code, 200)
+        self.assertEqual(default.get_json()['limit_percent'], 5.0)
+        for value in (-0.01, 100.01, 'NaN', 'invalid'):
+            with self.subTest(value=value):
+                self.assertEqual(self.c.post('/api/settings/cashier-rounding-limit',
+                                             json={'limit_percent': value}).status_code, 400)
+        saved = self.c.post('/api/settings/cashier-rounding-limit', json={'limit_percent': 10})
+        self.assertEqual(saved.status_code, 200)
+        self.assertEqual(saved.get_json()['limit_percent'], 10.0)
+
+        self.f.login('cashier', 'cashier-pass')
+        self.assertEqual(self.c.get('/api/settings/cashier-rounding-limit').get_json()['limit_percent'], 10.0)
+        self.assertEqual(self.c.post('/api/settings/cashier-rounding-limit',
+                                     json={'limit_percent': 20}).status_code, 403)
+        boundary = self.post(items=[{'product_id': 1, 'quantity': 1}], rounding_adjustment=1.0)
+        self.assertEqual(boundary.status_code, 200)
+        over_limit = self.post(items=[{'product_id': 1, 'quantity': 1}], rounding_adjustment=1.01)
+        self.assertEqual(over_limit.status_code, 403)
+        self.assertTrue(over_limit.get_json().get('approval_required'))
+
     def test_negative_invoice_and_underpayment_are_rejected(self):
         self.f.login('cashier', 'cashier-pass')
         negative_total = self.post(items=[{'product_id': 1, 'quantity': 1}], rounding_adjustment=-10.01)

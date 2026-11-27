@@ -12,6 +12,9 @@ class RbacPolicyTests(unittest.TestCase):
         self.assertTrue(role_can_access("GET", "/api/menu", "cashier"))
         self.assertTrue(role_can_access("POST", "/api/orders", "cashier"))
         self.assertTrue(role_can_access("GET", "/api/sync/status", "cashier"))
+        self.assertTrue(role_can_access("GET", "/api/settings/cashier-rounding-limit", "cashier"))
+        self.assertFalse(role_can_access("POST", "/api/settings/cashier-rounding-limit", "cashier"))
+        self.assertTrue(role_can_access("POST", "/api/settings/cashier-rounding-limit", "manager"))
 
     def test_cashier_cannot_access_management(self):
         self.assertFalse(role_can_access("GET", "/api/analytics", "cashier"))

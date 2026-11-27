@@ -1715,17 +1715,30 @@ DEFAULT_MANAGER_APPROVAL_POLICY = {
     'discount_percent_limit': 10.0,
     'discount_amount_limit': 0.0,
     'require_void_refund': True,
+    'cashier_rounding_limit_percent': 5.0,
 }
 DEFAULT_CASHIER_ROUNDING_LIMIT_PERCENT = 5.0
 
 
-def cashier_rounding_approval_required(base_total, adjustment):
-    """تتطلب التسوية موافقة إذا تجاوز مقدارها 5% من الصافي قبل التسوية."""
+def cashier_rounding_limit_percent(data):
+    """يعيد حد تسوية الكاشير المحفوظ، مع قيمة رجوع آمنة للبيانات القديمة."""
+    settings = data.get('settings', {}) if isinstance(data, dict) else {}
+    policy = settings.get('manager_approval_policy', {}) if isinstance(settings, dict) else {}
+    policy = policy if isinstance(policy, dict) else {}
+    value = as_money(policy.get('cashier_rounding_limit_percent'), DEFAULT_CASHIER_ROUNDING_LIMIT_PERCENT)
+    if value is None or not 0 <= value <= 100:
+        return DEFAULT_CASHIER_ROUNDING_LIMIT_PERCENT
+    return value
+
+
+def cashier_rounding_approval_required(base_total, adjustment, limit_percent=DEFAULT_CASHIER_ROUNDING_LIMIT_PERCENT):
+    """تتطلب التسوية موافقة إذا تجاوزت النسبة المحفوظة من الصافي قبل التسوية."""
     try:
         base = Decimal(str(base_total or 0))
         value = Decimal(str(adjustment or 0))
-        limit = Decimal(str(DEFAULT_CASHIER_ROUNDING_LIMIT_PERCENT))
-        if not base.is_finite() or not value.is_finite() or base < 0:
+        limit = Decimal(str(limit_percent))
+        if (not base.is_finite() or not value.is_finite() or not limit.is_finite()
+                or base < 0 or limit < 0 or limit > 100):
             return True
         if value == 0:
             return False
@@ -1745,6 +1758,7 @@ def manager_approval_policy(data):
         'discount_percent_limit': min(100, max(0, percent_limit if percent_limit is not None else 10.0)),
         'discount_amount_limit': max(0, amount_limit if amount_limit is not None else 0.0),
         'require_void_refund': bool(raw.get('require_void_refund', True)),
+        'cashier_rounding_limit_percent': cashier_rounding_limit_percent(data),
     }
 
 
@@ -1847,9 +1861,33 @@ def manager_approval_settings():
     data.setdefault('settings', {})['manager_approval_policy'] = {
         'discount_percent_limit': percent_limit, 'discount_amount_limit': amount_limit,
         'require_void_refund': True,
+        'cashier_rounding_limit_percent': cashier_rounding_limit_percent(data),
     }
     save(data); backup()
     return jsonify({'ok': True, 'policy': manager_approval_policy(data)})
+
+
+@app.route('/api/settings/cashier-rounding-limit', methods=['GET', 'POST'])
+def cashier_rounding_limit_settings():
+    if request.method == 'GET':
+        if not has_role('manager', 'supervisor', 'cashier'):
+            return permission_error()
+        return jsonify({'ok': True, 'limit_percent': cashier_rounding_limit_percent(load())})
+    if not has_role('manager'):
+        return permission_error()
+    payload = request.get_json(silent=True) or {}
+    limit_percent = as_money(payload.get('limit_percent'))
+    if limit_percent is None or not 0 <= limit_percent <= 100:
+        return jsonify({'ok': False, 'error': 'يجب أن يكون حد التسوية رقمًا بين 0 و100 بالمئة'}), 400
+    data = load()
+    settings = data.setdefault('settings', {})
+    policy = settings.get('manager_approval_policy', {})
+    if not isinstance(policy, dict):
+        policy = {}
+    policy['cashier_rounding_limit_percent'] = limit_percent
+    settings['manager_approval_policy'] = policy
+    save(data); backup()
+    return jsonify({'ok': True, 'limit_percent': cashier_rounding_limit_percent(data)})
 
 
 @app.route('/api/orders', methods=['GET', 'POST'])
@@ -1916,7 +1954,8 @@ def orders():
         approval_record = None
         discount_needs_approval, _ = manager_approval_required(
             data, max(discount_pct, effective_discount_pct(subtotal, total_discount)), total_discount)
-        rounding_needs_approval = cashier_rounding_approval_required(base_total, rounding_adjustment)
+        rounding_needs_approval = cashier_rounding_approval_required(
+            base_total, rounding_adjustment, cashier_rounding_limit_percent(data))
         if discount_needs_approval or rounding_needs_approval:
             if discount_needs_approval and rounding_needs_approval:
                 approval_action = 'خصم وتسوية مبلغ الفاتورة'
@@ -4227,8 +4266,8 @@ def create_financial_xlsx(report):
 def create_print_log_xlsx(rows):
     """ينشئ ملف Excel مستقلًا لسجل محاولات الطباعة لتتبع الأعطال لاحقًا."""
     status_labels = {'sent': 'تم الإرسال', 'failed': 'فشل الإرسال', 'skipped': 'لم يُنفذ', 'disabled': 'غير مفعّل'}
-    sheet_rows = [['سجل حالات الطباعة - كاشير قيصر'], ['تاريخ التصدير', datetime.now().isoformat(timespec='seconds')], [], ['التاريخ', 'رقم الطلب', 'النوع', 'الحالة', 'الطابعة', 'الرسالة']]
-    sheet_rows.extend([[row.get('timestamp', ''), row.get('order_id', ''), 'إيصال العميل' if row.get('type') == 'receipt' else 'تذكرة المطبخ', status_labels.get(row.get('status'), row.get('status', '')), row.get('printer', ''), row.get('message', '')] for row in rows])
+    sheet_rows = [['سجل حالات الطباعة - كاشير قيصر'], ['تاريخ التصدير', datetime.now().isoformat(timespec='seconds')], [], ['تاريخ المحاولة', 'رقم الطلب', 'النوع', 'الحالة', 'الطابعة', 'الرسالة', 'إعادة طباعة', 'منفذ الإعادة', 'دور المنفذ', 'وقت طلب الإعادة']]
+    sheet_rows.extend([[row.get('timestamp', ''), row.get('order_id', ''), 'إيصال العميل' if row.get('type') == 'receipt' else 'تذكرة المطبخ', status_labels.get(row.get('status'), row.get('status', '')), row.get('printer', ''), row.get('message', ''), 'نعم' if row.get('is_reprint') else 'لا', row.get('requested_by', ''), row.get('requested_by_role', ''), row.get('requested_at', '')] for row in rows])
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
         archive.writestr('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>')
@@ -5430,7 +5469,10 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
         return f'{name} × {quantity_text} | سعر: {receipt_amount(unit_price)} | الإجمالي: {receipt_amount(line_total)}'
 
     if ticket_type == 'kitchen':
-        lines = [format_line(restaurant_name), divider, format_line('طلب مطبخ'), f"الطلب: {display_no(order)}", f"النوع: {order.get('type', 'سفري')}"]
+        lines = [format_line(restaurant_name), divider, format_line('طلب مطبخ')]
+        if order.get('is_reprint'):
+            lines.append(format_line('نسخة معاد طبعها'))
+        lines.extend([f"الطلب: {display_no(order)}", f"النوع: {order.get('type', 'سفري')}"])
         if order.get('table'):
             lines.append('الطاولة: ' + str(order.get('table')))
         if order.get('customer'):
@@ -5458,6 +5500,8 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
         if restaurant_phone:
             header_lines.append(format_line('هاتف: ' + restaurant_phone[:width - 6]))
         header_lines.extend([divider, format_line(header)])
+        if order.get('is_reprint'):
+            header_lines.append(format_line('نسخة معاد طبعها'))
         raw_date = str(order.get('timestamp') or order.get('date', ''))[:19]
         # Keep technical LTR values isolated from Arabic RTL labels.
         safe_date = raw_date.replace('T', ' ')
@@ -5812,6 +5856,11 @@ def queue_thermal_print(data, order, ticket_type='receipt', wait=False, manual=F
     is_network = printer.get('connection_mode') == 'network'
     printer_target = (str(printer.get('network_host') or '').strip() + ':' + str(printer.get('network_port', 9100))) if is_network else printer_name
     log = {'id': uuid.uuid4().hex[:12], 'timestamp': datetime.now().isoformat(), 'order_id': order.get('id', ''), 'type': ticket_type, 'printer': printer_target, 'status': 'skipped', 'message': '', 'resolved': False}
+    if order.get('is_reprint'):
+        log.update({'is_reprint': True,
+                    'requested_by': str(order.get('reprint_requested_by') or 'unknown')[:80],
+                    'requested_by_role': str(order.get('reprint_requested_role') or '')[:32],
+                    'requested_at': str(order.get('reprint_requested_at') or log['timestamp'])[:40]})
     if is_network and (not str(printer.get('network_host') or '').strip()):
         log.update({'status': 'skipped', 'message': 'لم يُحدد عنوان طابعة الشبكة'})
     elif not is_network and sys.platform != 'win32':
@@ -6260,13 +6309,19 @@ def open_cash_drawer():
 
 @app.route('/api/printer/orders/<order_id>/print', methods=['POST'])
 def reprint_order(order_id):
-    """يعيد طباعة فاتورة محفوظة بطلب صريح من مستخدم يملك صلاحية الكاشير قيصر."""
+    """يعيد طباعة إيصال أو تذكرة مطبخ مع حفظ منفذ العملية ووقتها في سجل الطباعة."""
     if not has_role('manager', 'supervisor', 'cashier'):
         return permission_error()
+    payload = request.get_json(silent=True) or {}
+    ticket_type = str(payload.get('type', 'receipt')).strip()
+    if ticket_type not in ('receipt', 'kitchen'):
+        return jsonify({'ok': False, 'error': 'نوع مستند الطباعة غير صالح'}), 400
     data = load()
     order = find_order_anywhere(data, order_id)
     if not order:
         return jsonify({'ok': False, 'error': 'الفاتورة غير موجودة أو ملغاة'}), 404
+    if ticket_type == 'kitchen' and (order.get('kitchen_release') == 'later' or order.get('kitchen_status') == 'held'):
+        return jsonify({'ok': False, 'error': 'لا يمكن إعادة طباعة تذكرة المطبخ قبل إطلاق الطلب للمطبخ'}), 409
     printer = data.get('settings', {}).get('printer', {})
     if printer.get('connection_mode') == 'network':
         configured_printer = bool(str(printer.get('network_host') or '').strip())
@@ -6274,14 +6329,18 @@ def reprint_order(order_id):
         configured_printer = bool(str(printer.get('printer_name') or '').strip())
     if not configured_printer:
         return jsonify({'ok': False, 'error': 'حدد الطابعة أو عنوان طابعة الشبكة أولًا من الإعدادات'}), 400
-    previous = printer.get('auto_print_receipt', False)
-    printer['auto_print_receipt'] = True
+    enabled_key = 'auto_print_receipt' if ticket_type == 'receipt' else 'auto_print_kitchen'
+    previous = printer.get(enabled_key, False)
+    printer[enabled_key] = True
     reprint = dict(order)
-    reprint['is_reprint'] = True
-    result = queue_thermal_print(data, reprint, 'receipt')
-    printer['auto_print_receipt'] = previous
+    reprint.update({'is_reprint': True,
+                    'reprint_requested_by': session.get('username', 'unknown'),
+                    'reprint_requested_role': session.get('role', ''),
+                    'reprint_requested_at': datetime.now().isoformat()})
+    result = queue_thermal_print(data, reprint, ticket_type)
+    printer[enabled_key] = previous
     save(data)
-    return jsonify({'ok': result.get('status') in {'queued', 'submitted', 'sent'}, 'print': result})
+    return jsonify({'ok': result.get('status') in {'queued', 'submitted', 'sent'}, 'type': ticket_type, 'print': result})
 
 
 @app.route('/api/printer/orders/<order_id>/retry', methods=['POST'])
