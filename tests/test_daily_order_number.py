@@ -113,7 +113,8 @@ class DailyOrderNumberTests(unittest.TestCase):
         data = server.load()
         order = {
             'id': 'ORD-0088', 'daily_no': 6, 'timestamp': datetime.now().isoformat(),
-            'type': 'سفري', 'kitchen_status': 'ready', 'items': [], 'total': 0,
+            'type': 'سفري', 'payment': 'نقدي', 'kitchen_status': 'ready',
+            'items': [{'name': 'شاورما', 'price': 10, 'quantity': 1}], 'subtotal': 10, 'total': 10,
         }
         data['orders'].append(order)
         server.save(data, [order['id']])
@@ -133,6 +134,26 @@ class DailyOrderNumberTests(unittest.TestCase):
         self.assertNotIn('ORD-0088', structured)
         legacy_text = server.thermal_receipt_text(receipt_data, {'id': 'ORD-OLD', 'items': []})
         self.assertIn('ORD-OLD', legacy_text)
+
+        self.set_role('manager')
+        report = self.request_api('get', '/api/analytics?period=custom&from=' + order['timestamp'][:10] + '&to=' + order['timestamp'][:10])
+        report_order = next(row for row in report.get_json()['order_details'] if row['id'] == order['id'])
+        self.assertEqual(report_order['id'], 'ORD-0088')
+        self.assertEqual(report_order['display_no'], '6')
+
+    def test_order_screens_use_display_number_and_reset_text_keeps_ord_internal(self):
+        kitchen = (APP_DIR / 'kitchen.html').read_text(encoding='utf-8')
+        waiting = (APP_DIR / 'waiting_screen.html').read_text(encoding='utf-8')
+        orders = (APP_DIR / 'orders_list.html').read_text(encoding='utf-8')
+        analytics = (APP_DIR / 'analytics.html').read_text(encoding='utf-8')
+        shift = (APP_DIR / 'shift.html').read_text(encoding='utf-8')
+
+        self.assertIn('order.display_no||order.id', kitchen)
+        self.assertIn('row.display_no||row.id', waiting)
+        self.assertIn('o.display_no || o.id', orders)
+        self.assertIn('order.display_no || order.id', analytics)
+        self.assertIn('رقم العرض اليومي التالي من <b>1</b>', shift)
+        self.assertIn('ORD الداخلي فريدًا ولا يعاد استخدامه', shift)
 
 
 if __name__ == '__main__':

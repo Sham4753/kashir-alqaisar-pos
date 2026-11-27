@@ -401,7 +401,7 @@ function jsArg(value){return JSON.stringify(String(value??''));}
             lastFilteredOrders.forEach(o => {
                 const itemsText = (o.items || []).map(i => `${i.name} ×${i.quantity || 1}`).join(' | ');
                 rows.push([
-                    o.id || '', (o.date || o.timestamp || '').substring(0, 16), o.type || '',
+                    o.display_no || o.id || '', (o.date || o.timestamp || '').substring(0, 16), o.type || '',
                     itemsText, o.payment || '', o.total || 0, o.voided ? 'ملغى' : 'نشط'
                 ]);
             });

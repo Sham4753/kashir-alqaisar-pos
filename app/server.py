@@ -3860,6 +3860,7 @@ def get_analytics():
             detail_total = original_total
         order_details.append({
             'id': o.get('id', ''),
+            'display_no': display_no(o),
             'date': o.get('timestamp') or o.get('date', ''),
             'type': o.get('type', 'سفري'),
             'payment': o.get('payment', '') or 'غير محدد',

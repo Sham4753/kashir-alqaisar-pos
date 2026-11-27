@@ -80,6 +80,8 @@ class DailyItemsReportTests(unittest.TestCase):
              'accounting_type': 'debt_payment', 'items': [
                  {'name': 'تسديد دين', 'price': 1000, 'quantity': 1},
              ], 'total': 1000},
+            {'id': 'ORD-0005', 'timestamp': stamp, 'subtotal': 200, 'discount_total': 50,
+             'items': [{'name': 'كريسبي', 'price': 100, 'quantity': 2}], 'total': 150},
         ]
         data['orders_archive'] = [
             {'id': 'ORD-0002', 'timestamp': stamp, 'items': [
@@ -87,7 +89,7 @@ class DailyItemsReportTests(unittest.TestCase):
                 {'name': 'شاورما دبل', 'price': 80, 'quantity': 3},
             ], 'total': 290},
         ]
-        server.save(data, ['ORD-0001', 'ORD-0002', 'ORD-0003', 'ORD-0004'])
+        server.save(data, ['ORD-0001', 'ORD-0002', 'ORD-0003', 'ORD-0004', 'ORD-0005'])
 
     def test_report_aggregates_live_and_archived_sales_and_excludes_voids_and_debt(self):
         response = self.request_api('get', '/api/reports/daily-items?date=' + self.today)
@@ -95,15 +97,18 @@ class DailyItemsReportTests(unittest.TestCase):
         body = response.get_json()
         self.assertTrue(body['ok'])
         self.assertEqual(body['currency'], 'SYP')
-        self.assertEqual(body['item_count'], 2)
+        self.assertEqual(body['item_count'], 3)
         rows = {row['name']: row for row in body['items']}
         self.assertEqual(rows['فروجة']['quantity'], 3)
         self.assertEqual(rows['فروجة']['price'], 50)
         self.assertEqual(rows['فروجة']['total'], 150)
         self.assertEqual(rows['شاورما دبل']['quantity'], 3)
         self.assertEqual(rows['شاورما دبل']['total'], 240)
-        self.assertEqual(body['quantity_total'], 6)
-        self.assertEqual(body['sales_total'], 390)
+        self.assertEqual(rows['كريسبي']['quantity'], 2)
+        self.assertEqual(rows['كريسبي']['price'], 100)
+        self.assertEqual(rows['كريسبي']['total'], 200)
+        self.assertEqual(body['quantity_total'], 8)
+        self.assertEqual(body['sales_total'], 590)
         self.assertNotIn('كريسبي ملغى', rows)
         self.assertNotIn('تسديد دين', rows)
 
@@ -129,7 +134,7 @@ class DailyItemsReportTests(unittest.TestCase):
         body = response.get_json()
         self.assertTrue(body['ok'])
         self.assertEqual(body['print']['type'], 'daily_report')
-        self.assertEqual(body['report']['sales_total'], 390)
+        self.assertEqual(body['report']['sales_total'], 590)
         self.assertEqual(submit.call_args.args[4], 80)
         document_text = submit.call_args.args[2]
         self.assertIn(server.RECEIPT_RS + server.RECEIPT_US.join(['C', 'تقرير أصناف اليوم', '1']), document_text)
