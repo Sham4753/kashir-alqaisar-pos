@@ -10,6 +10,10 @@ const retryPath = resolve(process.cwd(), 'app', 'pos-retry.js');
 const retryScript = readFileSync(retryPath, 'utf8');
 const currencyPath = resolve(process.cwd(), 'app', 'currency-manager.js');
 const currencyScript = readFileSync(currencyPath, 'utf8');
+const analyticsPath = resolve(process.cwd(), 'app', 'analytics.html');
+const analytics = readFileSync(analyticsPath, 'utf8');
+const shiftPath = resolve(process.cwd(), 'app', 'shift.html');
+const shift = readFileSync(shiftPath, 'utf8');
 const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)];
 
 function requireText(value, text, message) {
@@ -132,8 +136,31 @@ if ((html.match(/class="action-main"/g) || []).length !== 1 || html.includes('cl
   throw new Error('يجب أن تحتوي شاشة الكاشير على زر إجراء أساسي واحد دون أزرار دفع مكررة');
 }
 
+requireText(analytics, 'id="printDailyItems80" onclick="printDailyItems80Report()"', 'زر تقرير آخر النهار غير مربوط بمعالج التقرير المختصر');
+requireText(analytics, "fetch('/api/printer/daily-report/print'", 'زر التحليلات لا يستدعي مسار طباعة التقرير المختصر');
+requireText(analytics, 'id="dailyItemsTotals"', 'معاينة الملخص المالي النهائي غير موجودة');
+const dailyPreview = analytics.split('id="dailyItemsPreview"')[1]?.split('</section>')[0] || '';
+if (!dailyPreview || dailyPreview.includes('<table') || dailyPreview.includes('سعر الوحدة')) {
+  throw new Error('يجب أن تكون معاينة التقرير سطور أصناف وملخصًا بلا جدول أسعار');
+}
+for (const label of ['المبيع', 'المشتريات', 'الرواتب', 'مصاريف أخرى', 'الصافي']) {
+  requireText(analytics, `['${label}'`, `سطر ${label} غير موجود في ملخص التحليلات`);
+}
+if ((analytics.match(/\/api\/printer\/daily-report\/print/g) || []).length !== 1 ||
+    analytics.includes('window.print') || analytics.includes('printReport()')) {
+  throw new Error('يجب ألا توفر التحليلات طباعة عامة أو مسارًا بديلًا يطبع قائمة الفواتير');
+}
+requireText(shift, 'id="printDailyReportButton"', 'زر تقرير آخر النهار غير موجود في صفحة الوردية');
+requireText(shift, "$('printDailyReportButton').hidden=me.role!=='manager'", 'زر تقرير الوردية يجب أن يظهر للمدير فقط');
+requireText(shift, "if(me?.role!=='manager')return", 'معالج تقرير الوردية لا يتحقق من دور المدير');
+requireText(shift, "json('/api/printer/daily-report/print'", 'زر الوردية لا يستدعي مسار طباعة التقرير المختصر');
+if ((shift.match(/\/api\/printer\/daily-report\/print/g) || []).length !== 1 || shift.includes('window.print')) {
+  throw new Error('صفحة الوردية يجب أن تستخدم مسار التقرير المختصر دون طباعة عامة');
+}
+
 for (const [, script] of scripts) new Function(script);
 new Function(retryScript);
+for (const [, script] of shift.matchAll(/<script>([\s\S]*?)<\/script>/gi)) new Function(script);
 
 const currencyContext = {
   window: { dispatchEvent() {} },

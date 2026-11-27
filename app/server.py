@@ -3954,8 +3954,37 @@ def _report_period_orders(data, period='daily', date_from='', date_to=''):
     return orders
 
 
+def _daily_expense_totals(data, day):
+    """يجمع المصروفات المسجلة في يوم واحد بالعملة الأساسية دون الملغى أو العكوسات."""
+    totals = {'purchases_total': Decimal('0'), 'payroll_total': Decimal('0'),
+              'other_expenses_total': Decimal('0')}
+    empty_ref = (None, '', 0, '0')
+    for expense in data.get('expenses', []) or []:
+        if not isinstance(expense, dict) or str(expense.get('date') or '')[:10] != day:
+            continue
+        if (expense.get('voided') or expense.get('is_reversal')
+                or expense.get('reversal_of') not in empty_ref
+                or expense.get('reversed_by') not in empty_ref):
+            continue
+        try:
+            amount = Decimal(str(expense_amount_base(data, expense)))
+            if not amount.is_finite() or amount <= 0:
+                continue
+        except (InvalidOperation, TypeError, ValueError):
+            continue
+        if expense.get('material_id') is not None:
+            key = 'purchases_total'
+        elif expense.get('employee_id') is not None:
+            key = 'payroll_total'
+        else:
+            key = 'other_expenses_total'
+        totals[key] += amount
+    return {key: float(value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+            for key, value in totals.items()}
+
+
 def daily_items_report(data, report_date=None):
-    """يجمع كميات وأسعار الأصناف المباعة في يوم محدد بالعملة الأساسية (ل.س)."""
+    """يجمع أصناف ومجاميع المبيع والمصروفات الفعلية ليوم محدد بالليرة السورية."""
     day = str(report_date or datetime.now().strftime('%Y-%m-%d'))
     orders = _report_period_orders(data, 'daily', day, day)
     grouped = {}
@@ -3966,36 +3995,28 @@ def daily_items_report(data, report_date=None):
                 continue
             try:
                 quantity = Decimal(str(item.get('quantity', item.get('qty', 1)) or 0))
-                price = Decimal(str(item.get('price', item.get('unit_price', 0)) or 0))
-                if not quantity.is_finite() or not price.is_finite() or quantity <= 0 or price < 0:
+                if not quantity.is_finite() or quantity <= 0:
                     continue
             except (InvalidOperation, TypeError, ValueError):
                 continue
-            unit_price = price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            key = (name, unit_price)
-            row = grouped.setdefault(key, {'name': name, 'quantity': Decimal('0'),
-                                           'price': unit_price, 'total': Decimal('0')})
+            row = grouped.setdefault(name, {'name': name, 'quantity': Decimal('0')})
             row['quantity'] += quantity
-            row['total'] += price * quantity
-    rows = []
-    for key in sorted(grouped, key=lambda value: (value[0].casefold(), value[1])):
-        row = grouped[key]
-        quantity = row['quantity'].quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        rows.append({'name': row['name'], 'quantity': float(quantity),
-                     'price': float(row['price']),
-                     'total': float(row['total'].quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))})
-    sales_total = sum((Decimal(str(row['total'])) for row in rows), Decimal('0'))
+    rows = [
+        {'name': row['name'], 'quantity': float(row['quantity'].quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))}
+        for row in sorted(grouped.values(), key=lambda value: value['name'].casefold())
+    ]
+    sales_total = sum_money(order.get('total', 0) or 0 for order in orders)
+    expenses = _daily_expense_totals(data, day)
+    net_total = round_money(sales_total - expenses['purchases_total']
+                            - expenses['payroll_total'] - expenses['other_expenses_total'])
     quantity_total = sum((Decimal(str(row['quantity'])) for row in rows), Decimal('0'))
     return {'date': day, 'currency': 'SYP', 'items': rows,
             'item_count': len(rows), 'quantity_total': float(quantity_total),
-            'sales_total': float(sales_total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))}
+            'sales_total': sales_total, **expenses, 'net_total': net_total}
 
 
 def thermal_daily_items_structured(data, report):
-    """يبني تقرير أصناف على هيئة أوامر الإيصال المهيكل بعرض 80mm."""
-    settings = data.get('settings', {})
-    restaurant = settings.get('restaurant', {})
-
+    """يبني تذكرة 80mm مختصرة: عنوان وتاريخ وأصناف وخمسة مجاميع فقط."""
     def cmd(*parts):
         return RECEIPT_RS + RECEIPT_US.join(
             str(part).replace('\n', ' ').replace(RECEIPT_RS, '').replace(RECEIPT_US, '') for part in parts
@@ -4016,24 +4037,14 @@ def thermal_daily_items_structured(data, report):
         return f'{amount:,.2f}'.rstrip('0').rstrip('.')
 
     rows = report.get('items', []) or []
-    lines = [cmd('C', restaurant.get('name') or 'كاشير قيصر', 1, 1),
-             cmd('C', 'تقرير أصناف اليوم', 1),
-             cmd('C', 'التاريخ: ' + str(report.get('date', ''))),
-             cmd('C', 'الأسعار بالليرة السورية'), cmd('GAP', 5), cmd('BOX'),
-             cmd('ROW', 1, '44,18,18,20', 'r,c,c,c', 1,
-                 'الصنف', 'العدد', 'سعر الوحدة', 'الإجمالي')]
-    if rows:
-        for item in rows:
-            lines.append(cmd('ROW', 1, '44,18,18,20', 'r,c,c,c', 0,
-                             item.get('name', ''), number(item.get('quantity')),
-                             money(item.get('price')), money(item.get('total'))))
-    else:
-        lines.append(cmd('C', 'لا توجد مبيعات أصناف في هذا اليوم'))
-    lines.extend([cmd('ENDBOX'), cmd('RULE'),
-                  cmd('KV', 'عدد الأصناف', str(report.get('item_count', 0)), 1),
-                  cmd('KV', 'إجمالي الكمية', number(report.get('quantity_total', 0))),
-                  cmd('KV', 'قيمة الأصناف قبل الخصم', money(report.get('sales_total', 0)) + ' ل.س', 1),
-                  cmd('GAP', 8)])
+    lines = [cmd('C', 'تقرير آخر النهار', 1),
+             cmd('C', 'التاريخ: ' + str(report.get('date', '')))]
+    for item in rows:
+        lines.append(cmd('C', number(item.get('quantity')) + '  ' + str(item.get('name', ''))))
+    for label, key in (('المبيع', 'sales_total'), ('المشتريات', 'purchases_total'),
+                       ('الرواتب', 'payroll_total'), ('مصاريف أخرى', 'other_expenses_total'),
+                       ('الصافي', 'net_total')):
+        lines.append(cmd('C', f"{label} = {money(report.get(key, 0))} ل.س"))
     return '\n'.join(lines)
 
 

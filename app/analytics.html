@@ -41,9 +41,8 @@
         <div class="flex items-center justify-between mb-6 no-print">
             <h1 class="text-2xl font-bold text-gray-800"> التقارير المالية والربحية</h1>
             <div class="flex gap-2">
-                <button onclick="printReport()" class="report-action-button bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm"> طباعة / PDF</button>
                 <button onclick="prepareDailyReport()" class="report-action-button bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 text-sm"> تقرير اليوم</button>
-                <button id="printDailyItems80" onclick="printDailyItems80Report()" class="report-action-button bg-slate-800 text-white px-3 py-2 rounded-lg hover:bg-slate-900 text-sm"> طباعة 80mm</button>
+                <button id="printDailyItems80" onclick="printDailyItems80Report()" class="report-action-button bg-slate-800 text-white px-3 py-2 rounded-lg hover:bg-slate-900 text-sm"> طباعة تقرير آخر النهار (80mm)</button>
                 <button id="exportExcelTop" onclick="exportSelectedExcel()" class="report-action-button bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm">⬇ Excel حسب التاريخ</button>
                 <button id="exportPdfTop" onclick="exportSelectedPdf()" class="report-action-button bg-slate-700 text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm">⬇ PDF حسب التاريخ</button>
                 <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩ رجوع</a>
@@ -98,9 +97,9 @@
         </div>
 
         <section id="dailyItemsPreview" class="hidden bg-white rounded-xl shadow-md p-5 mb-6" aria-live="polite">
-            <div class="flex flex-wrap items-center justify-between gap-2 mb-3"><h2 class="text-lg font-bold text-gray-800">تقرير أصناف اليوم</h2><span id="dailyItemsDate" class="text-sm text-gray-500"></span></div>
-            <div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-right"><thead class="bg-slate-100"><tr><th class="p-2">الصنف</th><th class="p-2">العدد</th><th class="p-2">سعر الوحدة</th><th class="p-2">الإجمالي</th></tr></thead><tbody id="dailyItemsBody"></tbody></table></div>
-            <div id="dailyItemsTotal" class="mt-3 text-left font-bold text-slate-800"></div>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3"><h2 class="text-lg font-bold text-gray-800">تقرير آخر النهار</h2><span id="dailyItemsDate" class="text-sm text-gray-500"></span></div>
+            <div id="dailyItemsBody" class="space-y-1"></div>
+            <div id="dailyItemsTotals" class="mt-3 space-y-1 text-left font-bold text-slate-800"></div>
         </section>
 
         <!-- النتائج -->
@@ -191,9 +190,7 @@
                 </div>
             </div>
 
-            <!-- زر طباعة -->
             <div class="no-print flex gap-2">
-                <button onclick="printReport()" class="flex-1 min-h-[56px] bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition"> طباعة / PDF</button>
                 <button id="exportExcelBottom" onclick="openExcelPreview()" class="flex-1 min-h-[56px] bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition"> معاينة ثم تصدير Excel</button>
                 <button onclick="exportSelectedExcel()" class="flex-1 min-h-[56px] bg-emerald-700 text-white font-bold py-3 rounded-lg hover:bg-emerald-800 transition">⬇ Excel حسب التاريخ</button>
                 <button onclick="exportSelectedPdf()" class="flex-1 min-h-[56px] bg-slate-700 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition">⬇ PDF حسب التاريخ</button>
@@ -503,28 +500,29 @@
 
         async function printDailyItems80Report() {
             const button = document.getElementById('printDailyItems80');
-            const day = document.getElementById('dateTo').value || todayIso();
+            const day = todayIso();
             button.disabled = true;
             const originalText = button.textContent;
             button.textContent = 'جارِ تجهيز التقرير…';
             try {
-                const query = new URLSearchParams({ date: day });
-                const reportResponse = await fetch('/api/reports/daily-items?' + query.toString(), { cache: 'no-store' });
-                const report = await reportResponse.json();
-                if (!reportResponse.ok || !report.ok) throw new Error(report.error || 'تعذر تحميل تقرير الأصناف');
-                document.getElementById('dailyItemsDate').textContent = 'التاريخ: ' + report.date;
-                const rows = Array.isArray(report.items) ? report.items : [];
-                document.getElementById('dailyItemsBody').innerHTML = rows.length ? rows.map(item => `<tr class="border-t"><td class="p-2 font-bold">${escapeHtml(item.name)}</td><td class="p-2">${Number(item.quantity || 0).toLocaleString('ar')}</td><td class="p-2">${formatPrice(item.price || 0)}</td><td class="p-2">${formatPrice(item.total || 0)}</td></tr>`).join('') : '<tr><td colspan="4" class="p-4 text-center text-gray-500">لا توجد مبيعات أصناف في هذا اليوم</td></tr>';
-                document.getElementById('dailyItemsTotal').textContent = 'قيمة الأصناف قبل الخصم: ' + formatPrice(report.sales_total || 0);
-                document.getElementById('dailyItemsPreview').classList.remove('hidden');
-                button.textContent = 'جارِ الإرسال للطابعة…';
                 const printResponse = await fetch('/api/printer/daily-report/print', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ date: report.date })
+                    body: JSON.stringify({ date: day })
                 });
                 const result = await printResponse.json();
                 if (!printResponse.ok || !result.ok) throw new Error(result.error || result.print?.message || 'فشل إرسال التقرير للطابعة');
-                showToast(' تم إرسال تقرير الأصناف إلى الطابعة 80mm');
+                const report = result.report || {};
+                document.getElementById('dailyItemsDate').textContent = 'التاريخ: ' + report.date;
+                const rows = Array.isArray(report.items) ? report.items : [];
+                document.getElementById('dailyItemsBody').innerHTML = rows.map(item => `<div class="py-1">${Number(item.quantity || 0).toLocaleString('ar-SY')}  ${escapeHtml(item.name)}</div>`).join('');
+                const syp = value => Number(value || 0).toLocaleString('ar-SY', { maximumFractionDigits: 2 }) + ' ل.س';
+                document.getElementById('dailyItemsTotals').innerHTML = [
+                    ['المبيع', report.sales_total], ['المشتريات', report.purchases_total],
+                    ['الرواتب', report.payroll_total], ['مصاريف أخرى', report.other_expenses_total],
+                    ['الصافي', report.net_total],
+                ].map(([label, amount]) => `<div>${label} = ${syp(amount)}</div>`).join('');
+                document.getElementById('dailyItemsPreview').classList.remove('hidden');
+                showToast(' تم إرسال تقرير آخر النهار المختصر إلى الطابعة 80mm');
             } catch (error) {
                 showToast(' ' + (error.message || 'تعذر طباعة تقرير الأصناف'));
             } finally {
@@ -553,8 +551,7 @@
                 const response = await fetch('/api/analytics/financial.pdf?' + reportParams().toString());
                 if (!response.ok) {
                     if (response.status === 503) {
-                        showToast('ℹ مولّد PDF غير مضمّن؛ افتح الطباعة واحفظ التقرير المحدد كـPDF');
-                        printReport();
+                        showToast('ℹ مولّد PDF غير مضمّن في هذه النسخة.');
                         return;
                     }
                     const data = await response.json().catch(() => ({}));
@@ -575,15 +572,6 @@
             } finally {
                 if (button) { button.disabled = false; button.textContent = previousLabel || '⬇ PDF يومي'; button.classList.remove('opacity-70', 'cursor-wait'); }
             }
-        }
-
-        function printReport() {
-            const results = document.getElementById('results');
-            if (results.classList.contains('hidden')) {
-                showToast(' اعرض التقرير أولاً');
-                return;
-            }
-            window.print();
         }
 
         function downloadCSV(filename, rows) {

@@ -44,6 +44,8 @@ class DailyItemsReportTests(unittest.TestCase):
                     {'username': 'supervisor', 'role': 'supervisor'},
                 ],
             },
+            'employees': [{'id': 1, 'name': 'موظف اختبار', 'salary': 9000}],
+            'expenses': [],
         }
         Path(server.DATA_FILE).write_text(json.dumps(fixture, ensure_ascii=False), encoding='utf-8')
         server.app.config['TESTING'] = True
@@ -81,13 +83,32 @@ class DailyItemsReportTests(unittest.TestCase):
                  {'name': 'تسديد دين', 'price': 1000, 'quantity': 1},
              ], 'total': 1000},
             {'id': 'ORD-0005', 'timestamp': stamp, 'subtotal': 200, 'discount_total': 50,
-             'items': [{'name': 'كريسبي', 'price': 100, 'quantity': 2}], 'total': 150},
+             'rounding_adjustment': 5,
+             'items': [{'name': 'كريسبي', 'price': 100, 'quantity': 2}], 'total': 155},
         ]
         data['orders_archive'] = [
             {'id': 'ORD-0002', 'timestamp': stamp, 'items': [
                 {'name': 'فروجة', 'price': 50, 'quantity': 1},
+                {'name': 'فروجة', 'price': 60, 'quantity': 1},
                 {'name': 'شاورما دبل', 'price': 80, 'quantity': 3},
-            ], 'total': 290},
+            ], 'total': 350},
+        ]
+        data['expenses'] = [
+            {'id': 1, 'material_id': 10, 'amount': 300, 'amount_base': 100,
+             'date': stamp, 'payment': 'نقدي'},
+            {'id': 2, 'employee_id': 1, 'amount': 40, 'amount_base': 40,
+             'date': stamp, 'category': 'رواتب'},
+            {'id': 3, 'amount': 80, 'amount_base': 20, 'date': stamp,
+             'category': 'كهرباء'},
+            {'id': 4, 'material_id': 11, 'amount': 700, 'amount_base': 700,
+             'date': stamp, 'voided': True},
+            {'id': 5, 'employee_id': 1, 'amount': 90, 'amount_base': 90,
+             'date': stamp, 'voided': True},
+            {'id': 6, 'material_id': 12, 'amount': 200, 'amount_base': 200,
+             'date': stamp, 'is_reversal': True},
+            {'id': 7, 'amount': 50, 'amount_base': -50, 'date': stamp},
+            {'id': 8, 'material_id': 13, 'amount': 999, 'amount_base': 999,
+             'date': '2020-01-01T09:00:00'},
         ]
         server.save(data, ['ORD-0001', 'ORD-0002', 'ORD-0003', 'ORD-0004', 'ORD-0005'])
 
@@ -99,18 +120,30 @@ class DailyItemsReportTests(unittest.TestCase):
         self.assertEqual(body['currency'], 'SYP')
         self.assertEqual(body['item_count'], 3)
         rows = {row['name']: row for row in body['items']}
-        self.assertEqual(rows['فروجة']['quantity'], 3)
-        self.assertEqual(rows['فروجة']['price'], 50)
-        self.assertEqual(rows['فروجة']['total'], 150)
+        self.assertEqual(rows['فروجة']['quantity'], 4)
         self.assertEqual(rows['شاورما دبل']['quantity'], 3)
-        self.assertEqual(rows['شاورما دبل']['total'], 240)
         self.assertEqual(rows['كريسبي']['quantity'], 2)
-        self.assertEqual(rows['كريسبي']['price'], 100)
-        self.assertEqual(rows['كريسبي']['total'], 200)
-        self.assertEqual(body['quantity_total'], 8)
-        self.assertEqual(body['sales_total'], 590)
+        self.assertEqual(body['quantity_total'], 9)
+        self.assertEqual(body['sales_total'], 605)
+        self.assertEqual(body['purchases_total'], 100)
+        self.assertEqual(body['payroll_total'], 40)
+        self.assertEqual(body['other_expenses_total'], 20)
+        self.assertEqual(body['net_total'], 445)
         self.assertNotIn('كريسبي ملغى', rows)
         self.assertNotIn('تسديد دين', rows)
+
+    def test_day_without_expenses_has_zero_cost_totals_and_net_equals_sales(self):
+        data = server.load()
+        data['expenses'] = []
+        server.save(data)
+        response = self.request_api('get', '/api/reports/daily-items?date=' + self.today)
+        self.assertEqual(response.status_code, 200)
+        report = response.get_json()
+        self.assertEqual(report['purchases_total'], 0)
+        self.assertEqual(report['payroll_total'], 0)
+        self.assertEqual(report['other_expenses_total'], 0)
+        self.assertEqual(report['sales_total'], 605)
+        self.assertEqual(report['net_total'], 605)
 
     def test_daily_report_endpoints_are_manager_only(self):
         for role in ('cashier', 'supervisor'):
@@ -134,14 +167,29 @@ class DailyItemsReportTests(unittest.TestCase):
         body = response.get_json()
         self.assertTrue(body['ok'])
         self.assertEqual(body['print']['type'], 'daily_report')
-        self.assertEqual(body['report']['sales_total'], 590)
+        self.assertEqual(body['report']['sales_total'], 605)
+        self.assertEqual(body['report']['purchases_total'], 100)
+        self.assertEqual(body['report']['payroll_total'], 40)
+        self.assertEqual(body['report']['other_expenses_total'], 20)
+        self.assertEqual(body['report']['net_total'], 445)
         self.assertEqual(submit.call_args.args[4], 80)
         document_text = submit.call_args.args[2]
-        self.assertIn(server.RECEIPT_RS + server.RECEIPT_US.join(['C', 'تقرير أصناف اليوم', '1']), document_text)
-        self.assertIn('فروجة', document_text)
-        self.assertIn('شاورما دبل', document_text)
-        self.assertIn('ROW', document_text)
-        self.assertIn('BOX', document_text)
+        commands = [line[1:].split(server.RECEIPT_US) for line in document_text.splitlines()]
+        self.assertTrue(commands)
+        self.assertTrue(all(parts[0] == 'C' for parts in commands))
+        printed_lines = [parts[1] for parts in commands]
+        self.assertEqual(printed_lines[:2], ['تقرير آخر النهار', 'التاريخ: ' + self.today])
+        self.assertEqual(printed_lines[2:5], [
+            f"{int(item['quantity'])}  {item['name']}" for item in body['report']['items']
+        ])
+        self.assertEqual(printed_lines[-5:], [
+            'المبيع = 605 ل.س', 'المشتريات = 100 ل.س', 'الرواتب = 40 ل.س',
+            'مصاريف أخرى = 20 ل.س', 'الصافي = 445 ل.س',
+        ])
+        self.assertNotIn('ORD-', document_text)
+        self.assertNotIn('DAILY-REPORT', document_text)
+        self.assertNotIn('السعر', document_text)
+        self.assertNotIn('الفاتورة', document_text)
         saved = server.load()
         entries = [row for row in saved.get('print_log', []) if row.get('type') == 'daily_report']
         self.assertEqual(len(entries), 1)
