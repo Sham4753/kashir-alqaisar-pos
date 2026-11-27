@@ -1548,6 +1548,17 @@ def as_money(value, default=None):
         return default
 
 
+def as_signed_money(value, default=None):
+    """ينظم مبلغًا موقّعًا إلى منزلتين دون تحويل الإشارة السالبة إلى قيمة افتراضية."""
+    try:
+        amount = Decimal(str(value))
+        if not amount.is_finite():
+            return default
+        return float(amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+    except (InvalidOperation, TypeError, ValueError):
+        return default
+
+
 KITCHEN_STATION_LABELS = {
     'main': 'المطبخ الرئيسي', 'grill': 'الشواية', 'drinks': 'المشروبات',
     'fryer': 'المقالي', 'dessert': 'الحلويات',
@@ -1646,14 +1657,26 @@ def normalize_payment(total, payload):
     if payment not in {'نقدي', 'بطاقة', 'مختلط'}:
         return None, 'طريقة الدفع غير صالحة'
     if payment == 'نقدي':
-        return {'payment': payment, 'cash_amount': total, 'card_amount': 0}, None
+        received = as_money(payload.get('cash_received', total))
+        if received is None or received < total:
+            return None, 'المبلغ المستلم أقل من إجمالي الفاتورة'
+        return {'payment': payment, 'cash_amount': total, 'card_amount': 0,
+                'cash_received': received, 'change_due': round_money(received - total)}, None
     if payment == 'بطاقة':
-        return {'payment': payment, 'cash_amount': 0, 'card_amount': total}, None
+        received = as_money(payload.get('cash_received', 0), 0)
+        if received is None or received != 0:
+            return None, 'لا يُقبل مبلغ نقدي مستلم مع الدفع بالبطاقة فقط'
+        return {'payment': payment, 'cash_amount': 0, 'card_amount': total,
+                'cash_received': 0, 'change_due': 0}, None
     cash = as_money(payload.get('cash_amount'))
     card = as_money(payload.get('card_amount'))
     if cash is None or card is None or round_money(cash + card) != round_money(total):
         return None, 'مبالغ الدفع المختلط يجب أن تساوي إجمالي الفاتورة'
-    return {'payment': payment, 'cash_amount': cash, 'card_amount': card}, None
+    received = as_money(payload.get('cash_received', cash))
+    if received is None or received < cash:
+        return None, 'المبلغ النقدي المستلم أقل من الحصة النقدية'
+    return {'payment': payment, 'cash_amount': cash, 'card_amount': card,
+            'cash_received': received, 'change_due': round_money(received - cash)}, None
 
 
 DEFAULT_MANAGER_APPROVAL_POLICY = {
@@ -1661,6 +1684,24 @@ DEFAULT_MANAGER_APPROVAL_POLICY = {
     'discount_amount_limit': 0.0,
     'require_void_refund': True,
 }
+DEFAULT_CASHIER_ROUNDING_LIMIT_PERCENT = 5.0
+
+
+def cashier_rounding_approval_required(base_total, adjustment):
+    """تتطلب التسوية موافقة إذا تجاوز مقدارها 5% من الصافي قبل التسوية."""
+    try:
+        base = Decimal(str(base_total or 0))
+        value = Decimal(str(adjustment or 0))
+        limit = Decimal(str(DEFAULT_CASHIER_ROUNDING_LIMIT_PERCENT))
+        if not base.is_finite() or not value.is_finite() or base < 0:
+            return True
+        if value == 0:
+            return False
+        if base == 0:
+            return True
+        return abs(value) * Decimal('100') > base * limit
+    except (InvalidOperation, TypeError, ValueError):
+        return True
 
 
 def manager_approval_policy(data):
@@ -1823,13 +1864,53 @@ def orders():
             return jsonify({'ok': False, 'error': 'الخصم أكبر من إجمالي الفاتورة'}), 400
         total = round_money(after_percent - discount_amount)
         total_discount = round_money(subtotal - total)
+        snap = currency_snapshot(data)
+        adjustment_input = as_signed_money(payload.get('rounding_adjustment', 0), 0)
+        if adjustment_input is None:
+            return jsonify({'ok': False, 'error': 'تسوية مبلغ الفاتورة غير صالحة'}), 400
+        if snap['currency'] != 'SYP' and snap['exchange_rate'] <= 0:
+            if adjustment_input:
+                return jsonify({'ok': False, 'error': 'يلزم ضبط سعر الصرف قبل إدخال تسوية بعملة أجنبية'}), 400
+            rounding_adjustment = 0
+        else:
+            rounding_adjustment = amount_in_base(data, adjustment_input, snap['currency'], snap['exchange_rate'])
+        if rounding_adjustment is None:
+            return jsonify({'ok': False, 'error': 'تعذر تحويل تسوية الفاتورة إلى العملة الأساسية'}), 400
+        base_total = total
+        total = round_money(base_total + rounding_adjustment)
+        if total < 0:
+            return jsonify({'ok': False, 'error': 'لا يمكن أن تجعل التسوية إجمالي الفاتورة سالباً'}), 400
         approval_record = None
-        needs_approval, approval_policy = manager_approval_required(data, max(discount_pct, effective_discount_pct(subtotal, total_discount)), total_discount)
-        if needs_approval:
-            approval_record, approval_error = verify_manager_approval(data, payload, 'خصم فاتورة', total_discount)
+        discount_needs_approval, _ = manager_approval_required(
+            data, max(discount_pct, effective_discount_pct(subtotal, total_discount)), total_discount)
+        rounding_needs_approval = cashier_rounding_approval_required(base_total, rounding_adjustment)
+        if discount_needs_approval or rounding_needs_approval:
+            if discount_needs_approval and rounding_needs_approval:
+                approval_action = 'خصم وتسوية مبلغ الفاتورة'
+                approval_amount = round_money(total_discount + abs(rounding_adjustment))
+            elif rounding_needs_approval:
+                approval_action = 'تسوية مبلغ الفاتورة'
+                approval_amount = abs(rounding_adjustment)
+            else:
+                approval_action = 'خصم فاتورة'
+                approval_amount = total_discount
+            approval_record, approval_error = verify_manager_approval(data, payload, approval_action, approval_amount)
             if approval_error:
                 return approval_error
-        payment_data, payment_error = normalize_payment(total, payload)
+            approval_record['rounding_adjustment'] = rounding_adjustment
+        payment_payload = dict(payload)
+        if 'cash_received' in payload:
+            received_input = as_money(payload.get('cash_received'))
+            if received_input is None:
+                return jsonify({'ok': False, 'error': 'المبلغ المستلم غير صالح'}), 400
+            if snap['currency'] != 'SYP':
+                received_base = amount_in_base(data, received_input, snap['currency'], snap['exchange_rate'])
+            else:
+                received_base = received_input
+            if received_base is None:
+                return jsonify({'ok': False, 'error': 'تعذر تحويل المبلغ المستلم إلى العملة الأساسية'}), 400
+            payment_payload['cash_received'] = received_base
+        payment_data, payment_error = normalize_payment(total, payment_payload)
         if payment_error:
             return jsonify({'ok': False, 'error': payment_error}), 400
         order_type = str(payload.get('type', 'سفري') or 'سفري')
@@ -1841,10 +1922,12 @@ def orders():
         o = {
             'id': next_order_id(data), 'timestamp': datetime.now().isoformat(), 'items': items,
             'subtotal': subtotal, 'discount_pct': discount_pct, 'discount_amount': discount_amount,
-            'discount_total': total_discount,
+            'discount_total': total_discount, 'rounding_adjustment': rounding_adjustment,
             'total': total, 'type': order_type, 'note': str(payload.get('note', ''))[:500],
             'customer': str(payload.get('customer', ''))[:120], 'table': str(payload.get('table', ''))[:60],
             'cashier_name': session.get('username', 'غير محدد'),
+            'rounding_adjustment_by': session.get('username', 'غير محدد') if rounding_adjustment else '',
+            'rounding_adjustment_at': datetime.now().isoformat() if rounding_adjustment else '',
             'kitchen_status': 'held' if kitchen_release == 'later' else 'new', 'kitchen_release': kitchen_release,
             **payment_data
         }
@@ -1852,7 +1935,6 @@ def orders():
             approval_record['reference_id'] = o['id']; o['manager_approval'] = approval_record
         if order_type == 'ديليفري':
             o['delivery_status'] = 'pending'
-        snap = currency_snapshot(data, payload)
         o['currency'] = snap['currency']; o['exchange_rate'] = snap['exchange_rate']
         data.setdefault('orders', []).append(o)
         if payment_data.get('cash_amount', 0):
@@ -1875,7 +1957,12 @@ def orders():
         if drawer_result:
             o['cash_drawer_status'] = drawer_result
         save(data, [o['id']]); backup()
-        return jsonify({'ok': True, 'id': o['id'], 'total': total, 'print': {'receipt': receipt_print, 'kitchen': kitchen_print}, 'drawer': drawer_result})
+        return jsonify({'ok': True, 'id': o['id'], 'total': total,
+                        'rounding_adjustment': rounding_adjustment,
+                        'cash_received': payment_data.get('cash_received', 0),
+                        'change_due': payment_data.get('change_due', 0),
+                        'currency': snap['currency'], 'exchange_rate': snap['exchange_rate'],
+                        'print': {'receipt': receipt_print, 'kitchen': kitchen_print}, 'drawer': drawer_result})
     include_voided = request.args.get('include_voided', '').strip().lower() in {'1', 'true', 'yes'}
     all_orders = data.get('orders', []) + data.get('orders_archive', [])
     if not include_voided:
@@ -2298,8 +2385,12 @@ def edit_order_items(order_id):
             after_percent = round_money(subtotal * (1 - discount_pct / 100))
             if fixed_discount > after_percent:
                 return jsonify({'ok': False, 'error': 'الخصم المحفوظ أكبر من إجمالي الأصناف الجديدة'}), 400
-            new_total = round_money(after_percent - fixed_discount)
-            total_discount = round_money(subtotal - new_total)
+            new_base_total = round_money(after_percent - fixed_discount)
+            total_discount = round_money(subtotal - new_base_total)
+            rounding_adjustment = round_money(order.get('rounding_adjustment', 0) or 0)
+            new_total = round_money(new_base_total + rounding_adjustment)
+            if new_total < 0:
+                return jsonify({'ok': False, 'error': 'التسوية المحفوظة تجعل إجمالي الفاتورة المعدلة سالباً'}), 400
 
             old_total = round_money(order.get('total', 0))
             payment = order.get('payment', 'نقدي')
@@ -2359,11 +2450,21 @@ def edit_order_items(order_id):
             edit_history = order.setdefault('edit_history', [])
             edit_history.append({'date': datetime.now().isoformat(), 'reason': reason,
                                  'old_items': order.get('items', []), 'old_subtotal': order.get('subtotal'),
-                                 'old_total': old_total, 'old_cash_amount': old_cash, 'old_card_amount': old_card})
-            order.update({'items': items, 'subtotal': subtotal, 'discount_pct': discount_pct,
-                          'discount_amount': fixed_discount, 'discount_total': total_discount,
-                          'total': new_total, 'cash_amount': new_cash, 'card_amount': new_card,
-                          'edited': True, 'last_edit_reason': reason, 'last_edited_at': datetime.now().isoformat()})
+                                 'old_total': old_total, 'old_rounding_adjustment': rounding_adjustment,
+                                 'old_cash_amount': old_cash, 'old_card_amount': old_card,
+                                 'old_cash_received': order.get('cash_received'), 'old_change_due': order.get('change_due')})
+            tracks_cash_received = 'cash_received' in order or 'change_due' in order
+            change_due = round_money(order.get('change_due', 0) or 0)
+            order_updates = {'items': items, 'subtotal': subtotal, 'discount_pct': discount_pct,
+                             'discount_amount': fixed_discount, 'discount_total': total_discount,
+                             'total': new_total, 'cash_amount': new_cash, 'card_amount': new_card,
+                             'edited': True, 'last_edit_reason': reason, 'last_edited_at': datetime.now().isoformat()}
+            if 'rounding_adjustment' in order or rounding_adjustment:
+                order_updates['rounding_adjustment'] = rounding_adjustment
+            order.update(order_updates)
+            if tracks_cash_received:
+                order['cash_received'] = round_money(new_cash + change_due)
+                order['change_due'] = change_due
 
             # فروق التحصيل تسجل كسطور جديدة ولا تمحو أثر القبض الأصلي.
             for channel, old_amount, new_amount in (('cash', old_cash, new_cash), ('card', old_card, new_card)):
@@ -3498,7 +3599,9 @@ def get_analytics():
             if order_subtotal is None:
                 order_subtotal = sum_money((row.get('price', 0) or 0) * (row.get('quantity', row.get('qty', 1)) or 0) for row in o.get('items', []))
             order_total = round_money(o.get('total', 0))
-            net_factor = order_total / order_subtotal if order_subtotal else 0
+            order_adjustment = round_money(o.get('rounding_adjustment', 0) or 0)
+            item_revenue = max(0, round_money(order_total - order_adjustment))
+            net_factor = item_revenue / order_subtotal if order_subtotal else 0
             item_total = qty * price * net_factor
             entry = item_sales.setdefault(name, {'quantity': 0, 'total': 0, 'cost_total': 0, 'uncosted': False, 'dates': {}})
             entry['quantity'] += qty
@@ -3540,16 +3643,19 @@ def get_analytics():
     def selected_order_total(order):
         if not (category_filter or product_filter):
             return round_money(order.get('total', 0))
+        order_total = round_money(order.get('total', 0))
+        item_revenue = max(0, round_money(order_total - round_money(order.get('rounding_adjustment', 0) or 0)))
         gross = sum((item.get('price', 0) or 0) * (item.get('quantity', item.get('qty', 1)) or 0)
                     for item in order.get('items', []) if item.get('name', '') in filtered_items)
         subtotal = order.get('subtotal')
         if subtotal is None:
             subtotal = sum_money((item.get('price', 0) or 0) * (item.get('quantity', item.get('qty', 1)) or 0)
                                  for item in order.get('items', []))
-        return round_money(gross * round_money(order.get('total', 0)) / subtotal) if subtotal else 0.0
+        return round_money(gross * item_revenue / subtotal) if subtotal else 0.0
 
     selected_orders = [order for order in orders if order_matches_filter(order)]
     total_sales = sum_money(selected_order_total(order) for order in selected_orders)
+    total_rounding_adjustments = sum_money(o.get('rounding_adjustment', 0) or 0 for o in selected_orders)
     total_orders = len(selected_orders)
 
     # 1. متوسط قيمة الطلب
@@ -3667,13 +3773,14 @@ def get_analytics():
             card_amount = o.get('total', 0) if pm == 'بطاقة' else 0
         if category_filter or product_filter:
             order_total = round_money(o.get('total', 0))
+            item_revenue = max(0, round_money(order_total - round_money(o.get('rounding_adjustment', 0) or 0)))
             original_subtotal = o.get('subtotal')
             if original_subtotal is None:
                 original_subtotal = sum_money((i.get('price', 0) or 0) * (i.get('quantity', i.get('qty', 1)) or 0) for i in o.get('items', []))
             selected_gross = sum((i.get('price', 0) or 0) * (i.get('quantity', i.get('qty', 1)) or 0)
                                  for i in o.get('items', [])
                                  if i.get('name', '') in filtered_items)
-            selected_total = selected_gross * order_total / original_subtotal if original_subtotal else 0
+            selected_total = selected_gross * item_revenue / original_subtotal if original_subtotal else 0
             tender_ratio = selected_total / order_total if order_total else 0
             cash_amount, card_amount = round_money(cash_amount * tender_ratio), round_money(card_amount * tender_ratio)
         total_cash += cash_amount
@@ -3698,9 +3805,11 @@ def get_analytics():
         if original_subtotal is None:
             original_subtotal = sum((i.get('price', 0) or 0) * (i.get('quantity', i.get('qty', 1)) or 0) for i in o.get('items', []))
         original_total = o.get('total', 0) or 0
+        rounding_adjustment = round_money(o.get('rounding_adjustment', 0) or 0)
+        item_revenue = max(0, round_money(original_total - rounding_adjustment))
         discount_amount = o.get('discount_total')
         if discount_amount is None:
-            discount_amount = max(0, (original_subtotal or 0) - original_total)
+            discount_amount = max(0, (original_subtotal or 0) - item_revenue)
         filtered_subtotal = sum(i['total'] for i in detail_items)
         if category_filter or product_filter:
             ratio = (filtered_subtotal / original_subtotal) if original_subtotal else 0
@@ -3719,6 +3828,10 @@ def get_analytics():
             'cashier_name': o.get('cashier_name', 'غير معروف'),
             'subtotal': round(filtered_subtotal, 2),
             'discount': round(discount_amount if not (category_filter or product_filter) else discount_amount * (filtered_subtotal / original_subtotal if original_subtotal else 0), 2),
+            'rounding_adjustment': rounding_adjustment,
+            'rounding_adjustment_by': o.get('rounding_adjustment_by', ''),
+            'cash_received': round_money(o.get('cash_received', 0) or 0),
+            'change_due': round_money(o.get('change_due', 0) or 0),
             'total': round(detail_total, 2),
             'voided': bool(o.get('voided')),
             'print_status': order_print_status_label(o),
@@ -3733,6 +3846,7 @@ def get_analytics():
     return jsonify({
         "period": period,
         "total_sales": total_sales,
+        "total_rounding_adjustments": total_rounding_adjustments,
         "total_orders": total_orders,
         "avg_order": round(avg_order, 2),
         "types": type_stats,
@@ -3836,12 +3950,15 @@ def financial_report_payload(data, period='daily', date_from='', date_to='', cas
         cashier = order.get('cashier_name') or 'غير معروف'
         row = cashier_rows.setdefault(cashier, {
             'cashier': cashier, 'orders': 0, 'sales': 0.0, 'cash': 0.0, 'card': 0.0,
-            'discounts': 0.0, 'dine_in_orders': 0, 'takeaway_orders': 0, 'delivery_orders': 0
+            'discounts': 0.0, 'rounding_adjustments': 0.0,
+            'dine_in_orders': 0, 'takeaway_orders': 0, 'delivery_orders': 0
         })
         total = round_money(order.get('total', 0) or 0)
         subtotal = round_money(order.get('subtotal', total) or total)
+        rounding_adjustment = round_money(order.get('rounding_adjustment', 0) or 0)
         discount_value = order.get('discount_total')
-        discount = round_money(max(0, subtotal - total) if discount_value is None else (discount_value or 0))
+        discount = round_money(max(0, subtotal - round_money(total - rounding_adjustment))
+                               if discount_value is None else (discount_value or 0))
         cash_amount = order.get('cash_amount')
         card_amount = order.get('card_amount')
         if cash_amount is None and card_amount is None:
@@ -3852,6 +3969,7 @@ def financial_report_payload(data, period='daily', date_from='', date_to='', cas
         row['cash'] += round_money(cash_amount or 0)
         row['card'] += round_money(card_amount or 0)
         row['discounts'] += discount
+        row['rounding_adjustments'] += rounding_adjustment
         order_type = order.get('type', 'سفري')
         if order_type == 'صالة':
             row['dine_in_orders'] += 1
@@ -3862,7 +3980,7 @@ def financial_report_payload(data, period='daily', date_from='', date_to='', cas
     cashier_summary = []
     for row in cashier_rows.values():
         row['average_order'] = round_money(row['sales'] / row['orders']) if row['orders'] else 0
-        for key in ('sales', 'cash', 'card', 'discounts'):
+        for key in ('sales', 'cash', 'card', 'discounts', 'rounding_adjustments'):
             row[key] = round_money(row[key])
         cashier_summary.append(row)
     cashier_summary.sort(key=lambda row: (-row['sales'], row['cashier']))
@@ -3878,6 +3996,7 @@ def financial_report_payload(data, period='daily', date_from='', date_to='', cas
         'cashbook': [normalized_cash_movement(data, row) for row in sorted(cashbook, key=lambda row: str(row.get('timestamp', '')), reverse=True)],
         'summary': {
             'sales': sum_money(order.get('total', 0) or 0 for order in orders), 'orders': len(orders),
+            'rounding_adjustments': sum_money(order.get('rounding_adjustment', 0) or 0 for order in orders),
             'cash_in': round_money(cash_in), 'cash_out': round_money(cash_out), 'cash_balance': round_money(cash_in - cash_out),
             'card_in': round_money(card_in), 'card_out': round_money(card_out), 'card_balance': round_money(card_in - card_out)
         }
@@ -3920,9 +4039,9 @@ def create_financial_xlsx(report):
     """ينشئ ملف Excel حقيقيًا بأربع أوراق باستخدام مكتبات Python القياسية فقط."""
     summary = report['summary']
     sheets = [
-        ('الملخص المالي', [['تقرير مالي ومبيعات - كاشير قيصر'], ['الفترة', report['period']], ['من', report['from'] or '—'], ['إلى', report['to'] or '—'], [], ['البند', 'القيمة'], ['إجمالي المبيعات', summary['sales']], ['عدد الفواتير', summary['orders']], ['نقد داخل', summary['cash_in']], ['نقد خارج', summary['cash_out']], ['رصيد النقد', summary['cash_balance']], ['بطاقة داخل', summary['card_in']], ['بطاقة خارج', summary['card_out']], ['رصيد البطاقات', summary['card_balance']]]),
-        ('مبيعات الكاشير قيصر', [['الكاشير قيصر', 'عدد الفواتير', 'المبيعات', 'النقد', 'البطاقات', 'الخصومات', 'متوسط الفاتورة', 'صالة', 'سفري', 'ديليفري']] + [[row['cashier'], row['orders'], row['sales'], row['cash'], row['card'], row['discounts'], row['average_order'], row['dine_in_orders'], row['takeaway_orders'], row['delivery_orders']] for row in report['cashier_summary']]),
-        ('الفواتير', [['رقم الفاتورة', 'التاريخ', 'الكاشير قيصر', 'النوع', 'الدفع', 'النقد', 'البطاقات', 'الخصم', 'الإجمالي', 'حالة الطباعة', 'الطاولة', 'الزبون', 'الأصناف']] + [[order.get('id', ''), order.get('timestamp') or order.get('date', ''), order.get('cashier_name', 'غير معروف'), order.get('type', 'سفري'), order.get('payment', ''), order.get('cash_amount', ''), order.get('card_amount', ''), order.get('discount_total', max(0, (order.get('subtotal') or 0) - (order.get('total') or 0))), order.get('total', 0), order_print_status_label(order), order.get('table', ''), order.get('customer', ''), '، '.join(f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', []))] for order in report['orders']]),
+        ('الملخص المالي', [['تقرير مالي ومبيعات - كاشير قيصر'], ['الفترة', report['period']], ['من', report['from'] or '—'], ['إلى', report['to'] or '—'], [], ['البند', 'القيمة'], ['إجمالي المبيعات', summary['sales']], ['تسويات الفواتير', summary.get('rounding_adjustments', 0)], ['عدد الفواتير', summary['orders']], ['نقد داخل', summary['cash_in']], ['نقد خارج', summary['cash_out']], ['رصيد النقد', summary['cash_balance']], ['بطاقة داخل', summary['card_in']], ['بطاقة خارج', summary['card_out']], ['رصيد البطاقات', summary['card_balance']]]),
+        ('مبيعات الكاشير قيصر', [['الكاشير قيصر', 'عدد الفواتير', 'المبيعات', 'النقد', 'البطاقات', 'الخصومات', 'تسويات الفواتير', 'متوسط الفاتورة', 'صالة', 'سفري', 'ديليفري']] + [[row['cashier'], row['orders'], row['sales'], row['cash'], row['card'], row['discounts'], row['rounding_adjustments'], row['average_order'], row['dine_in_orders'], row['takeaway_orders'], row['delivery_orders']] for row in report['cashier_summary']]),
+        ('الفواتير', [['رقم الفاتورة', 'التاريخ', 'الكاشير قيصر', 'النوع', 'الدفع', 'النقد', 'البطاقات', 'الخصم', 'تسوية الفاتورة', 'الإجمالي', 'حالة الطباعة', 'الطاولة', 'الزبون', 'الأصناف']] + [[order.get('id', ''), order.get('timestamp') or order.get('date', ''), order.get('cashier_name', 'غير معروف'), order.get('type', 'سفري'), order.get('payment', ''), order.get('cash_amount', ''), order.get('card_amount', ''), order.get('discount_total', max(0, (order.get('subtotal') or 0) - (order.get('total', 0) - order.get('rounding_adjustment', 0)))), order.get('rounding_adjustment', 0), order.get('total', 0), order_print_status_label(order), order.get('table', ''), order.get('customer', ''), '، '.join(f"{item.get('name', '')} × {item.get('quantity', item.get('qty', 1))}" for item in order.get('items', []))] for order in report['orders']]),
         ('دفتر الصندوق', [['التاريخ', 'الاتجاه', 'القناة', 'التصنيف', 'المبلغ', 'الكاشير قيصر/المستخدم', 'المرجع', 'الملاحظة']] + [[movement.get('timestamp', ''), movement.get('direction', ''), movement.get('channel', ''), movement.get('category', ''), movement.get('amount', 0), movement.get('created_by', ''), movement.get('reference_id', ''), movement.get('note', '')] for movement in report['cashbook']])
     ]
     buffer = BytesIO()
@@ -4000,6 +4119,7 @@ def create_financial_pdf(report):
     summary_rows = [
         [_pdf_text('البند'), _pdf_text('القيمة')],
         [_pdf_text('إجمالي المبيعات'), _pdf_text(summary.get('sales', 0))],
+        [_pdf_text('تسويات الفواتير (+ / -)'), _pdf_text(summary.get('rounding_adjustments', 0))],
         [_pdf_text('عدد الفواتير'), _pdf_text(summary.get('orders', 0))],
         [_pdf_text('النقد الداخل'), _pdf_text(summary.get('cash_in', 0))],
         [_pdf_text('البطاقات الداخلة'), _pdf_text(summary.get('card_in', 0))],
@@ -4014,18 +4134,19 @@ def create_financial_pdf(report):
         ('TOPPADDING', (0, 0), (-1, -1), 7), ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
     ]))
     story.extend([summary_table, Spacer(1, 14), Paragraph(_pdf_text('تفاصيل الفواتير'), body_style), Spacer(1, 6)])
-    invoice_rows = [[_pdf_text('رقم الفاتورة'), _pdf_text('التاريخ'), _pdf_text('الكاشير قيصر'), _pdf_text('الدفع'), _pdf_text('الإجمالي')]]
+    invoice_rows = [[_pdf_text('رقم الفاتورة'), _pdf_text('التاريخ'), _pdf_text('الكاشير قيصر'), _pdf_text('الدفع'), _pdf_text('التسوية'), _pdf_text('الإجمالي')]]
     for order in report.get('orders', []):
         invoice_rows.append([
             _pdf_text(order.get('id', '')),
             _pdf_text((order.get('timestamp') or order.get('date') or '')[:19]),
             _pdf_text(order.get('cashier_name', 'غير معروف')),
             _pdf_text(order.get('payment', '')),
+            _pdf_text(order.get('rounding_adjustment', 0)),
             _pdf_text(order.get('total', 0)),
         ])
     if len(invoice_rows) == 1:
-        invoice_rows.append([_pdf_text('لا توجد فواتير ضمن الفترة'), '', '', '', ''])
-    invoice_table = Table(invoice_rows, colWidths=[92, 130, 105, 80, 70], repeatRows=1)
+        invoice_rows.append([_pdf_text('لا توجد فواتير ضمن الفترة'), '', '', '', '', ''])
+    invoice_table = Table(invoice_rows, colWidths=[88, 112, 92, 68, 78, 80], repeatRows=1)
     invoice_table.setStyle(TableStyle([
         ('FONTNAME', (0, 0), (-1, -1), font_name), ('FONTSIZE', (0, 0), (-1, -1), 7.5),
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0f172a')), ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -5226,7 +5347,14 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
         total_lines = [divider, 'المجموع الفرعي: ' + display_amount(subtotal)]
         if float(discount or 0) > 0:
             total_lines.append('الخصم: -' + display_amount(discount))
+        rounding_adjustment = round_money(order.get('rounding_adjustment', 0) or 0)
+        if rounding_adjustment:
+            sign = '+' if rounding_adjustment > 0 else ''
+            total_lines.append('تسوية المبلغ: ' + sign + display_amount(rounding_adjustment))
         total_lines.extend(['الإجمالي: ' + display_amount(total), 'طريقة الدفع: ' + str(order.get('payment', ''))])
+        if 'cash_received' in order and str(order.get('payment', '')) != 'بطاقة':
+            total_lines.append('المبلغ المستلم: ' + display_amount(order.get('cash_received', 0)))
+            total_lines.append('الباقي: ' + display_amount(order.get('change_due', 0)))
         if str(order.get('payment', '')) == 'مختلط':
             total_lines.extend(['النقدي: ' + display_amount(cash), 'البطاقة: ' + display_amount(card)])
         footer_lines = []
@@ -5371,9 +5499,16 @@ def thermal_receipt_structured(data, order):
         has_discount = False
     if has_discount:
         lines.append(cmd('ROW', 1, '55,45', 'r,l', 0, 'الخصم', '-' + money_text(discount, True)))
+    rounding_adjustment = round_money(order.get('rounding_adjustment', 0) or 0)
+    if rounding_adjustment:
+        sign = '+' if rounding_adjustment > 0 else ''
+        lines.append(cmd('ROW', 1, '55,45', 'r,l', 0, 'تسوية المبلغ', sign + money_text(rounding_adjustment, True)))
     lines.append(cmd('RULE'))
     lines.append(cmd('ROW', 1, '55,45', 'r,l', 1, 'الإجمالي', money_text(total, True)))
     lines.append(cmd('ROW', 1, '55,45', 'r,l', 0, 'طريقة الدفع', str(order.get('payment', ''))))
+    if 'cash_received' in order and str(order.get('payment', '')) != 'بطاقة':
+        lines.append(cmd('ROW', 1, '55,45', 'r,l', 0, 'المبلغ المستلم', money_text(order.get('cash_received', 0), True)))
+        lines.append(cmd('ROW', 1, '55,45', 'r,l', 0, 'الباقي', money_text(order.get('change_due', 0), True)))
     if str(order.get('payment', '')) == 'مختلط':
         cash = order.get('cash_amount', 0) or 0
         card = order.get('card_amount', 0) or 0
@@ -6683,7 +6818,8 @@ def _cashier_shift_summary(data, username, cutoff=''):
     cash = sum_money(o.get('cash_amount', o.get('total', 0) if o.get('payment') != 'بطاقة' else 0) or 0 for o in orders)
     card = sum_money(o.get('card_amount', o.get('total', 0) if o.get('payment') == 'بطاقة' else 0) or 0 for o in orders)
     return {'cashier': username, 'from': cutoff or None, 'to': datetime.now().isoformat(), 'orders': len(orders),
-            'sales': sum_money(o.get('total', 0) or 0 for o in orders), 'cash': cash, 'card': card}
+            'sales': sum_money(o.get('total', 0) or 0 for o in orders), 'cash': cash, 'card': card,
+            'rounding_adjustments': sum_money(o.get('rounding_adjustment', 0) or 0 for o in orders)}
 
 @app.route('/api/shift/users', methods=['GET'])
 def shift_users():
@@ -6744,6 +6880,7 @@ def current_shift():
                     'sales': sum_money(o.get('total', 0) or 0 for o in orders),
                     'cash': sum_money(o.get('cash_amount', o.get('total', 0) if o.get('payment') != 'بطاقة' else 0) or 0 for o in orders),
                     'card': sum_money(o.get('card_amount', o.get('total', 0) if o.get('payment') == 'بطاقة' else 0) or 0 for o in orders),
+                    'rounding_adjustments': sum_money(o.get('rounding_adjustment', 0) or 0 for o in orders),
                     'cashier': 'جميع الكاشير قيصرات'})
 
 @app.route('/api/shifts/close', methods=['POST'])
@@ -6765,6 +6902,7 @@ def close_shift_secure():
     shift = {'id': len(data.get('shifts', [])) + 1, 'date': datetime.now().strftime('%Y-%m-%d'),
              'time': datetime.now().isoformat(), 'orders': len(orders),
              'sales': sum_money(o.get('total', 0) or 0 for o in orders),
+             'rounding_adjustments': sum_money(o.get('rounding_adjustment', 0) or 0 for o in orders),
              'expected_cash': expected_cash, 'actual_cash': actual_cash,
              'difference': round_money(actual_cash_value - Decimal(str(expected_cash))) if actual_cash_value is not None else None,
              'closed_by': session.get('username', 'manager'), 'reason': str(payload.get('reason', ''))[:300]}
@@ -6822,14 +6960,20 @@ def split_order(order_id):
             moved_subtotal = item_total(moved)
             remaining_subtotal = item_total(remaining)
             old_total = round_money(o.get('total', 0))
-            discount_total = round_money(max(0, old_subtotal - old_total))
+            rounding_adjustment = round_money(o.get('rounding_adjustment', 0) or 0)
+            old_base_total = round_money(old_total - rounding_adjustment)
+            discount_total = round_money(max(0, old_subtotal - old_base_total))
             moved_discount = round_money(discount_total * moved_subtotal / old_subtotal) if old_subtotal else 0
             remaining_discount = round_money(discount_total - moved_discount)
-            moved_total = round_money(max(0, moved_subtotal - moved_discount))
-            remaining_total = round_money(max(0, remaining_subtotal - remaining_discount))
+            moved_base_total = round_money(max(0, moved_subtotal - moved_discount))
+            remaining_base_total = round_money(max(0, remaining_subtotal - remaining_discount))
+            moved_adjustment = round_money(rounding_adjustment * moved_subtotal / old_subtotal) if old_subtotal else 0
+            remaining_adjustment = round_money(rounding_adjustment - moved_adjustment)
+            moved_total = round_money(moved_base_total + moved_adjustment)
+            remaining_total = round_money(remaining_base_total + remaining_adjustment)
             if round_money(moved_total + remaining_total) != old_total:
                 remaining_total = round_money(old_total - moved_total)
-                remaining_discount = round_money(remaining_subtotal - remaining_total)
+                remaining_adjustment = round_money(remaining_total - remaining_base_total)
             if 'cash_amount' in o or 'card_amount' in o:
                 old_cash = round_money(o.get('cash_amount', 0))
                 old_card = round_money(o.get('card_amount', 0))
@@ -6841,6 +6985,12 @@ def split_order(order_id):
                 return jsonify({'ok': False, 'error': 'تقسيمة الدفع لا تطابق إجمالي الفاتورة'}), 409
             new_cash = round_money(old_cash * moved_total / old_total) if old_total else 0.0
             new_card = round_money(moved_total - new_cash) if old_total else 0.0
+            tracks_cash_received = 'cash_received' in o or 'change_due' in o
+            old_change_due = round_money(o.get('change_due', 0) or 0)
+            if tracks_cash_received and old_change_due and old_cash <= 0:
+                return jsonify({'ok': False, 'error': 'سجل الباقي لا يطابق مبلغ الدفع النقدي'}), 409
+            moved_change_due = round_money(old_change_due * new_cash / old_cash) if old_cash else 0.0
+            remaining_change_due = round_money(old_change_due - moved_change_due)
             new_order = dict(o)
             new_order['id'] = next_order_id(data)
             new_order['items'] = moved
@@ -6848,11 +6998,27 @@ def split_order(order_id):
                               'discount_amount': moved_discount, 'discount_total': moved_discount, 'total': moved_total,
                               'cash_amount': new_cash, 'card_amount': new_card,
                               'split_from': o.get('id'), 'timestamp': datetime.now().isoformat()})
+            if 'rounding_adjustment' in o or rounding_adjustment:
+                new_order['rounding_adjustment'] = moved_adjustment
+                o['rounding_adjustment'] = remaining_adjustment
+            if 'rounding_adjustment_by' in o or rounding_adjustment:
+                cashier = o.get('rounding_adjustment_by', '')
+                adjusted_at = o.get('rounding_adjustment_at', '')
+                new_order['rounding_adjustment_by'] = cashier if moved_adjustment else ''
+                new_order['rounding_adjustment_at'] = adjusted_at if moved_adjustment else ''
+                o['rounding_adjustment_by'] = cashier if remaining_adjustment else ''
+                o['rounding_adjustment_at'] = adjusted_at if remaining_adjustment else ''
+            if tracks_cash_received:
+                new_order['cash_received'] = round_money(new_cash + moved_change_due)
+                new_order['change_due'] = moved_change_due
             o['items'] = remaining
             o.update({'subtotal': remaining_subtotal, 'discount_pct': 0,
                       'discount_amount': remaining_discount, 'discount_total': remaining_discount, 'total': remaining_total,
                       'cash_amount': round_money(old_cash - new_cash),
                       'card_amount': round_money(old_card - new_card), 'split_into': new_order['id']})
+            if tracks_cash_received:
+                o['cash_received'] = round_money(o['cash_amount'] + remaining_change_due)
+                o['change_due'] = remaining_change_due
             data['orders'].append(new_order)
             save(data, [o['id'], new_order['id']]); backup()
             return jsonify({'ok': True, 'new_order': new_order, 'original_order': o})

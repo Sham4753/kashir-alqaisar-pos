@@ -85,6 +85,113 @@ class AccountingAccuracyTests(unittest.TestCase):
         financial = self.client.get('/api/analytics/financial?period=custom&from=' + now[:10] + '&to=' + now[:10]).get_json()
         self.assertEqual(financial['cashier_summary'][0]['discounts'], 20)
 
+    def test_invoice_adjustment_stays_out_of_product_revenue_and_closes_as_net_cash(self):
+        data = server.load()
+        data['menu'] = {'أطعمة': [{'id': 1, 'name': 'A', 'price': 100, 'recipe': []}]}
+        server.save(data)
+        sale = self.client.post('/api/orders', json={
+            'items': [{'product_id': 1, 'quantity': 1}], 'payment': 'نقدي',
+            'rounding_adjustment': 1, 'cash_received': 102, 'type': 'سفري',
+            'kitchen_release': 'later'
+        })
+        self.assertEqual(sale.status_code, 200)
+        self.assertEqual(sale.get_json()['total'], 101)
+
+        day = datetime.now().strftime('%Y-%m-%d')
+        product_report = self.client.get(f'/api/analytics?period=custom&from={day}&to={day}&product=A').get_json()
+        self.assertEqual(product_report['total_sales'], 100)
+        self.assertEqual(product_report['product_sales'][0]['total'], 100)
+        self.assertEqual(product_report['total_rounding_adjustments'], 1)
+        self.assertEqual(product_report['total_cash'], 100)
+        self.assertEqual(product_report['order_details'][0]['discount'], 0)
+        self.assertEqual(product_report['order_details'][0]['cash_amount'], 100)
+
+        financial = self.client.get(f'/api/analytics/financial?period=custom&from={day}&to={day}').get_json()
+        self.assertEqual(financial['summary']['sales'], 101)
+        self.assertEqual(financial['summary']['rounding_adjustments'], 1)
+        self.assertEqual(financial['summary']['cash_in'], 101)
+        self.assertEqual(financial['cashier_summary'][0]['discounts'], 0)
+        self.assertEqual(financial['cashier_summary'][0]['rounding_adjustments'], 1)
+        self.assertEqual(financial['orders'][0]['cash_received'], 102)
+        self.assertEqual(financial['orders'][0]['change_due'], 1)
+
+        current = self.client.get('/api/shifts/current').get_json()
+        self.assertEqual(current['sales'], 101)
+        self.assertEqual(current['cash'], 101)
+        self.assertEqual(current['rounding_adjustments'], 1)
+        closed = self.client.post('/api/shifts/close', json={'actual_cash': 101})
+        self.assertEqual(closed.status_code, 200)
+        self.assertEqual(closed.get_json()['shift']['expected_cash'], 101)
+        self.assertEqual(closed.get_json()['shift']['rounding_adjustments'], 1)
+
+    def test_legacy_orders_without_adjustment_fields_remain_unchanged_in_reports(self):
+        now = datetime.now().isoformat()
+        data = server.load()
+        data['menu'] = {'أطعمة': [{'id': 1, 'name': 'Legacy', 'price': 50, 'recipe': []}]}
+        data['orders'] = [{
+            'id': 'ORD-LEGACY', 'timestamp': now, 'items': [{'product_id': 1, 'name': 'Legacy', 'price': 50, 'quantity': 1}],
+            'subtotal': 50, 'total': 50, 'payment': 'نقدي', 'cash_amount': 50, 'card_amount': 0,
+            'type': 'سفري', 'cashier_name': 'manager'
+        }]
+        server.save(data)
+        report = self.client.get('/api/analytics/financial?period=daily').get_json()
+        self.assertEqual(report['summary']['sales'], 50)
+        self.assertEqual(report['summary']['rounding_adjustments'], 0)
+        self.assertEqual(report['cashier_summary'][0]['discounts'], 0)
+        self.assertEqual(report['cashier_summary'][0]['rounding_adjustments'], 0)
+        self.assertNotIn('rounding_adjustment', data['orders'][0])
+
+    def test_editing_invoice_preserves_adjustment_and_rebalances_cash_received(self):
+        sale = self.client.post('/api/orders', json={
+            'items': [{'product_id': 1, 'quantity': 1}], 'payment': 'نقدي',
+            'rounding_adjustment': 0.5, 'cash_received': 11, 'kitchen_release': 'later'
+        })
+        self.assertEqual(sale.status_code, 200)
+        order_id = sale.get_json()['id']
+        data = server.load()
+        data['menu']['السندويشات'][0]['price'] = 20
+        server.save(data)
+
+        edited = self.client.post(f'/api/orders/{order_id}/edit-items', json={
+            'username': 'manager', 'password': 'manager-pass',
+            'items': [{'product_id': 1, 'quantity': 1}], 'reason': 'تحديث سعر الصنف'
+        })
+        self.assertEqual(edited.status_code, 200)
+        order = self.client.get(f'/api/order/{order_id}').get_json()
+        self.assertEqual(order['rounding_adjustment'], 0.5)
+        self.assertEqual(order['total'], 20.5)
+        self.assertEqual(order['cash_amount'], 20.5)
+        self.assertEqual(order['cash_received'], 21)
+        self.assertEqual(order['change_due'], 0.5)
+        self.assertEqual(order['edit_history'][0]['old_cash_received'], 11)
+        self.assertEqual(order['edit_history'][0]['old_change_due'], 0.5)
+        self.assertEqual(self.client.get('/api/cashbook/summary').get_json()['cash_in'], 20.5)
+
+    def test_splitting_invoice_allocates_adjustment_change_and_received_amount_once(self):
+        data = server.load()
+        data['menu']['السندويشات'].append({'id': 2, 'name': 'B', 'price': 10, 'recipe': []})
+        server.save(data)
+        sale = self.client.post('/api/orders', json={
+            'items': [{'product_id': 1, 'quantity': 1}, {'product_id': 2, 'quantity': 1}],
+            'payment': 'نقدي', 'rounding_adjustment': 1, 'cash_received': 22,
+            'kitchen_release': 'later'
+        })
+        self.assertEqual(sale.status_code, 200)
+        split = self.client.post(f"/api/orders/{sale.get_json()['id']}/split", json={'item_indexes': [0]})
+        self.assertEqual(split.status_code, 200)
+        original = split.get_json()['original_order']
+        created = split.get_json()['new_order']
+        self.assertEqual(original['total'] + created['total'], 21)
+        self.assertEqual(original['rounding_adjustment'] + created['rounding_adjustment'], 1)
+        self.assertEqual(original['cash_amount'] + created['cash_amount'], 21)
+        self.assertEqual(original['cash_received'] + created['cash_received'], 22)
+        self.assertEqual(original['change_due'] + created['change_due'], 1)
+        self.assertEqual(original['rounding_adjustment_by'], 'manager')
+        self.assertEqual(created['rounding_adjustment_by'], 'manager')
+        report = self.client.get('/api/analytics/financial?period=daily').get_json()
+        self.assertEqual(report['summary']['sales'], 21)
+        self.assertEqual(report['summary']['rounding_adjustments'], 1)
+
     def test_edit_order_reprices_rebalances_mixed_tender_and_writes_adjustments(self):
         response = self.client.post('/api/orders', json={
             'items': [{'product_id': 1, 'quantity': 2}], 'payment': 'مختلط',
