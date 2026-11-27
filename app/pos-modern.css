@@ -488,3 +488,42 @@ body.caesar-page-index .mobile-cart-bar { display: none; }
   body.caesar-page-index *::before,
   body.caesar-page-index *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* Manual reprint controls in the cashier workspace. */
+body.caesar-page-index .reprint-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--q-line);
+  border-radius: 10px;
+  color: var(--q-brand-strong);
+  background: var(--q-surface);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+body.caesar-page-index .reprint-trigger:hover { background: var(--q-brand-soft); }
+body.caesar-page-index .reprint-trigger svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+body.caesar-page-index .reprint-card { width: min(780px, 94vw); max-height: min(84vh, 760px); display: flex; flex-direction: column; }
+body.caesar-page-index .reprint-search-label { margin: 4px 0 6px; color: var(--q-muted); font-size: 11px; font-weight: 800; }
+body.caesar-page-index .reprint-search { width: 100%; min-height: 42px; margin-bottom: 10px; padding: 8px 12px; border: 1px solid var(--q-line); border-radius: 10px; color: var(--q-ink); background: var(--q-surface); font: inherit; }
+body.caesar-page-index .reprint-orders-list { max-height: min(56vh, 500px); overflow: auto; }
+body.caesar-page-index .reprint-order { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px; border: 1px solid var(--q-line); border-radius: 11px; background: var(--q-surface); }
+body.caesar-page-index .reprint-order + .reprint-order { margin-top: 7px; }
+body.caesar-page-index .reprint-order-details { min-width: 0; display: grid; gap: 4px; }
+body.caesar-page-index .reprint-order-details strong { color: var(--q-ink); font-size: 13px; }
+body.caesar-page-index .reprint-order-details small { color: var(--q-muted); font-size: 10px; overflow-wrap: anywhere; }
+body.caesar-page-index .reprint-order-actions { display: flex; flex: 0 0 auto; gap: 6px; }
+body.caesar-page-index .reprint-action { min-height: 36px; padding: 0 10px; border: 1px solid var(--q-line); border-radius: 8px; color: var(--q-brand-strong); background: var(--q-brand-soft); font: inherit; font-size: 10px; font-weight: 800; }
+body.caesar-page-index .reprint-action:disabled { opacity: .6; }
+body.caesar-page-index .reprint-status { min-height: 18px; margin-top: 8px; color: var(--q-success); font-size: 11px; font-weight: 700; }
+body.caesar-page-index .reprint-status.error { color: var(--q-danger); }
+@media (max-width: 560px) {
+  body.caesar-page-index .reprint-card { width: min(100%, 94vw); padding: 16px; }
+  body.caesar-page-index .reprint-order { align-items: stretch; flex-direction: column; }
+  body.caesar-page-index .reprint-order-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

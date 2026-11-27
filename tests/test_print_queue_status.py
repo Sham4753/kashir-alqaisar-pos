@@ -1,4 +1,5 @@
 import unittest
+import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -42,7 +43,54 @@ class PrintQueueStatusTests(unittest.TestCase):
         self.assertEqual(ticket_type, 'receipt')
         self.assertFalse(wait)
         self.assertTrue(reprint['is_reprint'])
+        self.assertEqual(reprint['reprint_requested_by'], 'cashier')
+        self.assertEqual(reprint['reprint_requested_role'], 'cashier')
+        self.assertTrue(reprint['reprint_requested_at'])
         self.assertIn('نسخة', server.thermal_receipt_structured(server.load(), reprint))
+
+    def test_cashier_can_reprint_kitchen_ticket_and_actor_is_audited(self):
+        data = server.load()
+        data['orders'][0].update({'kitchen_release': 'now', 'kitchen_status': 'new'})
+        server.save(data, ['ORD-QUEUE-1'])
+        with patch.object(server.sys, 'platform', 'win32'), \
+                patch.object(server.PRINT_QUEUE, 'put_nowait') as enqueue:
+            response = self.client.post('/api/printer/orders/ORD-QUEUE-1/print', json={'type': 'kitchen'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()['ok'])
+        self.assertEqual(response.get_json()['type'], 'kitchen')
+        enqueue.assert_called_once()
+        log = server.load()['print_log'][-1]
+        self.assertEqual(log['type'], 'kitchen')
+        self.assertTrue(log['is_reprint'])
+        self.assertEqual(log['requested_by'], 'cashier')
+        self.assertEqual(log['requested_by_role'], 'cashier')
+        self.assertTrue(log['requested_at'])
+        self.assertIn('نسخة معاد طبعها', server.thermal_receipt_text(
+            server.load(), {**data['orders'][0], 'is_reprint': True}, 'kitchen'))
+
+    def test_kitchen_reprint_waits_until_order_is_released(self):
+        data = server.load()
+        data['orders'][0].update({'kitchen_release': 'later', 'kitchen_status': 'held'})
+        server.save(data, ['ORD-QUEUE-1'])
+        with patch.object(server, 'queue_thermal_print') as queue_print:
+            response = self.client.post('/api/printer/orders/ORD-QUEUE-1/print', json={'type': 'kitchen'})
+        self.assertEqual(response.status_code, 409)
+        queue_print.assert_not_called()
+
+    def test_print_log_export_includes_reprint_actor_role_and_time(self):
+        export = server.create_print_log_xlsx([{
+            'timestamp': '2026-10-30T12:00:00', 'order_id': 'ORD-QUEUE-1',
+            'type': 'receipt', 'status': 'sent', 'is_reprint': True,
+            'requested_by': 'cashier', 'requested_by_role': 'cashier',
+            'requested_at': '2026-10-30T12:01:00',
+        }])
+        with zipfile.ZipFile(export) as workbook:
+            sheet = workbook.read('xl/worksheets/sheet1.xml').decode('utf-8')
+        self.assertIn('إعادة طباعة', sheet)
+        self.assertIn('منفذ الإعادة', sheet)
+        self.assertIn('cashier', sheet)
+        self.assertIn('2026-10-30T12:01:00', sheet)
 
     def test_retry_accepts_queued_replacement_but_refuses_running_queued_job(self):
         data = server.load()

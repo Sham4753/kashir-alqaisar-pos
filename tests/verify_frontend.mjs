@@ -8,6 +8,8 @@ const posCssPath = resolve(process.cwd(), 'app', 'pos-modern.css');
 const posCss = readFileSync(posCssPath, 'utf8');
 const retryPath = resolve(process.cwd(), 'app', 'pos-retry.js');
 const retryScript = readFileSync(retryPath, 'utf8');
+const reprintPath = resolve(process.cwd(), 'app', 'pos-reprint.js');
+const reprintScript = readFileSync(reprintPath, 'utf8');
 const currencyPath = resolve(process.cwd(), 'app', 'currency-manager.js');
 const currencyScript = readFileSync(currencyPath, 'utf8');
 const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)];
@@ -53,6 +55,9 @@ for (const required of [
   'id="managerApprovalFields"',
   'id="confirmPaymentButton"',
   'id="printState" aria-live="polite"',
+  'id="cashierReprintButton"',
+  'id="reprintOrdersList"',
+  'id="reprintSearch"',
   "noteToggle.innerHTML=svgIcon('note')",
   'function syncCartAccessibility()',
   'function svgIcon(name)',
@@ -84,6 +89,7 @@ for (const route of [
   '/api/menu',
   '/api/restaurant/identity',
   '/api/settings/features',
+  '/api/settings/cashier-rounding-limit',
   '/api/dashboard/counters',
   '/api/dashboard/daily',
   '/api/delivery/orders',
@@ -100,6 +106,8 @@ for (const source of [
   'money(total,true)',
   'updatePaymentPreview(false)',
   "paymentEl.approval.hidden=!needsManager",
+  'state.cashierRoundingLimit',
+  "api('/api/settings/cashier-rounding-limit')",
   "event.stopImmediatePropagation()",
   'paymentEl.overlay.addEventListener(\'keydown\'',
   'event.stopImmediatePropagation(); closePayment();',
@@ -128,12 +136,19 @@ for (const counterId of ['counterOrders', 'counterReady', 'counterSales']) {
 if (!html.includes('/pos-retry.js') || !retryScript.includes('/api/printer/orders/')) {
   throw new Error('تدفق إعادة محاولة الإيصال غير مرتبط بالواجهة');
 }
+if (!html.includes('/pos-reprint.js') ||
+    !reprintScript.includes('/api/orders?scope=today&limit=50') ||
+    !reprintScript.includes("JSON.stringify({ type: kind })") ||
+    !reprintScript.includes('/api/printer/orders/')) {
+  throw new Error('إعادة الطباعة اليدوية للإيصال وتذكرة المطبخ غير مرتبطة بواجهة الكاشير');
+}
 if ((html.match(/class="action-main"/g) || []).length !== 1 || html.includes('class="action-secondary"')) {
   throw new Error('يجب أن تحتوي شاشة الكاشير على زر إجراء أساسي واحد دون أزرار دفع مكررة');
 }
 
 for (const [, script] of scripts) new Function(script);
 new Function(retryScript);
+new Function(reprintScript);
 
 const currencyContext = {
   window: { dispatchEvent() {} },

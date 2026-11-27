@@ -140,6 +140,8 @@ ROUTE_POLICIES = (
     ("POST", "/api/expenses", MANAGER_ONLY),
     ("DELETE", "/api/expenses/<eid>", MANAGER_ONLY),
     ("POST", "/api/orders", OPERATIONAL_ROLES),
+    ("GET", "/api/settings/cashier-rounding-limit", OPERATIONAL_ROLES),
+    ("POST", "/api/settings/cashier-rounding-limit", MANAGER_ONLY),
     # يستطيع المستخدم التشغيلي طلب تعديل الأصناف، لكن الخادم لا ينفذه إلا
     # بعد check_manager_password الذي يثبت كلمة مرور مدير فعلي.
     ("POST", "/api/orders/<order_id>/edit-items", OPERATIONAL_ROLES),
