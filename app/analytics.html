@@ -41,8 +41,8 @@
         <div class="flex items-center justify-between mb-6 no-print">
             <h1 class="text-2xl font-bold text-gray-800"> التقارير المالية والربحية</h1>
             <div class="flex gap-2">
-                <button onclick="printReport()" class="report-action-button bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm"> طباعة / PDF</button>
                 <button onclick="prepareDailyReport()" class="report-action-button bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 text-sm"> تقرير اليوم</button>
+                <button id="printDailyItems80" onclick="printDailyItems80Report()" class="report-action-button bg-slate-800 text-white px-3 py-2 rounded-lg hover:bg-slate-900 text-sm"> طباعة تقرير آخر النهار (80mm)</button>
                 <button id="exportExcelTop" onclick="exportSelectedExcel()" class="report-action-button bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm">⬇ Excel حسب التاريخ</button>
                 <button id="exportPdfTop" onclick="exportSelectedPdf()" class="report-action-button bg-slate-700 text-white px-3 py-2 rounded-lg hover:bg-slate-800 text-sm">⬇ PDF حسب التاريخ</button>
                 <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 text-sm">↩ رجوع</a>
@@ -95,6 +95,12 @@
             </div>
             <button onclick="loadReport()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition"> عرض التقرير</button>
         </div>
+
+        <section id="dailyItemsPreview" class="hidden bg-white rounded-xl shadow-md p-5 mb-6" aria-live="polite">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3"><h2 class="text-lg font-bold text-gray-800">تقرير آخر النهار</h2><span id="dailyItemsDate" class="text-sm text-gray-500"></span></div>
+            <div id="dailyItemsBody" class="space-y-1"></div>
+            <div id="dailyItemsTotals" class="mt-3 space-y-1 text-left font-bold text-slate-800"></div>
+        </section>
 
         <!-- النتائج -->
         <div id="results" class="hidden bg-white rounded-xl shadow-md p-6 space-y-5 mb-6">
@@ -184,9 +190,7 @@
                 </div>
             </div>
 
-            <!-- زر طباعة -->
             <div class="no-print flex gap-2">
-                <button onclick="printReport()" class="flex-1 min-h-[56px] bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition"> طباعة / PDF</button>
                 <button id="exportExcelBottom" onclick="openExcelPreview()" class="flex-1 min-h-[56px] bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition"> معاينة ثم تصدير Excel</button>
                 <button onclick="exportSelectedExcel()" class="flex-1 min-h-[56px] bg-emerald-700 text-white font-bold py-3 rounded-lg hover:bg-emerald-800 transition">⬇ Excel حسب التاريخ</button>
                 <button onclick="exportSelectedPdf()" class="flex-1 min-h-[56px] bg-slate-700 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition">⬇ PDF حسب التاريخ</button>
@@ -199,7 +203,7 @@
             <div class="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-2xl bg-white shadow-2xl p-5">
                 <div class="flex items-start justify-between gap-4 border-b border-slate-200 pb-4"><div><h2 id="excelPreviewTitle" class="text-lg font-black text-slate-800">معاينة نتائج Excel</h2><p id="excelPreviewMeta" class="mt-1 text-xs text-slate-500">جارِ تحضير المعاينة…</p></div><button onclick="closeExcelPreview()" class="rounded-lg px-3 py-2 text-slate-500 hover:bg-slate-100" aria-label="إغلاق">حذف</button></div>
                 <div id="excelPreviewBody" class="py-4"><p class="text-center text-slate-500">جارِ تحميل البيانات…</p></div>
-                <div class="border-t border-slate-200 pt-4"><div class="mb-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]"><input id="printLogPrinterFilter" type="search" class="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-200" placeholder="ابحث باسم الطابعة في سجل الطباعة"><select id="printLogDocumentType" class="rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">كل المستندات</option><option value="receipt">إيصال العميل</option><option value="kitchen">تذكرة المطبخ</option></select><select id="printLogPrinterSort" class="rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="timestamp_desc">الأحدث أولاً</option><option value="printer_asc">الطابعة: أ إلى ي</option><option value="printer_desc">الطابعة: ي إلى أ</option></select></div><div class="flex flex-wrap gap-2"><button onclick="exportExcel()" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700"> تصدير هذه النتائج إلى Excel</button><button id="exportPrintLog" onclick="exportPrintLog()" class="rounded-xl bg-slate-800 px-4 py-3 font-bold text-white hover:bg-slate-900"> تصدير سجل الطباعة</button><button onclick="closeExcelPreview()" class="rounded-xl bg-slate-100 px-4 py-3 font-bold text-slate-700 hover:bg-slate-200">رجوع</button></div></div>
+                        <div class="border-t border-slate-200 pt-4"><div class="mb-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]"><input id="printLogPrinterFilter" type="search" class="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-200" placeholder="ابحث باسم الطابعة في سجل الطباعة"><select id="printLogDocumentType" class="rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">كل المستندات</option><option value="receipt">إيصال العميل</option><option value="kitchen">تذكرة المطبخ</option><option value="daily_report">تقرير الأصناف اليومي</option></select><select id="printLogPrinterSort" class="rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="timestamp_desc">الأحدث أولاً</option><option value="printer_asc">الطابعة: أ إلى ي</option><option value="printer_desc">الطابعة: ي إلى أ</option></select></div><div class="flex flex-wrap gap-2"><button onclick="exportExcel()" class="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700"> تصدير هذه النتائج إلى Excel</button><button id="exportPrintLog" onclick="exportPrintLog()" class="rounded-xl bg-slate-800 px-4 py-3 font-bold text-white hover:bg-slate-900"> تصدير سجل الطباعة</button><button onclick="closeExcelPreview()" class="rounded-xl bg-slate-100 px-4 py-3 font-bold text-slate-700 hover:bg-slate-200">رجوع</button></div></div>
             </div>
         </div>
     </div>
@@ -232,7 +236,7 @@
                 cats.forEach(c => { const option = document.createElement('option'); option.value = c; option.textContent = ' ' + c; sel.appendChild(option); });
             } catch(e) {}
             // تاريخ اليوم
-            const today = new Date().toISOString().split('T')[0];
+            const today = todayIso();
             document.getElementById('dateTo').value = today;
         }
 
@@ -427,7 +431,7 @@
                 const items = (o.items || []).map(i => `${escapeHtml(i.name)} × ${i.quantity}`).join('، ');
                 const date = o.date ? new Date(o.date).toLocaleString('ar') : '-';
                 const status = o.voided ? ' <span class="text-red-600">(ملغاة)</span>' : '';
-                return `<tr class="border-t hover:bg-gray-50"><td class="p-2 font-bold">${escapeHtml(o.id)}${status}</td><td class="p-2 whitespace-nowrap">${escapeHtml(date)}</td><td class="p-2 min-w-[220px]">${items}</td><td class="p-2">${escapeHtml(o.payment)}</td><td class="p-2">${formatPrice(o.discount || 0)}</td><td class="p-2 font-bold">${formatPrice(o.total || 0)}</td></tr>`;
+                return `<tr class="border-t hover:bg-gray-50"><td class="p-2 font-bold">${escapeHtml(o.display_no || o.id)}${status}</td><td class="p-2 whitespace-nowrap">${escapeHtml(date)}</td><td class="p-2 min-w-[220px]">${items}</td><td class="p-2">${escapeHtml(o.payment)}</td><td class="p-2">${formatPrice(o.discount || 0)}</td><td class="p-2 font-bold">${formatPrice(o.total || 0)}</td></tr>`;
             }).join('');
         }
 
@@ -494,6 +498,39 @@
             showToast(' تم تحميل تقرير مبيعات اليوم');
         }
 
+        async function printDailyItems80Report() {
+            const button = document.getElementById('printDailyItems80');
+            const day = todayIso();
+            button.disabled = true;
+            const originalText = button.textContent;
+            button.textContent = 'جارِ تجهيز التقرير…';
+            try {
+                const printResponse = await fetch('/api/printer/daily-report/print', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date: day })
+                });
+                const result = await printResponse.json();
+                if (!printResponse.ok || !result.ok) throw new Error(result.error || result.print?.message || 'فشل إرسال التقرير للطابعة');
+                const report = result.report || {};
+                document.getElementById('dailyItemsDate').textContent = 'التاريخ: ' + report.date;
+                const rows = Array.isArray(report.items) ? report.items : [];
+                document.getElementById('dailyItemsBody').innerHTML = rows.map(item => `<div class="py-1">${Number(item.quantity || 0).toLocaleString('ar-SY')}  ${escapeHtml(item.name)}</div>`).join('');
+                const syp = value => Number(value || 0).toLocaleString('ar-SY', { maximumFractionDigits: 2 }) + ' ل.س';
+                document.getElementById('dailyItemsTotals').innerHTML = [
+                    ['المبيع', report.sales_total], ['المشتريات', report.purchases_total],
+                    ['الرواتب', report.payroll_total], ['مصاريف أخرى', report.other_expenses_total],
+                    ['الصافي', report.net_total],
+                ].map(([label, amount]) => `<div>${label} = ${syp(amount)}</div>`).join('');
+                document.getElementById('dailyItemsPreview').classList.remove('hidden');
+                showToast(' تم إرسال تقرير آخر النهار المختصر إلى الطابعة 80mm');
+            } catch (error) {
+                showToast(' ' + (error.message || 'تعذر طباعة تقرير الأصناف'));
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+
         async function ensureSelectedReport() {
             const params = reportParams().toString();
             if (!lastReportData || lastReportParams !== params) await loadReport();
@@ -514,8 +551,7 @@
                 const response = await fetch('/api/analytics/financial.pdf?' + reportParams().toString());
                 if (!response.ok) {
                     if (response.status === 503) {
-                        showToast('ℹ مولّد PDF غير مضمّن؛ افتح الطباعة واحفظ التقرير المحدد كـPDF');
-                        printReport();
+                        showToast('ℹ مولّد PDF غير مضمّن في هذه النسخة.');
                         return;
                     }
                     const data = await response.json().catch(() => ({}));
@@ -536,15 +572,6 @@
             } finally {
                 if (button) { button.disabled = false; button.textContent = previousLabel || '⬇ PDF يومي'; button.classList.remove('opacity-70', 'cursor-wait'); }
             }
-        }
-
-        function printReport() {
-            const results = document.getElementById('results');
-            if (results.classList.contains('hidden')) {
-                showToast(' اعرض التقرير أولاً');
-                return;
-            }
-            window.print();
         }
 
         function downloadCSV(filename, rows) {
@@ -588,7 +615,7 @@
             (d.product_sales || []).forEach(p => rows.push([p.name, p.quantity, p.total || 0]));
             rows.push([], ['تفاصيل الفواتير'], ['رقم الفاتورة', 'التاريخ', 'الأصناف', 'طريقة الدفع', 'الخصم', 'الإجمالي']);
             (d.order_details || []).forEach(o => rows.push([
-                o.id, o.date, (o.items || []).map(i => `${i.name} × ${i.quantity}`).join('، '), o.payment, o.discount || 0, o.total || 0
+                o.display_no || o.id, o.date, (o.items || []).map(i => `${i.name} × ${i.quantity}`).join('، '), o.payment, o.discount || 0, o.total || 0
             ]));
             downloadCSV('تقرير_' + (d.period || 'report') + '_' + new Date().toISOString().slice(0,10) + '.csv', rows);
             showToast(' تم تصدير الملف');
@@ -645,7 +672,7 @@
             const normalized = String(query || '').trim().toLocaleLowerCase('ar');
             const matches = previewOrders.filter(order => {
                 const items = (order.items || []).map(item => item.name || '').join(' ');
-                const searchable = [order.id, order.cashier_name, order.payment, order.total, items].join(' ').toLocaleLowerCase('ar');
+                const searchable = [order.display_no, order.id, order.cashier_name, order.payment, order.total, items].join(' ').toLocaleLowerCase('ar');
                 const payment = String(order.payment || '').trim();
                 const savedPrint = order.print_status || {};
                 const documentJob = previewDocumentFilter === 'all' ? null : savedPrint[previewDocumentFilter];
@@ -661,7 +688,7 @@
             count.textContent = `${matches.length} من ${previewOrders.length} فاتورة`;
             target.innerHTML = matches.slice(0, 50).map(order => {
                 const items = (order.items || []).map(item => `${escapeHtml(item.name || '')} × ${item.quantity ?? item.qty ?? 1}`).join('، ');
-                return `<li class="border-t py-2 text-xs first:border-t-0"><div class="flex justify-between gap-3"><span><b>${escapeHtml(order.id || '')}</b> · ${escapeHtml(order.cashier_name || 'غير معروف')}</span><b>${formatPrice(order.total || 0)}</b></div><div class="mt-1 text-slate-500">${escapeHtml(order.payment || '')}${items ? ' · ' + items : ''}</div><div class="mt-2 flex flex-wrap gap-1.5">${previewPrintStatusBadges(order)}</div></li>`;
+                return `<li class="border-t py-2 text-xs first:border-t-0"><div class="flex justify-between gap-3"><span><b>${escapeHtml(order.display_no || order.id || '')}</b> · ${escapeHtml(order.cashier_name || 'غير معروف')}</span><b>${formatPrice(order.total || 0)}</b></div><div class="mt-1 text-slate-500">${escapeHtml(order.payment || '')}${items ? ' · ' + items : ''}</div><div class="mt-2 flex flex-wrap gap-1.5">${previewPrintStatusBadges(order)}</div></li>`;
             }).join('') || '<li class="py-4 text-center text-xs text-slate-500">لا توجد فاتورة تطابق البحث.</li>';
         }
 

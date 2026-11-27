@@ -53,6 +53,18 @@ class RbacPolicyTests(unittest.TestCase):
         self.assertTrue(role_can_access("POST", "/api/category", "manager"))
         self.assertEqual(allowed_roles_for_request("POST", "/api/category"), frozenset({"manager"}))
 
+    def test_daily_items_report_and_print_are_manager_only(self):
+        routes = (
+            ("GET", "/api/reports/daily-items"),
+            ("POST", "/api/printer/daily-report/print"),
+        )
+        for method, path in routes:
+            with self.subTest(method=method, path=path):
+                self.assertTrue(role_can_access(method, path, "manager"))
+                self.assertFalse(role_can_access(method, path, "supervisor"))
+                self.assertFalse(role_can_access(method, path, "cashier"))
+                self.assertEqual(allowed_roles_for_request(method, path), frozenset({"manager"}))
+
     def test_unknown_write_is_closed_by_default(self):
         self.assertFalse(role_can_access("POST", "/api/new-future-route", "cashier"))
         self.assertTrue(role_can_access("POST", "/api/new-future-route", "manager"))

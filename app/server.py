@@ -1094,6 +1094,38 @@ def next_order_id(data):
     data['order_counter'] = counter
     return f"ORD-{counter:04d}"
 
+
+def next_daily_order_no(data, now=None):
+    """يولّد رقم عرض يومياً مستقلاً عن معرّف ORD الداخلي."""
+    now = now or datetime.now()
+    day = now.strftime('%Y-%m-%d')
+    if data.get('daily_order_date') != day:
+        current_orders = data.get('orders', []) + data.get('orders_archive', [])
+        previous = [int(row.get('daily_no')) for row in current_orders
+                    if isinstance(row, dict) and str(row.get('timestamp', row.get('date', '')))[:10] == day
+                    and str(row.get('daily_no', '')).isdigit() and int(row.get('daily_no')) > 0]
+        counter = max(previous, default=0)
+        data['daily_order_date'] = day
+    else:
+        try:
+            counter = max(0, int(data.get('daily_order_counter', 0) or 0))
+        except (TypeError, ValueError):
+            counter = 0
+    counter += 1
+    data['daily_order_counter'] = counter
+    return counter
+
+
+def display_no(order):
+    """رقم المستخدم؛ تعود الطلبات القديمة بلا daily_no إلى ORD الأصلي."""
+    if not isinstance(order, dict):
+        return ''
+    daily_no = str(order.get('daily_no', '') or '').strip()
+    if daily_no.isdigit() and int(daily_no) > 0:
+        return str(int(daily_no))
+    return str(order.get('id', '') or '')
+
+
 def commercial_setup_complete(data=None):
     """يحافظ على توافق النسخ القديمة ويكشف فقط قوالب البيع غير المهيأة."""
     data = data or load()
@@ -1792,6 +1824,7 @@ def _structured_orders_page(date_from='', date_to='', limit=None, offset=0, incl
             except (TypeError, ValueError):
                 continue
             if isinstance(value, dict):
+                value['display_no'] = display_no(value)
                 result.append(value)
         return result, total
     finally:
@@ -1919,8 +1952,10 @@ def orders():
         kitchen_release = str(payload.get('kitchen_release', 'now') or 'now')
         if kitchen_release not in {'now', 'later'}:
             return jsonify({'ok': False, 'error': 'خيار إطلاق المطبخ غير صالح'}), 400
+        order_time = datetime.now()
         o = {
-            'id': next_order_id(data), 'timestamp': datetime.now().isoformat(), 'items': items,
+            'id': next_order_id(data), 'daily_no': next_daily_order_no(data, order_time),
+            'timestamp': order_time.isoformat(), 'items': items,
             'subtotal': subtotal, 'discount_pct': discount_pct, 'discount_amount': discount_amount,
             'discount_total': total_discount, 'rounding_adjustment': rounding_adjustment,
             'total': total, 'type': order_type, 'note': str(payload.get('note', ''))[:500],
@@ -1957,7 +1992,8 @@ def orders():
         if drawer_result:
             o['cash_drawer_status'] = drawer_result
         save(data, [o['id']]); backup()
-        return jsonify({'ok': True, 'id': o['id'], 'total': total,
+        return jsonify({'ok': True, 'id': o['id'], 'daily_no': o['daily_no'],
+                        'display_no': display_no(o), 'total': total,
                         'rounding_adjustment': rounding_adjustment,
                         'cash_received': payment_data.get('cash_received', 0),
                         'change_due': payment_data.get('change_due', 0),
@@ -2782,9 +2818,11 @@ def pay_debt(did):
             d['paid'] = round_money(as_money(d.get('paid'), 0) + amount)
             snap = currency_snapshot(data, d, allow_payload=True)
             payment = {'amount': amount, 'method': method, 'date': datetime.now().isoformat(), 'currency': snap['currency'], 'exchange_rate': snap['exchange_rate']}
+            payment_time = datetime.now()
             d.setdefault('payments', []).append(payment)
             payment_order = {
                 'id': next_order_id(data),
+                'daily_no': next_daily_order_no(data, payment_time),
                 'items': [{'name': f"تسديد دين: {d['name']}", 'price': amount, 'quantity': 1}],
                 'total': amount,
                 'type': 'تسديد دين',
@@ -2794,8 +2832,8 @@ def pay_debt(did):
                 'card_amount': amount if method == 'بطاقة' else 0,
                 'cashier_name': session.get('username', 'غير محدد'),
                 'currency': snap['currency'], 'exchange_rate': snap['exchange_rate'],
-                'date': datetime.now().isoformat(),
-                'timestamp': datetime.now().isoformat()
+                'date': payment_time.isoformat(),
+                'timestamp': payment_time.isoformat()
             }
             data.setdefault('orders', []).append(payment_order)
             payment_base_amount = amount_in_base(data, amount, snap['currency'], snap['exchange_rate'])
@@ -2842,6 +2880,8 @@ def archive_orders():
     # يمكن تصفير عداد الوردية للعرض، لكن next_order_id يعيد البناء من كل
     # الفواتير الحية والمؤرشفة، لذلك لا يؤدي ذلك إلى إعادة استخدام رقم قديم.
     data['order_counter'] = 0
+    data['daily_order_counter'] = 0
+    data['daily_order_date'] = datetime.now().strftime('%Y-%m-%d')
     data.setdefault('settings', {})['last_order_date'] = datetime.now().strftime('%Y-%m-%d')
     save(data)
     backup()
@@ -2854,7 +2894,8 @@ def archive_orders():
             except ValueError:
                 pass
     next_number = max(used_numbers, default=0) + 1
-    return jsonify({"ok": True, "shift_id": shift_id, "next_id": f"ORD-{next_number:04d}"})
+    return jsonify({"ok": True, "shift_id": shift_id, "next_id": f"ORD-{next_number:04d}",
+                    "next_daily_no": 1})
 
 
 @app.route('/api/shifts/reset-counter', methods=['POST'])
@@ -2868,6 +2909,7 @@ def reset_counter_after_close():
         return response
     body = response.get_json() if hasattr(response, 'get_json') else {}
     body['counter'] = 0
+    body['daily_counter'] = 0
     body['paper_cut'] = cut_paper_to_printer(load().get('settings', {}).get('printer', {}))
     return jsonify(body)
 
@@ -3818,6 +3860,7 @@ def get_analytics():
             detail_total = original_total
         order_details.append({
             'id': o.get('id', ''),
+            'display_no': display_no(o),
             'date': o.get('timestamp') or o.get('date', ''),
             'type': o.get('type', 'سفري'),
             'payment': o.get('payment', '') or 'غير محدد',
@@ -3909,6 +3952,141 @@ def _report_period_orders(data, period='daily', date_from='', date_to=''):
     if eff_from or eff_to:
         orders = [o for o in orders if (not eff_from or _order_stamp(o)[:10] >= eff_from) and (not eff_to or _order_stamp(o)[:10] <= eff_to)]
     return orders
+
+
+def _daily_expense_totals(data, day):
+    """يجمع المصروفات المسجلة في يوم واحد بالعملة الأساسية دون الملغى أو العكوسات."""
+    totals = {'purchases_total': Decimal('0'), 'payroll_total': Decimal('0'),
+              'other_expenses_total': Decimal('0')}
+    empty_ref = (None, '', 0, '0')
+    for expense in data.get('expenses', []) or []:
+        if not isinstance(expense, dict) or str(expense.get('date') or '')[:10] != day:
+            continue
+        if (expense.get('voided') or expense.get('is_reversal')
+                or expense.get('reversal_of') not in empty_ref
+                or expense.get('reversed_by') not in empty_ref):
+            continue
+        try:
+            amount = Decimal(str(expense_amount_base(data, expense)))
+            if not amount.is_finite() or amount <= 0:
+                continue
+        except (InvalidOperation, TypeError, ValueError):
+            continue
+        if expense.get('material_id') is not None:
+            key = 'purchases_total'
+        elif expense.get('employee_id') is not None:
+            key = 'payroll_total'
+        else:
+            key = 'other_expenses_total'
+        totals[key] += amount
+    return {key: float(value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+            for key, value in totals.items()}
+
+
+def daily_items_report(data, report_date=None):
+    """يجمع أصناف ومجاميع المبيع والمصروفات الفعلية ليوم محدد بالليرة السورية."""
+    day = str(report_date or datetime.now().strftime('%Y-%m-%d'))
+    orders = _report_period_orders(data, 'daily', day, day)
+    grouped = {}
+    for order in orders:
+        for item in order.get('items', []) or []:
+            name = str(item.get('name') or item.get('product_name') or '').strip()[:120]
+            if not name:
+                continue
+            try:
+                quantity = Decimal(str(item.get('quantity', item.get('qty', 1)) or 0))
+                if not quantity.is_finite() or quantity <= 0:
+                    continue
+            except (InvalidOperation, TypeError, ValueError):
+                continue
+            row = grouped.setdefault(name, {'name': name, 'quantity': Decimal('0')})
+            row['quantity'] += quantity
+    rows = [
+        {'name': row['name'], 'quantity': float(row['quantity'].quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))}
+        for row in sorted(grouped.values(), key=lambda value: value['name'].casefold())
+    ]
+    sales_total = sum_money(order.get('total', 0) or 0 for order in orders)
+    expenses = _daily_expense_totals(data, day)
+    net_total = round_money(sales_total - expenses['purchases_total']
+                            - expenses['payroll_total'] - expenses['other_expenses_total'])
+    quantity_total = sum((Decimal(str(row['quantity'])) for row in rows), Decimal('0'))
+    return {'date': day, 'currency': 'SYP', 'items': rows,
+            'item_count': len(rows), 'quantity_total': float(quantity_total),
+            'sales_total': sales_total, **expenses, 'net_total': net_total}
+
+
+def thermal_daily_items_structured(data, report):
+    """يبني تذكرة 80mm مختصرة: عنوان وتاريخ وأصناف وخمسة مجاميع فقط."""
+    def cmd(*parts):
+        return RECEIPT_RS + RECEIPT_US.join(
+            str(part).replace('\n', ' ').replace(RECEIPT_RS, '').replace(RECEIPT_US, '') for part in parts
+        )
+
+    def number(value):
+        try:
+            amount = float(value or 0)
+        except (TypeError, ValueError):
+            amount = 0
+        return str(int(amount)) if amount.is_integer() else f'{amount:,.2f}'.rstrip('0').rstrip('.')
+
+    def money(value):
+        try:
+            amount = float(value or 0)
+        except (TypeError, ValueError):
+            amount = 0
+        return f'{amount:,.2f}'.rstrip('0').rstrip('.')
+
+    rows = report.get('items', []) or []
+    lines = [cmd('C', 'تقرير آخر النهار', 1),
+             cmd('C', 'التاريخ: ' + str(report.get('date', '')))]
+    for item in rows:
+        lines.append(cmd('C', number(item.get('quantity')) + '  ' + str(item.get('name', ''))))
+    for label, key in (('المبيع', 'sales_total'), ('المشتريات', 'purchases_total'),
+                       ('الرواتب', 'payroll_total'), ('مصاريف أخرى', 'other_expenses_total'),
+                       ('الصافي', 'net_total')):
+        lines.append(cmd('C', f"{label} = {money(report.get(key, 0))} ل.س"))
+    return '\n'.join(lines)
+
+
+def _daily_report_date(value):
+    value = str(value or datetime.now().strftime('%Y-%m-%d')).strip()
+    try:
+        return datetime.strptime(value, '%Y-%m-%d').strftime('%Y-%m-%d')
+    except ValueError:
+        return None
+
+
+@app.route('/api/reports/daily-items', methods=['GET'])
+def daily_items_report_api():
+    if not has_role('manager'):
+        return permission_error()
+    day = _daily_report_date(request.args.get('date'))
+    if not day:
+        return jsonify({'ok': False, 'error': 'التاريخ غير صالح؛ استخدم YYYY-MM-DD'}), 400
+    return jsonify({'ok': True, **daily_items_report(load(), day)})
+
+
+@app.route('/api/printer/daily-report/print', methods=['POST'])
+def print_daily_items_report():
+    if not has_role('manager'):
+        return permission_error()
+    payload = request.get_json(silent=True) or {}
+    day = _daily_report_date(payload.get('date'))
+    if not day:
+        return jsonify({'ok': False, 'error': 'التاريخ غير صالح؛ استخدم YYYY-MM-DD'}), 400
+    data = load()
+    printer = data.get('settings', {}).get('printer', {})
+    is_network = printer.get('connection_mode') == 'network'
+    configured = bool(str(printer.get('network_host') or '').strip()) if is_network else bool(str(printer.get('printer_name') or '').strip())
+    if not configured:
+        return jsonify({'ok': False, 'error': 'حدد طابعة حرارية أو عنوان طابعة الشبكة أولاً'}), 400
+    report = daily_items_report(data, day)
+    print_order = {'id': 'DAILY-REPORT-' + day, 'timestamp': day + 'T23:59:59',
+                   'type': 'daily_report', 'daily_report': report}
+    result = queue_thermal_print(data, print_order, 'daily_report', wait=True, manual=True)
+    save(data)
+    return jsonify({'ok': result.get('status') in {'queued', 'submitted', 'sent'},
+                    'report': report, 'print': result})
 
 
 def order_print_status_label(order):
@@ -5263,7 +5441,7 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
         return f'{name} × {quantity_text} | سعر: {receipt_amount(unit_price)} | الإجمالي: {receipt_amount(line_total)}'
 
     if ticket_type == 'kitchen':
-        lines = [format_line(restaurant_name), divider, format_line('طلب مطبخ'), f"الطلب: {order.get('id', '')}", f"النوع: {order.get('type', 'سفري')}"]
+        lines = [format_line(restaurant_name), divider, format_line('طلب مطبخ'), f"الطلب: {display_no(order)}", f"النوع: {order.get('type', 'سفري')}"]
         if order.get('table'):
             lines.append('الطاولة: ' + str(order.get('table')))
         if order.get('customer'):
@@ -5295,7 +5473,7 @@ def thermal_receipt_text(data, order, ticket_type='receipt'):
         # Keep technical LTR values isolated from Arabic RTL labels.
         safe_date = raw_date.replace('T', ' ')
         isolated_date = '\u200e' + safe_date + '\u200e' if safe_date else ''
-        detail_lines = [f"رقم الفاتورة: {order.get('id', '')}", f"التاريخ: {isolated_date}"]
+        detail_lines = [f"رقم الفاتورة: {display_no(order)}", f"التاريخ: {isolated_date}"]
         if order.get('customer'):
             detail_lines.append('الزبون: ' + str(order.get('customer'))[:width - 8])
         if order.get('table') or order.get('table_no'):
@@ -5442,7 +5620,7 @@ def thermal_receipt_structured(data, order):
     stamp = str(order.get('timestamp') or order.get('date', ''))[:19].replace('T', ' ')
     date_part, _, time_part = stamp.partition(' ')
     lines.append(cmd('BOX'))
-    lines.append(cmd('ROW', 1, '100', 'r', 1, 'رقم الفاتورة: ' + str(order.get('id', ''))))
+    lines.append(cmd('ROW', 1, '100', 'r', 1, 'رقم الفاتورة: ' + display_no(order)))
     lines.append(cmd('ROW', 1, '100', 'r', 0, 'التاريخ: ‎' + date_part + '‎'))
     info = []
     if order.get('customer'):
@@ -5546,6 +5724,8 @@ PRINT_QUEUE = queue.Queue(maxsize=1000)
 def _dispatch_print_job(job):
     data, order, ticket_type, log_id = job
     printer = dict(data.get('settings', {}).get('printer', {}) or {})
+    if ticket_type == 'daily_report':
+        printer['paper_width'] = 80
     if ticket_type == 'kitchen':
         # تذكرة العمل الداخلية لا تحمل أي صورة شعار/QR ولا تتكرر لنسخ العميل.
         printer['logo_data'] = ''
@@ -5557,13 +5737,15 @@ def _dispatch_print_job(job):
     # تذكرة المطبخ تبقى على القالب النصي المعتاد.
     if ticket_type == 'receipt':
         document_text = thermal_receipt_structured(data, order)
+    elif ticket_type == 'daily_report':
+        document_text = thermal_daily_items_structured(data, order.get('daily_report', {}))
     else:
         document_text = thermal_receipt_text(data, order, ticket_type)
     try:
         copies = max(1, min(3, int(printer.get('copies', 1) or 1)))
     except (TypeError, ValueError):
         copies = 1
-    if ticket_type == 'kitchen':
+    if ticket_type in {'kitchen', 'daily_report'}:
         copies = 1
     result = None
     for copy_number in range(copies):
@@ -5572,7 +5754,7 @@ def _dispatch_print_job(job):
         else:
             result = submit_silent_thermal_print(
                 printer_name, document_text, font_size, printer.get('paper_width', 80),
-                f"CAESAR {'Kitchen' if ticket_type == 'kitchen' else 'Receipt'} {order.get('id', '')} ({copy_number + 1}/{copies})", printer
+                f"CAESAR {'Daily Report' if ticket_type == 'daily_report' else ('Kitchen' if ticket_type == 'kitchen' else 'Receipt')} {order.get('id', '')} ({copy_number + 1}/{copies})", printer
             )
         if not result.get('ok'):
             result['copies_sent'] = copy_number
@@ -5624,10 +5806,17 @@ def _print_worker():
 threading.Thread(target=_print_worker, name='caesar-print-worker', daemon=True).start()
 
 
-def queue_thermal_print(data, order, ticket_type='receipt', wait=False):
+def queue_thermal_print(data, order, ticket_type='receipt', wait=False, manual=False):
     """يسجل أمر الطباعة ويضعه في queue؛ لا ينتظر الطابعة ولا يؤخر حفظ الفاتورة."""
     printer = data.get('settings', {}).get('printer', {})
-    enabled = bool(printer.get('auto_print_receipt')) if ticket_type == 'receipt' else bool(printer.get('auto_print_kitchen'))
+    if ticket_type == 'receipt':
+        enabled = bool(printer.get('auto_print_receipt'))
+    elif ticket_type == 'kitchen':
+        enabled = bool(printer.get('auto_print_kitchen'))
+    elif ticket_type == 'daily_report':
+        enabled = bool(manual)
+    else:
+        return {'queued': False, 'status': 'invalid', 'type': ticket_type, 'message': 'نوع تذكرة الطباعة غير صالح'}
     if not enabled:
         return {'queued': False, 'status': 'disabled', 'type': ticket_type, 'message': 'الطباعة التلقائية غير مفعلة'}
     printer_name = str(printer.get('printer_name') or '').strip()
@@ -6993,11 +7182,13 @@ def split_order(order_id):
             remaining_change_due = round_money(old_change_due - moved_change_due)
             new_order = dict(o)
             new_order['id'] = next_order_id(data)
+            split_time = datetime.now()
+            new_order['daily_no'] = next_daily_order_no(data, split_time)
             new_order['items'] = moved
             new_order.update({'subtotal': moved_subtotal, 'discount_pct': 0,
                               'discount_amount': moved_discount, 'discount_total': moved_discount, 'total': moved_total,
                               'cash_amount': new_cash, 'card_amount': new_card,
-                              'split_from': o.get('id'), 'timestamp': datetime.now().isoformat()})
+                              'split_from': o.get('id'), 'timestamp': split_time.isoformat()})
             if 'rounding_adjustment' in o or rounding_adjustment:
                 new_order['rounding_adjustment'] = moved_adjustment
                 o['rounding_adjustment'] = remaining_adjustment
@@ -7405,9 +7596,11 @@ def close_dine_in_session(session_id):
     inventory_error = inventory_shortage_for_order(data, session_row.get('items', []))
     if inventory_error:
         return jsonify({'ok': False, 'error': inventory_error}), 409
-    now = datetime.now().isoformat()
+    now_time = datetime.now()
+    now = now_time.isoformat()
     order = {
-        'id': next_order_id(data), 'timestamp': now, 'items': session_row['items'],
+        'id': next_order_id(data), 'daily_no': next_daily_order_no(data, now_time),
+        'timestamp': now, 'items': session_row['items'],
         'subtotal': session_row['subtotal'], 'discount_pct': session_row['discount_pct'], 'discount_amount': session_row['discount_amount'],
         'discount_total': session_row.get('discount_total', round_money(session_row['subtotal'] - session_row['total'])),
         'total': session_row['total'], 'type': 'صالة', 'note': session_row.get('note', ''),
@@ -7461,6 +7654,7 @@ def kitchen_orders():
             open_sessions.append(kitchen_row)
     def with_station_routes(row):
         view = dict(row)
+        view['display_no'] = display_no(view)
         station_items = {}
         for item in view.get('items', []):
             station = str(item.get('kitchen_station', 'main') or 'main')
@@ -7481,7 +7675,8 @@ def ready_orders():
     for order in data.get('orders', []):
         if order.get('voided') or order.get('kitchen_status') != 'ready' or order.get('type') not in {'سفري', 'ديليفري'}:
             continue
-        rows.append({'id': order.get('id'), 'type': order.get('type'), 'customer': order.get('customer', ''),
+        rows.append({'id': order.get('id'), 'display_no': display_no(order),
+                     'type': order.get('type'), 'customer': order.get('customer', ''),
                      'timestamp': order.get('timestamp', ''), 'driver_name': order.get('driver_name', ''),
                      'delivery_status': order.get('delivery_status', '')})
     return jsonify(rows)
