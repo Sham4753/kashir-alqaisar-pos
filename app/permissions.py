@@ -145,6 +145,8 @@ ROUTE_POLICIES = (
     ("POST", "/api/orders/<order_id>/edit-items", OPERATIONAL_ROLES),
     ("POST", "/api/printer/orders/<order_id>/print", OPERATIONAL_ROLES),
     ("POST", "/api/printer/orders/<order_id>/retry", OPERATIONAL_ROLES),
+    ("GET", "/api/reports/daily-items", MANAGER_ONLY),
+    ("POST", "/api/printer/daily-report/print", MANAGER_ONLY),
     ("GET", "/api/held-orders", OPERATIONAL_ROLES),
     ("POST", "/api/held-orders", OPERATIONAL_ROLES),
     ("DELETE", "/api/held-orders/<hold_id>", OPERATIONAL_ROLES),

@@ -197,14 +197,14 @@ function jsArg(value){return JSON.stringify(String(value??''));}
                     <div class="bg-gray-50 rounded-lg border border-gray-200 p-4 ${voidedClass}">
                         <div class="flex justify-between items-start mb-2">
                             <div>
-                                <span class="font-bold text-lg">#${i + 1}</span>
+                                <span class="font-bold text-lg">#${esc(o.display_no || o.id || (i + 1))}</span>
                                 <span class="${typeClass} px-2 py-1 rounded text-xs font-bold mr-2">${typeIcon} ${esc(o.type)}</span>
                                 ${o.voided ? '<span class="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold mr-2"> ملغى</span>' : ''}
                                 ${o.edited ? '<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-bold mr-2"> معدّل</span>' : ''}
                             </div>
                             <span class="font-bold ${o.voided ? 'text-gray-400 line-through' : 'text-green-600'}">${formatPrice(o.total || 0)}</span>
                         </div>
-                        <div class="text-xs text-gray-500 mb-2"> ${esc((o.date || o.timestamp || '').substring(0, 16))} <span dir="ltr" style="unicode-bidi:isolate;">${esc(o.id || '')}</span></div>
+                        <div class="text-xs text-gray-500 mb-2"> ${esc((o.date || o.timestamp || '').substring(0, 16))} <span dir="ltr" style="unicode-bidi:isolate;">${esc(o.display_no || o.id || '')}</span></div>
                         ${items}
                         ${o.note ? `<div class="text-xs text-gray-400 mt-2"> ${esc(o.note)}</div>` : ''}
                         ${o.voided ? `<div class="text-xs text-red-500 mt-2">سبب الإلغاء: ${esc(o.void_reason || 'بدون سبب')}</div>` : ''}
